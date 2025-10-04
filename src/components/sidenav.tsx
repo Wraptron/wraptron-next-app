@@ -7,12 +7,9 @@ import {
   ChevronLeft,
   ChevronRight,
   House,
-  Database,
-  Monitor,
-  Workflow,
-  Plug,
-  FolderOpenDot,
-  FolderCode,
+  Folder,
+  Box,
+  Headset,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,8 +29,14 @@ export default function SideNav() {
     {
       id: "projects",
       label: "Projects",
-      icon: FolderCode,
+      icon: Box,
       href: "/projects",
+    },
+    {
+      id: "files",
+      label: "Library",
+      icon: Folder,
+      href: "/library",
     },
     // {
     //   id: "pages",
@@ -57,7 +60,7 @@ export default function SideNav() {
     {
       id: "support",
       label: "Support",
-      icon: MessageSquare,
+      icon: Headset,
       href: "/support",
     },
     {
