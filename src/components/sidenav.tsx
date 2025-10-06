@@ -10,6 +10,7 @@ import {
   Folder,
   Box,
   Headset,
+  Sparkle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,12 @@ export default function SideNav() {
       label: "Dashboard",
       icon: House,
       href: "/dashboard",
+    },
+    {
+      id: "ai",
+      label: "AI",
+      icon: Sparkle,
+      href: "/ai",
     },
     {
       id: "projects",
