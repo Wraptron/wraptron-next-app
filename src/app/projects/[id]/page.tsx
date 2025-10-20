@@ -1,3 +1,5 @@
+"use client";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const PROJECTS_QUERY = `
   query GetProjects {
@@ -20,32 +22,32 @@ export default function ProjectPage() {
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="grid justify-between items-center mb-6">
             <div className="row">
-              <h2 className="text-2xl font-bold">Projects</h2>
+              <h2 className="text-2xl">Projects</h2>
             </div>
             <Tabs defaultValue="overview">
               <TabsList className="">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="tasks">Update log</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="issues">Issues</TabsTrigger>
+                <TabsTrigger value="price">Pricing</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
-              <TabsContent value="overview">
-                Make changes to your account here.
+              <TabsContent value="overview">Display BRD here</TabsContent>
+              <TabsContent value="tasks">
+                Display,Track and Change all your tasks here
               </TabsContent>
-              <TabsContent value="brd">
-                Make changes to your Requirements here.
+              <TabsContent value="files">Display file browser here</TabsContent>
+
+              <TabsContent value="issues">
+                Track and change your issues here.
               </TabsContent>
-              <TabsContent value="charter">
-                Make changes to your charter here.
+              <TabsContent value="price">
+                Display price and plan here.
               </TabsContent>
-              <TabsContent value="design">
-                Make changes to your design guidelines here.
+              <TabsContent value="settings">
+                Display project settings.
               </TabsContent>
-              <TabsContent value="quality">
-                Make changes to your checklist tests here.
-              </TabsContent>
-              <TabsContent value="tasks">Change your tasks here.</TabsContent>
-              <TabsContent value="issues">Change your issues here.</TabsContent>
             </Tabs>
           </div>
         </div>

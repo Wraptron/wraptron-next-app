@@ -39,11 +39,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <main>
-          <div className="flex flex-row">
+          <div className="flex flex-row ">
             <SideNav />
-            <div className="flex flex-col w-full">
+            <div className="flex flex-col w-full  ">
               <Header />
-              <div>{children}</div>
+              <div className="ml-20 ml-20/ml-70 mr-4 mt-4">{children}</div>
             </div>
           </div>
         </main>

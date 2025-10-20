@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+
 import { RefreshCw, Plus, Loader2 } from "lucide-react";
 
 interface Project {
@@ -113,17 +113,21 @@ const Projects = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 ">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Projects</h2>
+            <h2 className="text-2xl">Projects</h2>
             <p className="text-gray-600">{projects.length} projects</p>
           </div>
-          <Button onClick={fetchProjects} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="">
+            <Button onClick={fetchProjects} variant="outline">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" className="ml-2">
+              <Plus className="h-4 w-4 mr-1" /> Add Project
+            </Button>
+          </div>
         </div>
 
         {loading && <div className="text-center py-8">Loading...</div>}

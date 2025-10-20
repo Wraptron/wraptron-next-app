@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  MessageSquare,
+  CircleCheckBig,
   CreditCard,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +11,8 @@ import {
   Box,
   Headset,
   Sparkle,
+  ChartPie,
+  UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,29 +24,25 @@ export default function SideNav() {
 
   const menuItems = [
     {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: House,
-      href: "/dashboard",
-    },
-    {
       id: "ai",
       label: "AI",
       icon: Sparkle,
       href: "/ai",
     },
     {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: ChartPie,
+      href: "/dashboard",
+    },
+
+    {
       id: "projects",
       label: "Projects",
       icon: Box,
       href: "/projects",
     },
-    {
-      id: "files",
-      label: "Library",
-      icon: Folder,
-      href: "/library",
-    },
+
     // {
     //   id: "pages",
     //   label: "Pages",
@@ -71,8 +69,14 @@ export default function SideNav() {
       href: "/support",
     },
     {
-      id: "payments",
-      label: "Payments",
+      id: "teams",
+      label: "Teams",
+      icon: UsersRound,
+      href: "/teams",
+    },
+    {
+      id: "billing",
+      label: "Billing",
       icon: CreditCard,
       href: "/payments",
     },
@@ -90,7 +94,7 @@ export default function SideNav() {
   return (
     <div
       className={cn(
-        "bg-white border-r border-gray-200 h-screen transition-all duration-300 ease-in-out  z-50",
+        "fixed bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out  z-50",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -127,9 +131,9 @@ export default function SideNav() {
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
-                    "w-full justify-start h-10 px-3",
+                    "w-full justify-start h-10px-3",
                     isActive && "bg-blue-50 text-blue-700 hover:bg-blue-100",
-                    isCollapsed && "justify-center px-0"
+                    isCollapsed && "justify-center px-0  w-10 "
                   )}
                   onClick={() => handleItemClick(item.id, item.href)}
                 >
@@ -141,7 +145,7 @@ export default function SideNav() {
                     )}
                   />
                   {!isCollapsed && (
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="text-sm font-normal">{item.label}</span>
                   )}
                 </Button>
               </li>
@@ -153,9 +157,9 @@ export default function SideNav() {
       {/* Footer */}
       {!isCollapsed && (
         <div className="absolute bottom-4 left-4 right-4">
-          <div className="text-xs text-gray-500 text-center">
+          {/* <div className="text-xs text-gray-500 text-center">
             © 2024 Wraptron Studio
-          </div>
+          </div> */}
         </div>
       )}
     </div>

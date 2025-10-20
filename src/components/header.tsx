@@ -22,7 +22,7 @@ export default function TopNavbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         {/* Left side - App name and mobile menu */}
         <div className="flex items-center space-x-4"></div>
