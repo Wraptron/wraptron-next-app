@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { RefreshCw, Plus, Loader2 } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
 
 interface Project {
   id: string;
@@ -98,7 +98,7 @@ const Projects = () => {
         body: JSON.stringify({ query: PROJECTS_QUERY }),
       });
 
-      const data = await response.json();
+      const data: any = await response.json();
       if (data.errors) throw new Error(data.errors[0]?.message);
       setProjects(data.data?.projects || []);
     } catch (err) {

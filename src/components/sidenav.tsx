@@ -2,17 +2,15 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CircleCheckBig,
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  House,
-  Folder,
   Box,
   Headset,
   Sparkle,
   ChartPie,
   UsersRound,
+  SquarePen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,12 +21,12 @@ export default function SideNav() {
   const [activeItem, setActiveItem] = useState<string>("projects");
 
   const menuItems = [
-    {
-      id: "ai",
-      label: "AI",
-      icon: Sparkle,
-      href: "/ai",
-    },
+    // {
+    //   id: "ai",
+    //   label: "AI",
+    //   icon: Sparkle,
+    //   href: "/ai",
+    // },
     {
       id: "dashboard",
       label: "Dashboard",
@@ -42,7 +40,12 @@ export default function SideNav() {
       icon: Box,
       href: "/projects",
     },
-
+    // {
+    //   id: "content",
+    //   label: "Content",
+    //   icon: SquarePen,
+    //   href: "/content",
+    // },
     // {
     //   id: "pages",
     //   label: "Pages",
@@ -68,12 +71,12 @@ export default function SideNav() {
       icon: Headset,
       href: "/support",
     },
-    {
-      id: "teams",
-      label: "Teams",
-      icon: UsersRound,
-      href: "/teams",
-    },
+    // {
+    //   id: "teams",
+    //   label: "Teams",
+    //   icon: UsersRound,
+    //   href: "/teams",
+    // },
     {
       id: "billing",
       label: "Billing",
@@ -94,7 +97,7 @@ export default function SideNav() {
   return (
     <div
       className={cn(
-        "fixed bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out  z-50",
+        "relative bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out  z-50",
         isCollapsed ? "w-16" : "w-64"
       )}
     >

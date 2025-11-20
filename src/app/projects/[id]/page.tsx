@@ -1,19 +1,19 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-const PROJECTS_QUERY = `
-  query GetProjects {
-    projects {
-      id
-      project_name
-      status
-      start_date
-      target_date
-      scope
-      tasks
-    }
-  }
-`;
+// const PROJECTS_QUERY = `
+//   query GetProjects {
+//     projects {
+//       id
+//       project_name
+//       status
+//       start_date
+//       target_date
+//       scope
+//       tasks
+//     }
+//   }
+// `;
 
 export default function ProjectPage() {
   return (

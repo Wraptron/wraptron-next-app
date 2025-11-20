@@ -1,7 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Plus, Loader2 } from "lucide-react";
 
 const New = () => {
   return (

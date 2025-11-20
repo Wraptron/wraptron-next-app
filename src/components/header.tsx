@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, User, Settings, LogOut, Menu } from "lucide-react";
+import { Bell, User, Settings, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 export default function TopNavbar() {
   const [notificationCount, setNotificationCount] = useState(3);
@@ -50,6 +51,11 @@ export default function TopNavbar() {
               )}
             </Button>
           </div>
+          <div>
+            <Link href="/settings">
+              <Settings className="mr-2 h-5 w-5" />
+            </Link>
+          </div>
 
           {/* Profile Dropdown */}
           <DropdownMenu>
@@ -74,10 +80,6 @@ export default function TopNavbar() {
               <DropdownMenuItem className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer text-red-600">
