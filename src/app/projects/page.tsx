@@ -15,7 +15,7 @@ interface Project {
   start_date?: string;
   target_date?: string;
   scope?: string;
-  tasks?: any[];
+  tasks?: unknown[];
 }
 
 const PROJECTS_QUERY = `
@@ -98,8 +98,14 @@ const Projects = () => {
         body: JSON.stringify({ query: PROJECTS_QUERY }),
       });
 
-      const data: any = await response.json();
-      if (data.errors) throw new Error(data.errors[0]?.message);
+      type GraphQLResponse = {
+        data?: { projects?: Project[] };
+        errors?: { message?: string }[];
+      };
+
+      const data: GraphQLResponse = await response.json();
+      if (data.errors && data.errors.length > 0)
+        throw new Error(data.errors[0]?.message || "Unknown GraphQL error");
       setProjects(data.data?.projects || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch");

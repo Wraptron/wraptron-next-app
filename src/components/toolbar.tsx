@@ -20,11 +20,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 const Toolbar = () => {
-  const [url, setUrl] = useState("https://wrap.com");
+  // const [url, setUrl] = useState("https://wrap.com");
 
   const handleAction = (action: string) => {
     console.log(`${action} clicked`);
@@ -99,7 +98,7 @@ const Toolbar = () => {
         <div className="relative">
           <input
             type="text"
-            onChange={(e) => setUrl(e.target.value)}
+            // onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleAction("navigate-url");
