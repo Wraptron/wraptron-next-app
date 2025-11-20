@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "wraptron-studio",
+	"name": "wraptron-app",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2025-03-01",
 	"compatibility_flags": [
@@ -21,7 +21,7 @@
 	},
 	"routes": [
 		{
-		  "pattern": "https://studio.wraptron.com",
+		  "pattern": "https://app.wraptron.com",
 		  "custom_domain": true
 		}
 	  ]
