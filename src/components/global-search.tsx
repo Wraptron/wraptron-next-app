@@ -17,7 +17,7 @@ import {
   Briefcase,
   Search,
 } from "lucide-react";
-import { customersApi, productsApi, employeesApi } from "@/lib/api";
+import { customersApi, productsApi, employeesApi, projectsApi } from "@/lib/api";
 
 interface SearchResult {
   id: string | number;
@@ -64,46 +64,21 @@ export function GlobalSearch() {
       const allResults: SearchResult[] = [];
 
       try {
-        // Search Projects (GraphQL)
+        // Search Projects
         try {
-          const PROJECTS_QUERY = `
-            query GetProjects {
-              projects {
-                id
-                project_name
-                status
-              }
-            }
-          `;
-
-          const response = await fetch("https://admin.wraptron.com/graphql", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              query: PROJECTS_QUERY,
-            }),
+          const projectsResponse = await projectsApi.getAll({
+            search: query,
+            limit: 5,
           });
-
-          const data = await response.json();
-          if (data.data?.projects) {
-            const searchLower = query.toLowerCase();
-            data.data.projects
-              .filter((project: any) => {
-                const name = (project.project_name || "").toLowerCase();
-                const status = (project.status || "").toLowerCase();
-                return name.includes(searchLower) || status.includes(searchLower);
-              })
-              .slice(0, 5)
-              .forEach((project: any) => {
-                allResults.push({
-                  id: project.id,
-                  title: project.project_name,
-                  subtitle: project.status,
-                  type: "project",
-                  url: `/projects/${project.id}`,
-                });
-              });
-          }
+          projectsResponse.data.forEach((project) => {
+            allResults.push({
+              id: project.id,
+              title: project.project_name,
+              subtitle: project.status,
+              type: "project",
+              url: `/projects/${project.id}`,
+            });
+          });
         } catch (error) {
           console.error("Error searching projects:", error);
         }

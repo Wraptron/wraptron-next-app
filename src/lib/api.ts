@@ -78,9 +78,9 @@ async function fetchApi<T>(
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options?.headers,
+    ...(options?.headers as Record<string, string> | undefined),
   };
   
   // Add auth token if available
@@ -102,9 +102,13 @@ async function fetchApi<T>(
       }
     }
     
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+      [key: string]: unknown;
+    };
     throw new ApiError(
-      errorData.error || "An error occurred",
+      errorData.error || errorData.message || "An error occurred",
       response.status,
       errorData,
     );
