@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+
+import React, { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   CreditCard,
   ChevronLeft,
@@ -8,98 +9,106 @@ import {
   Box,
   Headset,
   ChartPie,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/sidebar-context";
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  href: string;
+}
+
+const MAIN_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/dashboard",
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: Box,
+    href: "/projects",
+  },
+  {
+    id: "support",
+    label: "Support",
+    icon: Headset,
+    href: "/support",
+  },
+  {
+    id: "billing",
+    label: "Billing",
+    icon: CreditCard,
+    href: "/payments",
+  },
+];
 
 export default function SideNav() {
   const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState<string>("projects");
+  const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useSidebar();
+  const [activeItem, setActiveItem] = useState<string>("");
 
-  const menuItems = [
-    // {
-    //   id: "ai",
-    //   label: "AI",
-    //   icon: Sparkle,
-    //   href: "/ai",
-    // },
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: ChartPie,
-      href: "/dashboard",
-    },
+  // Determine active item based on pathname
+  useEffect(() => {
+    if (!pathname) return;
 
-    {
-      id: "projects",
-      label: "Projects",
-      icon: Box,
-      href: "/projects",
-    },
-    // {
-    //   id: "content",
-    //   label: "Content",
-    //   icon: SquarePen,
-    //   href: "/content",
-    // },
-    // {
-    //   id: "pages",
-    //   label: "Pages",
-    //   icon: Monitor,
-    //   href: "/studio",
-    // },
-    // {
-    //   id: "process",
-    //   label: "Integrations",
-    //   icon: Plug,
-    //   href: "/process",
-    // },
-    // {
-    //   id: "model",`
-    //   label: "Models",
-    //   icon: Database,
-    //   href: "/model",
-    // },
-
-    {
-      id: "support",
-      label: "Support",
-      icon: Headset,
-      href: "/support",
-    },
-    // {
-    //   id: "teams",
-    //   label: "Teams",
-    //   icon: UsersRound,
-    //   href: "/teams",
-    // },
-    {
-      id: "billing",
-      label: "Billing",
-      icon: CreditCard,
-      href: "/payments",
-    },
-  ];
+    const mainItem = MAIN_MENU_ITEMS.find((item) =>
+      pathname.startsWith(item.href)
+    );
+    if (mainItem) setActiveItem(mainItem.id);
+  }, [pathname]);
 
   const handleItemClick = (itemId: string, href: string) => {
     setActiveItem(itemId);
     router.push(href);
   };
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
+  const renderMenuItem = (item: MenuItem) => {
+    const Icon = item.icon;
+    const isActive = activeItem === item.id;
+
+    return (
+      <li key={item.id}>
+        <Button
+          variant={isActive ? "secondary" : "ghost"}
+          className={cn(
+            "w-full justify-start h-10 px-3",
+            isActive && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+            isCollapsed && "justify-center px-0 w-10"
+          )}
+          onClick={() => handleItemClick(item.id, item.href)}
+        >
+          <Icon
+            className={cn(
+              "h-5 w-5 flex-shrink-0",
+              isActive && "text-blue-700",
+              !isCollapsed && "mr-3"
+            )}
+          />
+          {!isCollapsed && (
+            <span className="text-sm font-normal">{item.label}</span>
+          )}
+        </Button>
+      </li>
+    );
   };
 
   return (
     <div
       className={cn(
-        "relative bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out  z-50",
+        "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200">
+      <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <h2 className="text-xl font-semibold text-gray-900">Wraptron</h2>
@@ -107,8 +116,9 @@ export default function SideNav() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleCollapse}
+            onClick={toggleSidebar}
             className="h-8 w-8 p-0"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -119,49 +129,10 @@ export default function SideNav() {
         </div>
       </div>
 
-      {/* Menu Items */}
-      <nav className="p-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeItem === item.id;
-
-            return (
-              <li key={item.id}>
-                <Button
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start h-10px-3",
-                    isActive && "bg-blue-50 text-blue-700 hover:bg-blue-100",
-                    isCollapsed && "justify-center px-0  w-10 "
-                  )}
-                  onClick={() => handleItemClick(item.id, item.href)}
-                >
-                  <Icon
-                    className={cn(
-                      "h-5 w-5",
-                      isActive && "text-blue-700",
-                      !isCollapsed && "mr-3"
-                    )}
-                  />
-                  {!isCollapsed && (
-                    <span className="text-sm font-normal">{item.label}</span>
-                  )}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+      {/* Menu Items - Scrollable */}
+      <nav className="flex-1 overflow-y-auto p-4">
+        <ul className="space-y-2">{MAIN_MENU_ITEMS.map(renderMenuItem)}</ul>
       </nav>
-
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="absolute bottom-4 left-4 right-4">
-          {/* <div className="text-xs text-gray-500 text-center">
-            © 2024 Wraptron Studio
-          </div> */}
-        </div>
-      )}
     </div>
   );
 }

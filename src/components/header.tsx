@@ -14,24 +14,52 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
+import { GlobalSearch } from "@/components/global-search";
 
 export default function TopNavbar() {
+  const { user, logout } = useAuth();
   const [notificationCount, setNotificationCount] = useState(3);
 
   const handleNotificationClick = () => {
     setNotificationCount(0);
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
+  const getUserInitials = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "U";
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user?.first_name) {
+      return user.first_name;
+    }
+    return user?.email || "User";
+  };
+
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
+    <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40">
+      <div className="flex items-center justify-between w-full">
         {/* Left side - App name and mobile menu */}
         <div className="flex items-center space-x-4"></div>
 
         {/* Right side - Command, Notifications and Profile */}
         <div className="flex items-center space-x-4">
-          {/* Command control */}
-          <div></div>
+          {/* Global Search */}
+          <GlobalSearch />
+
           {/* Notifications */}
           <div className="relative">
             <Button
@@ -63,26 +91,33 @@ export default function TopNavbar() {
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/api/placeholder/32/32" alt="Profile" />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
+                  <p className="text-sm font-medium leading-none">
+                    {getUserDisplayName()}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    john.doe@example.com
+                    {user?.email || "No email"}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link href="/settings">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-600">
+              <DropdownMenuItem
+                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                onClick={handleLogout}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
