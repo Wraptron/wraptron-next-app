@@ -1,0 +1,638 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { adminApi, type AdminUser, type CreateAdminUserInput } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  RefreshCw,
+  Loader2,
+  Eye,
+  EyeOff,
+  Shield,
+} from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+
+const ROLES = [
+  "admin",
+  "user",
+  "sales",
+  "procurement",
+  "production_manager",
+  "quality",
+  "store",
+  "accounts",
+  "management",
+];
+
+const formatDate = (dateString?: string | null) => {
+  if (!dateString || dateString === null || dateString === "null") {
+    return "Never";
+  }
+  // Handle empty string
+  if (typeof dateString === "string" && dateString.trim() === "") {
+    return "Never";
+  }
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Never";
+    }
+    return date.toLocaleString();
+  } catch {
+    return "Never";
+  }
+};
+
+const getRoleColor = (role: string) => {
+  const colors: Record<string, string> = {
+    admin: "bg-purple-100 text-purple-800",
+    user: "bg-blue-100 text-blue-800",
+    sales: "bg-green-100 text-green-800",
+    procurement: "bg-yellow-100 text-yellow-800",
+    production_manager: "bg-orange-100 text-orange-800",
+    quality: "bg-red-100 text-red-800",
+    store: "bg-indigo-100 text-indigo-800",
+    accounts: "bg-pink-100 text-pink-800",
+    management: "bg-gray-100 text-gray-800",
+  };
+  return colors[role] || "bg-gray-100 text-gray-800";
+};
+
+export default function AdminUsersPage() {
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
+
+  // Dialog states
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Form states
+  const [formData, setFormData] = useState<CreateAdminUserInput & { is_active?: boolean }>({
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    phone_number: "",
+    role: "user",
+    is_active: true,
+  });
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getUsers({
+        search: search || undefined,
+        role: roleFilter !== "all" ? roleFilter : undefined,
+        is_active: statusFilter !== "all" ? statusFilter === "active" : undefined,
+        limit,
+        offset: page * limit,
+      });
+      setUsers(response.users);
+      setTotal(response.total);
+    } catch (err: any) {
+      setError(err?.message || "Failed to fetch users");
+      console.error("Error fetching users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [page, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(() => {
+      if (page === 0) {
+        fetchUsers();
+      } else {
+        setPage(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const handleCreate = async () => {
+    try {
+      setError(null);
+      await adminApi.createUser({
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.first_name || undefined,
+        last_name: formData.last_name || undefined,
+        phone_number: formData.phone_number || undefined,
+        role: formData.role,
+      });
+      setCreateDialogOpen(false);
+      resetForm();
+      fetchUsers();
+    } catch (err: any) {
+      setError(err?.message || "Failed to create user");
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedUser) return;
+    try {
+      setError(null);
+      await adminApi.updateUser(selectedUser.id, {
+        email: formData.email,
+        password: formData.password || undefined,
+        first_name: formData.first_name || undefined,
+        last_name: formData.last_name || undefined,
+        phone_number: formData.phone_number || undefined,
+        role: formData.role,
+        is_active: formData.is_active,
+      });
+      setEditDialogOpen(false);
+      resetForm();
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err?.message || "Failed to update user");
+    }
+  };
+
+  const handleDelete = async (userId: number) => {
+    if (!confirm("Are you sure you want to deactivate this user?")) return;
+    try {
+      setError(null);
+      await adminApi.deleteUser(userId);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete user");
+    }
+  };
+
+  const openEditDialog = (user: AdminUser) => {
+    setSelectedUser(user);
+    setFormData({
+      email: user.email,
+      password: "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      phone_number: user.phone_number || "",
+      role: user.role,
+      is_active: user.is_active,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      email: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      phone_number: "",
+      role: "user",
+      is_active: true,
+    });
+    setShowPassword(false);
+  };
+
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-gray-600 mt-1">Manage users, roles, and permissions</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter password"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="first_name">First Name</Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="phone_number">Phone Number</Label>
+                <Input
+                  id="phone_number"
+                  value={formData.phone_number}
+                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                  placeholder="+1234567890"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {error && (
+                <div className="text-red-600 text-sm">{error}</div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreate} disabled={!formData.email || !formData.password}>
+                  Create User
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search users..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {ROLES.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={fetchUsers}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+          {error}
+        </div>
+      )}
+
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Users ({total})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No users found
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.email}</TableCell>
+                        <TableCell>
+                          {user.first_name || user.last_name
+                            ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getRoleColor(user.role)}>
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                          >
+                            {user.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {formatDate(user.last_login)}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {formatDate(user.created_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(user)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {currentUser?.id !== user.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(user.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} users
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page >= totalPages - 1}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-email">Email *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="user@example.com"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
+              <div className="relative">
+                <Input
+                  id="edit-password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter new password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-first_name">First Name</Label>
+                <Input
+                  id="edit-first_name"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  placeholder="John"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-last_name">Last Name</Label>
+                <Input
+                  id="edit-last_name"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-phone_number">Phone Number</Label>
+              <Input
+                id="edit-phone_number"
+                value={formData.phone_number}
+                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                placeholder="+1234567890"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-role">Role *</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) => setFormData({ ...formData, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-is_active">Status</Label>
+              <Select
+                value={formData.is_active ? "active" : "inactive"}
+                onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {error && (
+              <div className="text-red-600 text-sm">{error}</div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEdit} disabled={!formData.email}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+

@@ -588,6 +588,21 @@ export interface Project {
   target_audience?: string;
   functional_requirements?: string;
   non_functional_requirements?: string;
+  other_service_description?: string;
+  ux_preference?: string;
+  technology_stack?: string;
+  business_objectives?: string;
+  kpi?: string;
+  target_users?: string;
+  project_references?: string;
+  support_coverage?: string;
+  support_engagement_model?: string[];
+  support_channels?: string[];
+  scheduled_review_calls?: string;
+  backup_frequency?: string;
+  backup_retention_period?: string;
+  reports_required?: string[];
+  incident_alerts?: string[];
   status: string;
   created_at: string;
   updated_at: string;
@@ -602,6 +617,21 @@ export interface CreateProjectInput {
   target_audience?: string;
   functional_requirements?: string;
   non_functional_requirements?: string;
+  other_service_description?: string;
+  ux_preference?: string;
+  technology_stack?: string;
+  business_objectives?: string;
+  kpi?: string;
+  target_users?: string;
+  project_references?: string;
+  support_coverage?: string;
+  support_engagement_model?: string[];
+  support_channels?: string[];
+  scheduled_review_calls?: string;
+  backup_frequency?: string;
+  backup_retention_period?: string;
+  reports_required?: string[];
+  incident_alerts?: string[];
   status?: string;
   tasks?: Array<{
     title: string;
@@ -670,6 +700,155 @@ export const projectsApi = {
     return fetchApi<void>(`/api/projects/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+// Admin User Management types and API
+export interface AdminUser {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role: string;
+  is_active: boolean;
+  last_login?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAdminUserInput {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role?: string;
+}
+
+export interface UpdateAdminUserInput extends Partial<CreateAdminUserInput> {
+  is_active?: boolean;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface Permission {
+  id: number;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+}
+
+export interface RolePermission {
+  role: string;
+  permissions: {
+    name: string;
+    description: string;
+    resource: string;
+    action: string;
+  }[];
+}
+
+export interface UserPermissions {
+  user_id: number;
+  role: string;
+  role_permissions: string[];
+  user_permissions: {
+    name: string;
+    granted: boolean;
+  }[];
+  effective_permissions: string[];
+}
+
+export const adminApi = {
+  // Get all users
+  getUsers: async (params?: {
+    search?: string;
+    role?: string;
+    is_active?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<AdminUsersResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.role) searchParams.append("role", params.role);
+    if (params?.is_active !== undefined) {
+      searchParams.append("is_active", params.is_active.toString());
+    }
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<AdminUsersResponse>(
+      `/api/admin/users${query ? `?${query}` : ""}`,
+    );
+  },
+
+  // Get user by ID
+  getUser: async (id: number): Promise<{ user: AdminUser }> => {
+    return fetchApi<{ user: AdminUser }>(`/api/admin/users/${id}`);
+  },
+
+  // Create user
+  createUser: async (data: CreateAdminUserInput): Promise<{ user: AdminUser }> => {
+    return fetchApi<{ user: AdminUser }>("/api/admin/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update user
+  updateUser: async (
+    id: number,
+    data: Partial<UpdateAdminUserInput>,
+  ): Promise<{ user: AdminUser }> => {
+    return fetchApi<{ user: AdminUser }>(`/api/admin/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete user
+  deleteUser: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/admin/users/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Get user permissions
+  getUserPermissions: async (id: number): Promise<UserPermissions> => {
+    return fetchApi<UserPermissions>(`/api/admin/users/${id}/permissions`);
+  },
+
+  // Get all permissions
+  getPermissions: async (): Promise<{ permissions: Permission[] }> => {
+    return fetchApi<{ permissions: Permission[] }>("/api/admin/permissions");
+  },
+
+  // Get all roles with permissions
+  getRoles: async (): Promise<{ roles: RolePermission[] }> => {
+    return fetchApi<{ roles: RolePermission[] }>("/api/admin/roles");
+  },
+
+  // Assign permissions to role
+  assignRolePermissions: async (
+    role: string,
+    permissionIds: number[],
+  ): Promise<{ message: string; role: string; permission_count: number }> => {
+    return fetchApi<{ message: string; role: string; permission_count: number }>(
+      `/api/admin/roles/${role}/permissions`,
+      {
+        method: "POST",
+        body: JSON.stringify({ permission_ids: permissionIds }),
+      },
+    );
   },
 };
 

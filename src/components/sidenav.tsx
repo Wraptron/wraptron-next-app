@@ -9,11 +9,13 @@ import {
   Box,
   Headset,
   ChartPie,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
+import { useAuth } from "@/contexts/auth-context";
 
 interface MenuItem {
   id: string;
@@ -49,21 +51,34 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+const ADMIN_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "admin-users",
+    label: "User Management",
+    icon: Shield,
+    href: "/admin/users",
+  },
+];
+
 export default function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { user } = useAuth();
   const [activeItem, setActiveItem] = useState<string>("");
+  
+  const isAdmin = user?.role === "admin";
+  const menuItems = isAdmin ? [...MAIN_MENU_ITEMS, ...ADMIN_MENU_ITEMS] : MAIN_MENU_ITEMS;
 
   // Determine active item based on pathname
   useEffect(() => {
     if (!pathname) return;
 
-    const mainItem = MAIN_MENU_ITEMS.find((item) =>
+    const mainItem = menuItems.find((item) =>
       pathname.startsWith(item.href)
     );
     if (mainItem) setActiveItem(mainItem.id);
-  }, [pathname]);
+  }, [pathname, menuItems]);
 
   const handleItemClick = (itemId: string, href: string) => {
     setActiveItem(itemId);
@@ -131,7 +146,21 @@ export default function SideNav() {
 
       {/* Menu Items - Scrollable */}
       <nav className="flex-1 overflow-y-auto p-4">
-        <ul className="space-y-2">{MAIN_MENU_ITEMS.map(renderMenuItem)}</ul>
+        <ul className="space-y-2">
+          {MAIN_MENU_ITEMS.map(renderMenuItem)}
+          {isAdmin && (
+            <>
+              <li className="pt-4 pb-2">
+                {!isCollapsed && (
+                  <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Administration
+                  </div>
+                )}
+              </li>
+              {ADMIN_MENU_ITEMS.map(renderMenuItem)}
+            </>
+          )}
+        </ul>
       </nav>
     </div>
   );

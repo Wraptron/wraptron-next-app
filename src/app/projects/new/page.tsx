@@ -15,51 +15,60 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Plus,
-  Trash2,
-  Loader2,
-  ArrowLeft,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
+import { Loader2, ArrowLeft, ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-}
-
 const SERVICE_OPTIONS = [
-  "website",
-  "web app",
-  "mobile app",
-  "social media",
-  "business email",
-  "hosting",
+  "Business Website",
+  "E-Commerce Website",
+  "Lead Generation Website",
+  "Portfolio/Casestudy Website",
+  "Custom Application Development",
+  "Maintainence and Hosting",
+  "Other",
 ] as const;
 
 type ServiceOption = (typeof SERVICE_OPTIONS)[number];
 
+const SERVICE_DESCRIPTIONS: Record<ServiceOption, string> = {
+  "Business Website":
+    "Professional website for your business with company information, services, and contact details",
+  "E-Commerce Website":
+    "Online store with product catalog, shopping cart, and payment integration",
+  "Lead Generation Website":
+    "Website designed to capture and convert visitors into leads and customers",
+  "Portfolio/Casestudy Website":
+    "Showcase your work, projects, and achievements with case studies and testimonials for your customers to experience your service or proudct",
+  "Custom Application Development":
+    "Tailored software solutions built to meet your specific business needs",
+  "Maintainence and Hosting":
+    "Ongoing website maintenance, updates, and hosting services",
+  Other: "Specify a custom service not listed above",
+};
+
 interface ProjectFormData {
   project_name: string;
-  services_offered: ServiceOption[];
+  services_offered: ServiceOption | null;
+  other_service_description: string;
   planned_date: string;
   target_date: string;
+  ux_preference: string;
   target_audience: string;
   functional_requirements: string;
   non_functional_requirements: string;
-  tasks: Task[];
+  technology_stack: string;
+  business_objectives: string;
+  kpi: string;
+  target_users: string;
+  references: string;
+  support_coverage: string;
+  support_engagement_model: string[];
+  support_channels: string[];
+  scheduled_review_calls: string;
+  backup_frequency: string;
+  backup_retention_period: string;
+  reports_required: string[];
+  incident_alerts: string[];
 }
 
 export default function NewProjectPage() {
@@ -70,55 +79,52 @@ export default function NewProjectPage() {
 
   const [formData, setFormData] = useState<ProjectFormData>({
     project_name: "",
-    services_offered: [],
+    services_offered: null,
+    other_service_description: "",
     planned_date: new Date().toISOString().split("T")[0],
     target_date: "",
+    ux_preference: "",
     target_audience: "",
     functional_requirements: "",
     non_functional_requirements: "",
-    tasks: [],
+    technology_stack: "",
+    business_objectives: "",
+    kpi: "",
+    target_users: "",
+    references: "",
+    support_coverage: "",
+    support_engagement_model: [],
+    support_channels: [],
+    scheduled_review_calls: "",
+    backup_frequency: "",
+    backup_retention_period: "",
+    reports_required: [],
+    incident_alerts: [],
   });
-
-  const addTask = () => {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: "",
-      description: "",
-      status: "pending",
-    };
-    setFormData({
-      ...formData,
-      tasks: [...formData.tasks, newTask],
-    });
-  };
-
-  const removeTask = (taskId: string) => {
-    setFormData({
-      ...formData,
-      tasks: formData.tasks.filter((task) => task.id !== taskId),
-    });
-  };
-
-  const updateTask = (taskId: string, field: keyof Task, value: string) => {
-    setFormData({
-      ...formData,
-      tasks: formData.tasks.map((task) =>
-        task.id === taskId ? { ...task, [field]: value } : task
-      ),
-    });
-  };
 
   const validatePage1 = (): boolean => {
     if (!formData.project_name.trim()) {
       setError("Project name is required");
       return false;
     }
-    if (formData.services_offered.length === 0) {
-      setError("Please select at least one service");
+    if (!formData.services_offered) {
+      setError("Please select a service");
       return false;
     }
-    if (!formData.target_date) {
-      setError("Target date is required");
+    if (
+      formData.services_offered === "Other" &&
+      !formData.other_service_description.trim()
+    ) {
+      setError("Please provide a description for the 'Other' service");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validatePage4 = (): boolean => {
+    if (!formData.support_coverage) {
+      setError("Please select a Preferred Support Coverage option");
       return false;
     }
     return true;
@@ -129,7 +135,7 @@ export default function NewProjectPage() {
     if (currentPage === 1 && !validatePage1()) {
       return;
     }
-    if (currentPage < 3) {
+    if (currentPage < 4) {
       setCurrentPage(currentPage + 1);
     }
   };
@@ -143,6 +149,20 @@ export default function NewProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    // Only submit if we're on the last page (page 4)
+    if (currentPage !== 4) {
+      // If not on last page, just go to next page and prevent any submission
+      handleNext();
+      return;
+    }
+
+    // Double check we're on page 4 before proceeding
+    if (currentPage !== 4) {
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -151,22 +171,39 @@ export default function NewProjectPage() {
       setLoading(false);
       return;
     }
+    if (!validatePage4()) {
+      setLoading(false);
+      return;
+    }
 
     try {
       // Prepare project data for REST API
       const projectData = {
         project_name: formData.project_name,
-        services_offered: formData.services_offered,
+        services_offered: formData.services_offered
+          ? [formData.services_offered]
+          : [],
+        other_service_description:
+          formData.other_service_description || undefined,
         start_date: formData.planned_date,
         target_date: formData.target_date,
+        ux_preference: formData.ux_preference,
         target_audience: formData.target_audience,
         functional_requirements: formData.functional_requirements,
         non_functional_requirements: formData.non_functional_requirements,
-        tasks: formData.tasks.map((task) => ({
-          title: task.title,
-          description: task.description,
-          status: task.status,
-        })),
+        technology_stack: formData.technology_stack,
+        business_objectives: formData.business_objectives,
+        kpi: formData.kpi,
+        target_users: formData.target_users,
+        project_references: formData.references,
+        support_coverage: formData.support_coverage,
+        support_engagement_model: formData.support_engagement_model,
+        support_channels: formData.support_channels,
+        scheduled_review_calls: formData.scheduled_review_calls,
+        backup_frequency: formData.backup_frequency,
+        backup_retention_period: formData.backup_retention_period,
+        reports_required: formData.reports_required,
+        incident_alerts: formData.incident_alerts,
       };
 
       // Create project using REST API
@@ -244,7 +281,7 @@ export default function NewProjectPage() {
               >
                 2
               </div>
-              <span className="ml-2 font-medium">Requirements</span>
+              <span className="ml-2 font-medium">Objectives</span>
             </div>
             <div
               className={`h-0.5 w-16 ${
@@ -260,17 +297,52 @@ export default function NewProjectPage() {
                 className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                   currentPage >= 3
                     ? "bg-blue-600 border-blue-600 text-white"
+                    : currentPage > 3
+                    ? "bg-blue-600 border-blue-600 text-white"
                     : "border-gray-300"
                 }`}
               >
                 3
               </div>
-              <span className="ml-2 font-medium">Tasks</span>
+              <span className="ml-2 font-medium">Product Experience</span>
+            </div>
+            <div
+              className={`h-0.5 w-16 ${
+                currentPage >= 4 ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            />
+            <div
+              className={`flex items-center ${
+                currentPage >= 4 ? "text-blue-600" : "text-gray-400"
+              }`}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                  currentPage >= 4
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "border-gray-300"
+                }`}
+              >
+                4
+              </div>
+              <span className="ml-2 font-medium">Support</span>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            // Prevent form submission on Enter key unless we're on page 4
+            if (e.key === "Enter" && currentPage !== 4) {
+              e.preventDefault();
+              // If on page 3, navigate to page 4 instead
+              if (currentPage === 3) {
+                handleNext();
+              }
+            }
+          }}
+        >
           {/* Page 1: Basic Information */}
           {currentPage === 1 && (
             <div className="space-y-6">
@@ -299,10 +371,10 @@ export default function NewProjectPage() {
 
                   <div>
                     <Label>Services Offered</Label>
-                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                       {SERVICE_OPTIONS.map((service) => {
                         const isSelected =
-                          formData.services_offered.includes(service);
+                          formData.services_offered === service;
                         return (
                           <button
                             key={service}
@@ -311,18 +383,18 @@ export default function NewProjectPage() {
                               if (isSelected) {
                                 setFormData({
                                   ...formData,
-                                  services_offered:
-                                    formData.services_offered.filter(
-                                      (s) => s !== service
-                                    ),
+                                  services_offered: null,
+                                  ...(service === "Other" && {
+                                    other_service_description: "",
+                                  }),
                                 });
                               } else {
                                 setFormData({
                                   ...formData,
-                                  services_offered: [
-                                    ...formData.services_offered,
-                                    service,
-                                  ],
+                                  services_offered: service,
+                                  ...(service !== "Other" && {
+                                    other_service_description: "",
+                                  }),
                                 });
                               }
                             }}
@@ -337,38 +409,77 @@ export default function NewProjectPage() {
                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                             `}
                           >
-                            <div className="flex items-center justify-between">
-                              <span
-                                className={`text-sm font-medium capitalize ${
-                                  isSelected ? "text-blue-900" : "text-gray-700"
-                                }`}
-                              >
-                                {service}
-                              </span>
-                              {isSelected && (
-                                <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                                  <svg
-                                    className="h-3 w-3 text-white"
-                                    fill="none"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span
+                                    className={`text-sm font-medium capitalize ${
+                                      isSelected
+                                        ? "text-blue-900"
+                                        : "text-gray-700"
+                                    }`}
                                   >
-                                    <path d="M5 13l4 4L19 7"></path>
-                                  </svg>
+                                    {service}
+                                  </span>
+                                  {isSelected && (
+                                    <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                                      <svg
+                                        className="h-3 w-3 text-white"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                      >
+                                        <path d="M5 13l4 4L19 7"></path>
+                                      </svg>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                                <p
+                                  className={`text-xs mt-1 ${
+                                    isSelected
+                                      ? "text-blue-700"
+                                      : "text-gray-500"
+                                  }`}
+                                >
+                                  {SERVICE_DESCRIPTIONS[service]}
+                                </p>
+                              </div>
                             </div>
                           </button>
                         );
                       })}
                     </div>
-                    {formData.services_offered.length === 0 && (
+                    {!formData.services_offered && (
                       <p className="text-sm text-gray-500 mt-2">
-                        Select at least one service
+                        Select a service
                       </p>
+                    )}
+                    {formData.services_offered === "Other" && (
+                      <div className="mt-4">
+                        <Label htmlFor="other_service_description">
+                          Please describe the "Other" service{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="other_service_description"
+                          value={formData.other_service_description}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              other_service_description: e.target.value,
+                            })
+                          }
+                          placeholder="Enter description of the custom service"
+                          className="mt-2"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Provide details about the custom service you need
+                        </p>
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -396,9 +507,7 @@ export default function NewProjectPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="target_date">
-                        Target Date <span className="text-red-500">*</span>
-                      </Label>
+                      <Label htmlFor="target_date">Target Date</Label>
                       <Input
                         id="target_date"
                         type="date"
@@ -418,8 +527,108 @@ export default function NewProjectPage() {
             </div>
           )}
 
-          {/* Page 2: Requirements */}
+          {/* Page 2: Objectives */}
           {currentPage === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Objectives</CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Define your business objectives, goals, target users, and
+                  references
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="business_objectives">
+                    Project Objectives
+                  </Label>
+                  <Textarea
+                    id="business_objectives"
+                    value={formData.business_objectives}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        business_objectives: e.target.value,
+                      })
+                    }
+                    placeholder="# Business Objectives&#10;&#10;## Primary Goals&#10;- Increase online presence&#10;- Generate more leads&#10;- Improve customer engagement&#10;&#10;## Success Metrics&#10;- Target 30% increase in conversions&#10;- Reach 10,000 monthly visitors"
+                    rows={10}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Describe the main business objectives and goals for this
+                    project
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="kpi">Goals</Label>
+                  <Textarea
+                    id="kpi"
+                    value={formData.kpi}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        kpi: e.target.value,
+                      })
+                    }
+                    placeholder="# SMART Goals and KPIs&#10;&#10;## Specific&#10;- Increase monthly sign-ups by 25%&#10;&#10;## Measurable&#10;- Track conversion rate (target: 5%)&#10;&#10;## Achievable&#10;- Improve page load time to &lt; 2 seconds&#10;&#10;## Relevant&#10;- Align with Q4 business targets&#10;&#10;## Time-bound&#10;- Achieve goals within 6 months&#10;&#10;## Key Performance Indicators&#10;- User engagement rate&#10;- Conversion rate&#10;- Customer satisfaction score"
+                    rows={12}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Define Specific, Measurable, Achievable, Relevant, and
+                    Time-bound goals along with Key Performance Indicators
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="target_users">Target Users</Label>
+                  <Textarea
+                    id="target_users"
+                    value={formData.target_users}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        target_users: e.target.value,
+                      })
+                    }
+                    placeholder="# Target Users&#10;&#10;## Primary Audience&#10;- Age: 25-45&#10;- Occupation: Small business owners&#10;- Location: Urban areas&#10;- Tech-savviness: Moderate&#10;&#10;## User Personas&#10;&#10;### Persona 1: The Entrepreneur&#10;- Demographics: 30-40 years old, business owner&#10;- Goals: Grow online presence, attract customers&#10;- Pain points: Limited time, budget constraints&#10;&#10;### Persona 2: The Marketing Manager&#10;- Demographics: 28-35 years old, marketing professional&#10;- Goals: Generate leads, track performance&#10;- Pain points: Need data-driven insights"
+                    rows={12}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Describe your target users, including demographics,
+                    personas, goals, and pain points
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="references">References</Label>
+                  <Textarea
+                    id="references"
+                    value={formData.references}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        references: e.target.value,
+                      })
+                    }
+                    placeholder="# References&#10;&#10;## Design Inspiration&#10;- Website: https://example.com/design&#10;- App: https://example.com/app&#10;&#10;## Competitor Analysis&#10;- Competitor 1: https://competitor1.com&#10;- Competitor 2: https://competitor2.com&#10;&#10;## Brand Guidelines&#10;- Brand colors: #FF5733, #33C3F0&#10;- Typography: Inter, Roboto&#10;&#10;## Additional Resources&#10;- Documentation: https://docs.example.com&#10;- Style guide: https://style.example.com"
+                    rows={10}
+                    className="font-mono text-sm h-80"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Add links to design inspirations, competitor websites, brand
+                    guidelines, or any other relevant references
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Page 3: Product Experience */}
+          {currentPage === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle>Requirements</CardTitle>
@@ -429,17 +638,17 @@ export default function NewProjectPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="target_audience">Target Audience</Label>
+                  <Label htmlFor="ux_preference">UX Design Preference</Label>
                   <Textarea
-                    id="target_audience"
-                    value={formData.target_audience}
+                    id="ux_preference"
+                    value={formData.ux_preference}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        target_audience: e.target.value,
+                        ux_preference: e.target.value,
                       })
                     }
-                    placeholder="# Target Audience&#10;&#10;Describe the target audience for this project using Markdown..."
+                    placeholder="#UX Design Preferences  ## 1. Describe the design choices for this project..."
                     rows={8}
                     className="font-mono text-sm"
                   />
@@ -464,7 +673,7 @@ export default function NewProjectPage() {
                     }
                     placeholder="# Functional Requirements&#10;&#10;## Feature 1&#10;- Requirement 1&#10;- Requirement 2&#10;&#10;## Feature 2&#10;- Requirement 1"
                     rows={12}
-                    className="font-mono text-sm"
+                    className="font-mono text-sm h-80"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Use Markdown to structure your functional requirements
@@ -486,119 +695,294 @@ export default function NewProjectPage() {
                     }
                     placeholder="# Non-Functional Requirements&#10;&#10;## Performance&#10;- Response time &lt; 2 seconds&#10;&#10;## Security&#10;- SSL/TLS encryption required&#10;&#10;## Scalability&#10;- Support 10,000+ concurrent users"
                     rows={12}
-                    className="font-mono text-sm"
+                    className="font-mono text-sm h-80"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Document performance, security, scalability, and other
                     non-functional requirements
                   </p>
                 </div>
+
+                <div>
+                  <Label htmlFor="technology_stack">Technology Stack</Label>
+                  <Textarea
+                    id="technology_stack"
+                    value={formData.technology_stack}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        technology_stack: e.target.value,
+                      })
+                    }
+                    placeholder="# Technology Stack&#10;&#10;## Frontend&#10;- Framework: React, Next.js&#10;- UI Library: Tailwind CSS, shadcn/ui&#10;- State Management: Zustand, Redux&#10;&#10;## Backend&#10;- Runtime: Node.js, Deno&#10;- Framework: Express, Hono&#10;- Database: PostgreSQL, Supabase&#10;&#10;## Infrastructure&#10;- Hosting: Vercel, AWS&#10;- CI/CD: GitHub Actions&#10;- Monitoring: Sentry&#10;&#10;## Third-party Services&#10;- Authentication: Auth0, Clerk&#10;- Payments: Stripe&#10;- Analytics: PostHog"
+                    rows={12}
+                    className="font-mono text-sm h-80"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Specify the technologies, frameworks, libraries, and tools
+                    to be used in this project
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Page 3: Tasks */}
-          {currentPage === 3 && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Tasks</h3>
-                <Button
-                  type="button"
-                  onClick={addTask}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Task
-                </Button>
-              </div>
-              {formData.tasks.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 text-sm">
-                    No tasks added yet. Click "Add Task" to get started.
-                  </p>
+          {/* Page 4: Support */}
+          {currentPage === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Support Configuration</CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Configure support coverage, engagement models, and
+                  communication preferences
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* 1. Preferred Support Coverage */}
+                <div>
+                  <Label>
+                    Preferred Support Coverage{" "}
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="mt-2 space-y-2">
+                    {[
+                      "Standard Support (Mon–Fri, 9:00 AM – 6:00 PM IST)",
+                      "Extended Support (7 days a week, 9:00 AM – 9:00 PM IST)",
+                      "24/7 Critical Support (For mission-critical systems)",
+                    ].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="support_coverage"
+                          value={option}
+                          checked={formData.support_coverage === option}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              support_coverage: e.target.value,
+                            })
+                          }
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-gray-700">{option}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="rounded-md border bg-white">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[200px]">Title</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="w-[150px]">Status</TableHead>
-                        <TableHead className="w-[80px] text-center">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {formData.tasks.map((task) => (
-                        <TableRow key={task.id} className="hover:bg-gray-50/50">
-                          <TableCell className="py-2">
-                            <Input
-                              value={task.title}
-                              onChange={(e) =>
-                                updateTask(task.id, "title", e.target.value)
-                              }
-                              placeholder="Enter task title"
-                              className="h-9 border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-offset-0"
-                            />
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Textarea
-                              value={task.description}
-                              onChange={(e) =>
-                                updateTask(
-                                  task.id,
-                                  "description",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Enter task description"
-                              rows={2}
-                              className="min-h-[60px] border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-offset-0 resize-none"
-                            />
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) =>
-                                updateTask(task.id, "status", value)
-                              }
-                            >
-                              <SelectTrigger className="h-9 border-0 bg-transparent focus:ring-1 focus:ring-offset-0">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="in_progress">
-                                  In Progress
-                                </SelectItem>
-                                <SelectItem value="completed">
-                                  Completed
-                                </SelectItem>
-                                <SelectItem value="blocked">Blocked</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="py-2 text-center">
-                            <Button
-                              type="button"
-                              onClick={() => removeTask(task.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+
+                {/* 4. Scheduled Review Calls */}
+                <div>
+                  <Label htmlFor="scheduled_review_calls">
+                    Scheduled Review Calls
+                  </Label>
+                  <Select
+                    value={formData.scheduled_review_calls}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        scheduled_review_calls: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select review call frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                      <SelectItem value="BiWeekly">BiWeekly</SelectItem>
+                      <SelectItem value="Monthly">Monthly</SelectItem>
+                      <SelectItem value="Quarterly">Quarterly</SelectItem>
+                      <SelectItem value="Annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
+
+                {/* 6. Backup & Disaster Recovery */}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Backup & Disaster Recovery</Label>
+                  </div>
+                  <div>
+                    <Label htmlFor="backup_frequency" className="text-sm">
+                      Frequency
+                    </Label>
+                    <Select
+                      value={formData.backup_frequency}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          backup_frequency: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Select backup frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Daily">Daily</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                        <SelectItem value="Custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="backup_retention_period"
+                      className="text-sm"
+                    >
+                      Retention Period
+                    </Label>
+                    <Select
+                      value={formData.backup_retention_period}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          backup_retention_period: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Select retention period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7 Days">7 Days</SelectItem>
+                        <SelectItem value="30 Days">30 Days</SelectItem>
+                        <SelectItem value="90 Days">90 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* 7. Reports Required */}
+                <div>
+                  <Label>Reports Required</Label>
+                  <div className="mt-2 space-y-2">
+                    {[
+                      "SLA compliance report",
+                      "Ticket resolution report",
+                      "KPI Performance metrics",
+                      "Improvement recommendations",
+                    ].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.reports_required.includes(option)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                reports_required: [
+                                  ...formData.reports_required,
+                                  option,
+                                ],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                reports_required:
+                                  formData.reports_required.filter(
+                                    (item) => item !== option
+                                  ),
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-gray-700">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {/* 3. Support Channels Required */}
+                <div>
+                  <Label>Support Channels Required</Label>
+                  <div className="mt-2 space-y-2">
+                    {[
+                      "Email Support",
+                      "Ticketing System (Zoho Desk / Freshdesk / Jira)",
+                      "WhatsApp / Phone",
+                      "Wraptron Studio",
+                    ].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.support_channels.includes(option)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                support_channels: [
+                                  ...formData.support_channels,
+                                  option,
+                                ],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                support_channels:
+                                  formData.support_channels.filter(
+                                    (item) => item !== option
+                                  ),
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-gray-700">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 8. Incident Alerts & Notifications */}
+                <div>
+                  <Label>Incident Alerts & Notifications</Label>
+                  <div className="mt-2 space-y-2">
+                    {["Email", "Whatsapp", "Dashboard", "SMS"].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.incident_alerts.includes(option)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                incident_alerts: [
+                                  ...formData.incident_alerts,
+                                  option,
+                                ],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                incident_alerts:
+                                  formData.incident_alerts.filter(
+                                    (item) => item !== option
+                                  ),
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-gray-700">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Navigation Buttons */}
@@ -621,13 +1005,30 @@ export default function NewProjectPage() {
                   Cancel
                 </Button>
               </Link>
-              {currentPage < 3 ? (
-                <Button type="button" onClick={handleNext}>
+              {currentPage < 4 ? (
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNext();
+                  }}
+                >
                   Next
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={loading}>
+                <Button
+                  type="submit"
+                  disabled={loading || currentPage !== 4}
+                  onClick={(e) => {
+                    if (currentPage !== 4) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                  }}
+                >
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
