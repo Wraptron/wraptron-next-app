@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/protected-route";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/contexts/auth-context";
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
+import { PageTitleProvider } from "@/contexts/page-title-context";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -14,6 +15,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar();
   const pathname = usePathname();
 
+  // Public routes (no sidebar/header)
   if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
     return (
       <main className="h-screen w-screen overflow-auto">
@@ -24,19 +26,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
         </div>
       </main>
     );
-  } else if (pathname.startsWith("/settings")) {
-    return (
-      <main className="h-screen w-screen overflow-hidden">
-        <div className="flex flex-row h-full">
-          <div className="flex flex-col w-full h-full">
-            <Header />
-            <div className="flex-1 overflow-y-auto ml-20 mr-4 mt-4">{children}</div>
-          </div>
-        </div>
-      </main>
-    );
   }
 
+  // Protected routes (with sidebar and header)
   return (
     <main className="h-screen w-screen overflow-hidden">
       <SideNav />
@@ -62,13 +54,15 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="h-full overflow-hidden">
         <AuthProvider>
           <ProtectedRoute>
-            <SidebarProvider>
-              <MainContent>{children}</MainContent>
-            </SidebarProvider>
+            <PageTitleProvider>
+              <SidebarProvider>
+                <MainContent>{children}</MainContent>
+              </SidebarProvider>
+            </PageTitleProvider>
           </ProtectedRoute>
         </AuthProvider>
       </body>

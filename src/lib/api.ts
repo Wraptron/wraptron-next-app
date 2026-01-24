@@ -1,5 +1,466 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+class ApiError extends Error {
+  constructor(message: string, public status: number, public data?: unknown) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("auth_token");
+}
+
+// Set auth token in localStorage
+export function setAuthToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem("auth_token", token);
+  } else {
+    localStorage.removeItem("auth_token");
+  }
+}
+
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const token = getAuthToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+
+  // Add auth token if available
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Add timeout and better error handling
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    // Handle abort (timeout)
+    if (error.name === "AbortError") {
+      throw new ApiError(
+        "Request timeout. The server took too long to respond.",
+        408,
+        { timeout: true }
+      );
+    }
+    
+    // Handle network errors
+    if (error.message?.includes("Failed to fetch") || error.message?.includes("Broken pipe")) {
+      throw new ApiError(
+        `Network error: Cannot connect to server at ${API_BASE_URL}. Please ensure the backend is running.`,
+        0,
+        { networkError: true, originalError: error.message }
+      );
+    }
+    
+    throw error;
+  }
+
+  if (!response.ok) {
+    // If unauthorized, clear token and redirect to login
+    if (response.status === 401) {
+      setAuthToken(null);
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/signup")
+      ) {
+        window.location.href = "/login";
+      }
+    }
+
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+      [key: string]: unknown;
+    };
+    throw new ApiError(
+      errorData.error || errorData.message || "An error occurred",
+      response.status,
+      errorData
+    );
+  }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Authentication Types and API
+// ============================================================================
+
+export interface User {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role: string;
+}
+
+export interface SignupInput {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role?: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export const authApi = {
+  // Sign up a new user
+  signup: async (data: SignupInput): Promise<AuthResponse> => {
+    return fetchApi<AuthResponse>("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Login user
+  login: async (data: LoginInput): Promise<AuthResponse> => {
+    return fetchApi<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Get current user
+  getMe: async (): Promise<{ user: User }> => {
+    return fetchApi<{ user: User }>("/api/auth/me");
+  },
+
+  // Verify token
+  verify: async (): Promise<{ user: User; valid: boolean }> => {
+    return fetchApi<{ user: User; valid: boolean }>("/api/auth/verify", {
+      method: "POST",
+    });
+  },
+
+  // Logout (client-side only)
+  logout: (): void => {
+    setAuthToken(null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  },
+};
+
+// ============================================================================
+// Projects Types and API
+// ============================================================================
+
+export interface Task {
+  id: number;
+  project_id: number;
+  title: string;
+  description?: string;
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  priority?: string;
+  complexity?: string;
+  story_points?: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Project {
+  id: number;
+  project_name: string;
+  services_offered: string[];
+  start_date?: string;
+  target_date?: string;
+  target_audience?: string;
+  functional_requirements?: string;
+  non_functional_requirements?: string;
+  other_service_description?: string;
+  ux_preference?: string;
+  pages_views?: string[];
+  technology_stack?: string;
+  business_objectives?: string[];
+  kpi?: string;
+  target_users?: string;
+  project_references?: string;
+  support_coverage?: string;
+  support_engagement_model?: string[];
+  support_channels?: string[];
+  scheduled_review_calls?: string;
+  backup_frequency?: string;
+  backup_retention_period?: string;
+  reports_required?: string[];
+  incident_alerts?: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+  tasks?: Task[];
+}
+
+export interface CreateProjectInput {
+  project_name: string;
+  services_offered?: string[];
+  start_date?: string;
+  target_date?: string;
+  target_audience?: string;
+  functional_requirements?: string;
+  non_functional_requirements?: string;
+  other_service_description?: string;
+  ux_preference?: string;
+  pages_views?: string[];
+  technology_stack?: string;
+  business_objectives?: string[];
+  kpi?: string;
+  target_users?: string;
+  project_references?: string;
+  support_coverage?: string;
+  support_engagement_model?: string[];
+  support_channels?: string[];
+  scheduled_review_calls?: string;
+  backup_frequency?: string;
+  backup_retention_period?: string;
+  reports_required?: string[];
+  incident_alerts?: string[];
+  status?: string;
+  tasks?: Array<{
+    title: string;
+    description?: string;
+    status?: string;
+  }>;
+}
+
+export interface ProjectsResponse {
+  data: Project[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const projectsApi = {
+  // Get all projects with optional filters
+  getAll: async (params?: {
+    search?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ProjectsResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<ProjectsResponse>(
+      `/api/projects${query ? `?${query}` : ""}`
+    );
+  },
+
+  // Get single project by ID
+  getById: async (id: number): Promise<Project> => {
+    return fetchApi<Project>(`/api/projects/${id}`);
+  },
+
+  // Create new project
+  create: async (data: CreateProjectInput): Promise<Project> => {
+    return fetchApi<Project>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update project
+  update: async (
+    id: number,
+    data: Partial<CreateProjectInput>
+  ): Promise<Project> => {
+    return fetchApi<Project>(`/api/projects/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete project
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/projects/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Get available objectives
+  getObjectives: async (): Promise<{ objectives: string[] }> => {
+    return fetchApi<{ objectives: string[] }>("/api/projects/objectives");
+  },
+
+  // Create task for project
+  createTask: async (projectId: number, data: { title: string; description?: string; status?: string }): Promise<Task> => {
+    return fetchApi<Task>(`/api/projects/${projectId}/tasks`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+
+  // Update task
+  updateTask: async (projectId: number, taskId: number, data: Partial<Task>): Promise<Task> => {
+    return fetchApi<Task>(`/api/projects/${projectId}/tasks/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ============================================================================
+// Integrations Types and API
+// ============================================================================
+
+export interface GitHubCommit {
+  sha: string;
+  commit: {
+    author: {
+      name: string;
+      email: string;
+      date: string;
+    };
+    message: string;
+  };
+  author: {
+    login: string;
+    avatar_url: string;
+  } | null;
+  html_url: string;
+}
+
+export interface Integration {
+  id: number;
+  project_id: number;
+  integration_type: string;
+  config: {
+    repo_owner?: string;
+    repo_name?: string;
+    access_token?: string;
+    branch?: string;
+    [key: string]: unknown;
+  };
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateIntegrationInput {
+  integration_type: string;
+  config: {
+    repo_owner?: string;
+    repo_name?: string;
+    access_token?: string;
+    branch?: string;
+    [key: string]: unknown;
+  };
+  is_active?: boolean;
+}
+
+export interface IntegrationsResponse {
+  data: Integration[];
+  total: number;
+}
+
+export interface CommitsResponse {
+  data: GitHubCommit[];
+  total: number;
+  repository: {
+    owner: string;
+    name: string;
+    branch: string;
+  };
+}
+
+export const integrationsApi = {
+  // Get all integrations for a project
+  getAll: async (projectId: number): Promise<IntegrationsResponse> => {
+    return fetchApi<IntegrationsResponse>(`/api/projects/${projectId}/integrations`);
+  },
+
+  // Get specific integration
+  getById: async (projectId: number, integrationId: number): Promise<Integration> => {
+    return fetchApi<Integration>(`/api/projects/${projectId}/integrations/${integrationId}`);
+  },
+
+  // Create or update integration
+  save: async (projectId: number, data: CreateIntegrationInput): Promise<Integration> => {
+    return fetchApi<Integration>(`/api/projects/${projectId}/integrations`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete integration
+  delete: async (projectId: number, integrationId: number): Promise<void> => {
+    return fetchApi<void>(`/api/projects/${projectId}/integrations/${integrationId}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Test GitHub connection
+  testGitHub: async (data: { repo_owner: string; repo_name: string; access_token?: string }): Promise<{
+    success: boolean;
+    repository?: {
+      name: string;
+      full_name: string;
+      description: string;
+      default_branch: string;
+      private: boolean;
+    };
+    error?: string;
+    details?: string;
+  }> => {
+    return fetchApi(`/api/integrations/github/test`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Get GitHub commits
+  getGitHubCommits: async (projectId: number): Promise<CommitsResponse> => {
+    return fetchApi<CommitsResponse>(`/api/projects/${projectId}/integrations/github/commits`);
+  },
+};
+
+// ============================================================================
+// Customers Types and API
+// ============================================================================
+
 export interface Customer {
   id: number;
   customer_code: string;
@@ -33,10 +494,6 @@ export interface CreateCustomerInput {
   contact_person?: string;
 }
 
-export interface UpdateCustomerInput extends Partial<CreateCustomerInput> {
-  id: number;
-}
-
 export interface CustomersResponse {
   data: Customer[];
   total: number;
@@ -44,85 +501,7 @@ export interface CustomersResponse {
   offset: number;
 }
 
-class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public data?: unknown,
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
-
-// Get auth token from localStorage
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("auth_token");
-}
-
-// Set auth token in localStorage
-export function setAuthToken(token: string | null): void {
-  if (typeof window === "undefined") return;
-  if (token) {
-    localStorage.setItem("auth_token", token);
-  } else {
-    localStorage.removeItem("auth_token");
-  }
-}
-
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit,
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const token = getAuthToken();
-  
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string> | undefined),
-  };
-  
-  // Add auth token if available
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    // If unauthorized, clear token and redirect to login
-    if (response.status === 401) {
-      setAuthToken(null);
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/signup")) {
-        window.location.href = "/login";
-      }
-    }
-    
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-      [key: string]: unknown;
-    };
-    throw new ApiError(
-      errorData.error || errorData.message || "An error occurred",
-      response.status,
-      errorData,
-    );
-  }
-
-  if (response.status === 204) {
-    return null as T;
-  }
-
-  return response.json();
-}
-
 export const customersApi = {
-  // Get all customers with optional filters
   getAll: async (params?: {
     search?: string;
     state?: string;
@@ -137,16 +516,14 @@ export const customersApi = {
 
     const query = searchParams.toString();
     return fetchApi<CustomersResponse>(
-      `/api/customers${query ? `?${query}` : ""}`,
+      `/api/customers${query ? `?${query}` : ""}`
     );
   },
 
-  // Get single customer by ID
   getById: async (id: number): Promise<Customer> => {
     return fetchApi<Customer>(`/api/customers/${id}`);
   },
 
-  // Create new customer
   create: async (data: CreateCustomerInput): Promise<Customer> => {
     return fetchApi<Customer>("/api/customers", {
       method: "POST",
@@ -154,10 +531,9 @@ export const customersApi = {
     });
   },
 
-  // Update customer
   update: async (
     id: number,
-    data: Partial<CreateCustomerInput>,
+    data: Partial<CreateCustomerInput>
   ): Promise<Customer> => {
     return fetchApi<Customer>(`/api/customers/${id}`, {
       method: "PUT",
@@ -165,13 +541,16 @@ export const customersApi = {
     });
   },
 
-  // Delete customer
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/customers/${id}`, {
       method: "DELETE",
     });
   },
 };
+
+// ============================================================================
+// Products Types and API
+// ============================================================================
 
 export interface Product {
   id: number;
@@ -276,10 +655,6 @@ export interface CreateProductInput {
   status?: string;
 }
 
-export interface UpdateProductInput extends Partial<CreateProductInput> {
-  id: number;
-}
-
 export interface ProductsResponse {
   data: Product[];
   total: number;
@@ -288,7 +663,6 @@ export interface ProductsResponse {
 }
 
 export const productsApi = {
-  // Get all products with optional filters
   getAll: async (params?: {
     search?: string;
     status?: string;
@@ -307,16 +681,14 @@ export const productsApi = {
 
     const query = searchParams.toString();
     return fetchApi<ProductsResponse>(
-      `/api/products${query ? `?${query}` : ""}`,
+      `/api/products${query ? `?${query}` : ""}`
     );
   },
 
-  // Get single product by ID
   getById: async (id: number): Promise<Product> => {
     return fetchApi<Product>(`/api/products/${id}`);
   },
 
-  // Create new product
   create: async (data: CreateProductInput): Promise<Product> => {
     return fetchApi<Product>("/api/products", {
       method: "POST",
@@ -324,10 +696,9 @@ export const productsApi = {
     });
   },
 
-  // Update product
   update: async (
     id: number,
-    data: Partial<CreateProductInput>,
+    data: Partial<CreateProductInput>
   ): Promise<Product> => {
     return fetchApi<Product>(`/api/products/${id}`, {
       method: "PUT",
@@ -335,13 +706,16 @@ export const productsApi = {
     });
   },
 
-  // Delete product
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/products/${id}`, {
       method: "DELETE",
     });
   },
 };
+
+// ============================================================================
+// Employees Types and API
+// ============================================================================
 
 export interface Employee {
   id: number;
@@ -432,10 +806,6 @@ export interface CreateEmployeeInput {
   present_address?: string;
 }
 
-export interface UpdateEmployeeInput extends Partial<CreateEmployeeInput> {
-  id: number;
-}
-
 export interface EmployeesResponse {
   data: Employee[];
   total: number;
@@ -444,7 +814,6 @@ export interface EmployeesResponse {
 }
 
 export const employeesApi = {
-  // Get all employees with optional filters
   getAll: async (params?: {
     search?: string;
     department?: string;
@@ -465,16 +834,14 @@ export const employeesApi = {
 
     const query = searchParams.toString();
     return fetchApi<EmployeesResponse>(
-      `/api/employees${query ? `?${query}` : ""}`,
+      `/api/employees${query ? `?${query}` : ""}`
     );
   },
 
-  // Get single employee by ID
   getById: async (id: number): Promise<Employee> => {
     return fetchApi<Employee>(`/api/employees/${id}`);
   },
 
-  // Create new employee
   create: async (data: CreateEmployeeInput): Promise<Employee> => {
     return fetchApi<Employee>("/api/employees", {
       method: "POST",
@@ -482,10 +849,9 @@ export const employeesApi = {
     });
   },
 
-  // Update employee
   update: async (
     id: number,
-    data: Partial<CreateEmployeeInput>,
+    data: Partial<CreateEmployeeInput>
   ): Promise<Employee> => {
     return fetchApi<Employee>(`/api/employees/${id}`, {
       method: "PUT",
@@ -493,7 +859,6 @@ export const employeesApi = {
     });
   },
 
-  // Delete employee
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/employees/${id}`, {
       method: "DELETE",
@@ -501,209 +866,817 @@ export const employeesApi = {
   },
 };
 
-// Authentication types and API
-export interface User {
+// ============================================================================
+// CRM Module Types and API
+// ============================================================================
+
+// Contacts
+export interface Contact {
   id: number;
-  email: string;
-  first_name?: string;
+  first_name: string;
   last_name?: string;
-  phone_number?: string;
-  role: string;
-}
-
-export interface SignupInput {
-  email: string;
-  password: string;
-  first_name?: string;
-  last_name?: string;
-  phone_number?: string;
-  role?: string;
-}
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-}
-
-export const authApi = {
-  // Sign up a new user
-  signup: async (data: SignupInput): Promise<AuthResponse> => {
-    return fetchApi<AuthResponse>("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Login user
-  login: async (data: LoginInput): Promise<AuthResponse> => {
-    return fetchApi<AuthResponse>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Get current user
-  getMe: async (): Promise<{ user: User }> => {
-    return fetchApi<{ user: User }>("/api/auth/me");
-  },
-
-  // Verify token
-  verify: async (): Promise<{ user: User; valid: boolean }> => {
-    return fetchApi<{ user: User; valid: boolean }>("/api/auth/verify", {
-      method: "POST",
-    });
-  },
-
-  // Logout (client-side only)
-  logout: (): void => {
-    setAuthToken(null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-  },
-};
-
-// Projects types and API
-export interface Task {
-  id: number;
-  project_id: number;
-  title: string;
-  description?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  job_title?: string;
+  department?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  notes?: string;
+  tags?: string[];
+  client_id?: number;
   status: string;
+  is_primary: boolean;
+  preferred_contact_method?: string;
+  linkedin_url?: string;
+  birthday?: string;
+  created_by?: number;
+  updated_by?: number;
   created_at: string;
   updated_at: string;
+  client_name?: string;
+  client_company_name?: string;
 }
 
-export interface Project {
-  id: number;
-  project_name: string;
-  services_offered: string[];
-  start_date?: string;
-  target_date?: string;
-  target_audience?: string;
-  functional_requirements?: string;
-  non_functional_requirements?: string;
-  other_service_description?: string;
-  ux_preference?: string;
-  technology_stack?: string;
-  business_objectives?: string;
-  kpi?: string;
-  target_users?: string;
-  project_references?: string;
-  support_coverage?: string;
-  support_engagement_model?: string[];
-  support_channels?: string[];
-  scheduled_review_calls?: string;
-  backup_frequency?: string;
-  backup_retention_period?: string;
-  reports_required?: string[];
-  incident_alerts?: string[];
-  status: string;
-  created_at: string;
-  updated_at: string;
-  tasks?: Task[];
-}
-
-export interface CreateProjectInput {
-  project_name: string;
-  services_offered?: string[];
-  start_date?: string;
-  target_date?: string;
-  target_audience?: string;
-  functional_requirements?: string;
-  non_functional_requirements?: string;
-  other_service_description?: string;
-  ux_preference?: string;
-  technology_stack?: string;
-  business_objectives?: string;
-  kpi?: string;
-  target_users?: string;
-  project_references?: string;
-  support_coverage?: string;
-  support_engagement_model?: string[];
-  support_channels?: string[];
-  scheduled_review_calls?: string;
-  backup_frequency?: string;
-  backup_retention_period?: string;
-  reports_required?: string[];
-  incident_alerts?: string[];
+export interface CreateContactInput {
+  first_name: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  job_title?: string;
+  department?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  notes?: string;
+  tags?: string[];
+  client_id?: number;
   status?: string;
-  tasks?: Array<{
-    title: string;
-    description?: string;
-    status?: string;
-  }>;
+  is_primary?: boolean;
+  preferred_contact_method?: string;
+  linkedin_url?: string;
+  birthday?: string;
 }
 
-export interface UpdateProjectInput extends Partial<CreateProjectInput> {
-  id: number;
-}
-
-export interface ProjectsResponse {
-  data: Project[];
+export interface ContactsResponse {
+  data: Contact[];
   total: number;
   limit: number;
   offset: number;
 }
 
-export const projectsApi = {
-  // Get all projects with optional filters
+export const contactsApi = {
   getAll: async (params?: {
     search?: string;
+    client_id?: number;
     status?: string;
+    is_primary?: boolean;
     limit?: number;
     offset?: number;
-  }): Promise<ProjectsResponse> => {
+  }): Promise<ContactsResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.append("search", params.search);
+    if (params?.client_id)
+      searchParams.append("client_id", params.client_id.toString());
     if (params?.status) searchParams.append("status", params.status);
+    if (params?.is_primary)
+      searchParams.append("is_primary", params.is_primary.toString());
     if (params?.limit) searchParams.append("limit", params.limit.toString());
     if (params?.offset) searchParams.append("offset", params.offset.toString());
 
     const query = searchParams.toString();
-    return fetchApi<ProjectsResponse>(
-      `/api/projects${query ? `?${query}` : ""}`,
+    return fetchApi<ContactsResponse>(
+      `/api/contacts${query ? `?${query}` : ""}`
     );
   },
 
-  // Get single project by ID
-  getById: async (id: number): Promise<Project> => {
-    return fetchApi<Project>(`/api/projects/${id}`);
+  getById: async (id: number): Promise<Contact> => {
+    return fetchApi<Contact>(`/api/contacts/${id}`);
   },
 
-  // Create new project
-  create: async (data: CreateProjectInput): Promise<Project> => {
-    return fetchApi<Project>("/api/projects", {
+  create: async (data: CreateContactInput): Promise<Contact> => {
+    return fetchApi<Contact>("/api/contacts", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  // Update project
   update: async (
     id: number,
-    data: Partial<CreateProjectInput>,
-  ): Promise<Project> => {
-    return fetchApi<Project>(`/api/projects/${id}`, {
+    data: Partial<CreateContactInput>
+  ): Promise<Contact> => {
+    return fetchApi<Contact>(`/api/contacts/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
-  // Delete project
   delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/projects/${id}`, {
+    return fetchApi<void>(`/api/contacts/${id}`, {
       method: "DELETE",
     });
   },
 };
 
-// Admin User Management types and API
+// Clients
+export interface Client {
+  id: number;
+  name: string;
+  company_name?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  tax_id?: string;
+  notes?: string;
+  status: string;
+  rating?: number;
+  annual_revenue?: number;
+  employee_count?: number;
+  created_by?: number;
+  updated_by?: number;
+  created_at: string;
+  updated_at: string;
+  contact_count?: number;
+  deal_count?: number;
+  total_deal_value?: number;
+}
+
+export interface CreateClientInput {
+  name: string;
+  company_name?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  tax_id?: string;
+  notes?: string;
+  status?: string;
+  rating?: number;
+  annual_revenue?: number;
+  employee_count?: number;
+}
+
+export interface ClientsResponse {
+  data: Client[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ClientStats {
+  total_clients: number;
+  active_clients: number;
+  total_deal_value: number;
+  avg_rating: number;
+}
+
+export const clientsApi = {
+  getAll: async (params?: {
+    search?: string;
+    status?: string;
+    industry?: string;
+    company_size?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ClientsResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.industry) searchParams.append("industry", params.industry);
+    if (params?.company_size)
+      searchParams.append("company_size", params.company_size);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<ClientsResponse>(
+      `/api/clients${query ? `?${query}` : ""}`
+    );
+  },
+
+  getById: async (id: number): Promise<Client> => {
+    return fetchApi<Client>(`/api/clients/${id}`);
+  },
+
+  getStats: async (): Promise<ClientStats> => {
+    return fetchApi<ClientStats>("/api/clients/stats");
+  },
+
+  create: async (data: CreateClientInput): Promise<Client> => {
+    return fetchApi<Client>("/api/clients", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: Partial<CreateClientInput>
+  ): Promise<Client> => {
+    return fetchApi<Client>(`/api/clients/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/clients/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// Deals
+export interface Deal {
+  id: number;
+  title: string;
+  description?: string;
+  client_id?: number;
+  contact_id?: number;
+  value?: number;
+  currency: string;
+  stage: string;
+  probability: number;
+  expected_close_date?: string;
+  actual_close_date?: string;
+  owner_id?: number;
+  source?: string;
+  tags?: string[];
+  notes?: string;
+  status: string;
+  lost_reason?: string;
+  next_follow_up_date?: string;
+  created_by?: number;
+  updated_by?: number;
+  created_at: string;
+  updated_at: string;
+  client_name?: string;
+  client_company_name?: string;
+  contact_name?: string;
+  owner_name?: string;
+}
+
+export interface CreateDealInput {
+  title: string;
+  description?: string;
+  client_id?: number;
+  contact_id?: number;
+  value?: number;
+  currency?: string;
+  stage?: string;
+  probability?: number;
+  expected_close_date?: string;
+  owner_id?: number;
+  source?: string;
+  tags?: string[];
+  notes?: string;
+  status?: string;
+  next_follow_up_date?: string;
+}
+
+export interface DealsResponse {
+  data: Deal[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PipelineSummary {
+  stage: string;
+  deal_count: number;
+  total_value: number;
+  avg_probability: number;
+  weighted_value: number;
+}
+
+export interface DealStats {
+  total_deals: number;
+  open_deals: number;
+  won_deals: number;
+  lost_deals: number;
+  total_value: number;
+  weighted_value: number;
+  avg_deal_size: number;
+}
+
+export const dealsApi = {
+  getAll: async (params?: {
+    search?: string;
+    client_id?: number;
+    contact_id?: number;
+    stage?: string;
+    status?: string;
+    owner_id?: number;
+    source?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<DealsResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.client_id)
+      searchParams.append("client_id", params.client_id.toString());
+    if (params?.contact_id)
+      searchParams.append("contact_id", params.contact_id.toString());
+    if (params?.stage) searchParams.append("stage", params.stage);
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.owner_id)
+      searchParams.append("owner_id", params.owner_id.toString());
+    if (params?.source) searchParams.append("source", params.source);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<DealsResponse>(
+      `/api/deals${query ? `?${query}` : ""}`
+    );
+  },
+
+  getById: async (id: number): Promise<Deal> => {
+    return fetchApi<Deal>(`/api/deals/${id}`);
+  },
+
+  getPipeline: async (): Promise<{ pipeline: PipelineSummary[] }> => {
+    return fetchApi<{ pipeline: PipelineSummary[] }>("/api/deals/pipeline");
+  },
+
+  getStats: async (): Promise<DealStats> => {
+    return fetchApi<DealStats>("/api/deals/stats");
+  },
+
+  create: async (data: CreateDealInput): Promise<Deal> => {
+    return fetchApi<Deal>("/api/deals", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: Partial<CreateDealInput & { lost_reason?: string }>
+  ): Promise<Deal> => {
+    return fetchApi<Deal>(`/api/deals/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/deals/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ============================================================================
+// GitHub Connections Types and API
+// ============================================================================
+
+export interface GitHubConnection {
+  id: number;
+  user_id: number;
+  connection_name: string;
+  token_type: string;
+  github_user?: string;
+  github_email?: string;
+  scopes?: string[];
+  is_active: boolean;
+  last_verified_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateGitHubConnectionInput {
+  connection_name: string;
+  access_token: string;
+}
+
+export interface UpdateGitHubConnectionInput {
+  connection_name?: string;
+  access_token?: string;
+  is_active?: boolean;
+}
+
+export interface GitHubConnectionsResponse {
+  data: GitHubConnection[];
+  total: number;
+}
+
+export interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string;
+  private: boolean;
+  default_branch: string;
+  html_url: string;
+  owner: string;
+  owner_avatar: string;
+  updated_at: string;
+  language: string;
+  stars: number;
+  forks: number;
+}
+
+export interface GitHubReposResponse {
+  data: GitHubRepo[];
+  total: number;
+}
+
+export interface ProjectGitHubRepository {
+  id: number;
+  project_id: number;
+  github_connection_id: number;
+  repo_owner: string;
+  repo_name: string;
+  branch: string;
+  is_primary: boolean;
+  sync_enabled: boolean;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+  connection_name?: string;
+  github_user?: string;
+}
+
+export interface ProjectGitHubRepositoriesResponse {
+  data: ProjectGitHubRepository[];
+  total: number;
+}
+
+export interface LinkRepositoryInput {
+  github_connection_id: number;
+  repo_owner: string;
+  repo_name: string;
+  branch?: string;
+  is_primary?: boolean;
+  sync_enabled?: boolean;
+}
+
+export interface GitHubProject {
+  id: number;
+  project_id: number;
+  github_connection_id: number;
+  github_project_id: string; // GraphQL node ID (string like "PVT_kwDO...")
+  github_project_number: number;
+  github_project_title: string;
+  github_project_url?: string;
+  github_owner_type: string;
+  github_owner_name: string;
+  sync_enabled: boolean;
+  sync_direction: string;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+  connection_name?: string;
+  github_user?: string;
+}
+
+export interface GitHubProjectItem {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+  url?: string;
+  number?: number;
+  mapped_to_task?: number | null;
+  mapped_to_task_title?: string | null;
+  mapped_to_task_status?: string | null;
+  mapping_id?: number | null;
+}
+
+export interface GitHubProjectsResponse {
+  data: GitHubProject[];
+  total: number;
+}
+
+export interface GitHubProjectItemsResponse {
+  data: GitHubProjectItem[];
+  total: number;
+}
+
+export interface LinkGitHubProjectInput {
+  github_connection_id: number;
+  github_project_id: string; // GraphQL node ID (string like "PVT_kwDO...")
+  github_project_number: number;
+  github_project_title: string;
+  github_project_url?: string;
+  github_owner_type: string;
+  github_owner_name: string;
+  sync_enabled?: boolean;
+  sync_direction?: string;
+}
+
+export const githubApi = {
+  // Get all GitHub connections
+  getConnections: async (): Promise<GitHubConnectionsResponse> => {
+    return fetchApi<GitHubConnectionsResponse>("/api/github/connections");
+  },
+
+  // Get specific GitHub connection
+  getConnection: async (id: number): Promise<GitHubConnection> => {
+    return fetchApi<GitHubConnection>(`/api/github/connections/${id}`);
+  },
+
+  // Create new GitHub connection
+  createConnection: async (data: CreateGitHubConnectionInput): Promise<GitHubConnection> => {
+    return fetchApi<GitHubConnection>("/api/github/connections", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update GitHub connection
+  updateConnection: async (
+    id: number,
+    data: UpdateGitHubConnectionInput
+  ): Promise<GitHubConnection> => {
+    return fetchApi<GitHubConnection>(`/api/github/connections/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete GitHub connection
+  deleteConnection: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/github/connections/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Verify GitHub connection
+  verifyConnection: async (id: number): Promise<{
+    success: boolean;
+    github_user?: string;
+    github_email?: string;
+    account_type?: string;
+    error?: string;
+  }> => {
+    return fetchApi(`/api/github/connections/${id}/verify`, {
+      method: "POST",
+    });
+  },
+
+  // List repositories for a connection
+  getConnectionRepositories: async (connectionId: number): Promise<GitHubReposResponse> => {
+    return fetchApi<GitHubReposResponse>(
+      `/api/github/connections/${connectionId}/repositories`
+    );
+  },
+
+  // Get repositories linked to a project
+  getProjectRepositories: async (projectId: number): Promise<ProjectGitHubRepositoriesResponse> => {
+    return fetchApi<ProjectGitHubRepositoriesResponse>(
+      `/api/projects/${projectId}/github/repositories`
+    );
+  },
+
+  // Link repository to project
+  linkRepository: async (
+    projectId: number,
+    data: LinkRepositoryInput
+  ): Promise<ProjectGitHubRepository> => {
+    return fetchApi<ProjectGitHubRepository>(
+      `/api/projects/${projectId}/github/repositories`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  // Update repository link
+  updateRepositoryLink: async (
+    projectId: number,
+    repoId: number,
+    data: Partial<LinkRepositoryInput>
+  ): Promise<ProjectGitHubRepository> => {
+    return fetchApi<ProjectGitHubRepository>(
+      `/api/projects/${projectId}/github/repositories/${repoId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  // Remove repository link
+  removeRepositoryLink: async (projectId: number, repoId: number): Promise<void> => {
+    return fetchApi<void>(
+      `/api/projects/${projectId}/github/repositories/${repoId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  },
+
+  // Get commits from linked repository
+  getRepositoryCommits: async (projectId: number, repoId: number): Promise<CommitsResponse> => {
+    return fetchApi<CommitsResponse>(
+      `/api/projects/${projectId}/github/repositories/${repoId}/commits`
+    );
+  },
+
+  // Sync repository commits (2-way sync)
+  syncRepository: async (projectId: number, repoId: number): Promise<{
+    success: boolean;
+    message: string;
+    new_commits: number;
+    total_commits: number;
+    repository: {
+      owner: string;
+      name: string;
+      branch: string;
+    };
+  }> => {
+    return fetchApi(
+      `/api/projects/${projectId}/github/repositories/${repoId}/sync`,
+      {
+        method: "POST",
+      }
+    );
+  },
+
+  // Sync project task to GitHub issue (2-way sync - project to GitHub)
+  syncTaskToGitHub: async (
+    projectId: number,
+    taskId: number,
+    data: {
+      github_repository_id: number;
+      title?: string;
+      description?: string;
+      labels?: string[];
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    issue: {
+      number: number;
+      url: string;
+      title: string;
+    };
+  }> => {
+    return fetchApi(
+      `/api/projects/${projectId}/tasks/${taskId}/sync-to-github`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  // ============================================================================
+  // GitHub Projects API
+  // ============================================================================
+
+  // List available GitHub Projects from a connection
+  getConnectionProjects: async (connectionId: number): Promise<{
+    data: Array<{
+      id: string;
+      number: number;
+      title: string;
+      url: string;
+      owner_type: string;
+      owner_name: string;
+      public?: boolean;
+      closed?: boolean;
+    }>;
+    total: number;
+    message?: string;
+    hint?: string;
+    debug?: {
+      user_login?: string;
+      organizations?: string[];
+      viewer_data_received?: boolean;
+      user_projects_total_count?: number;
+      query_successful?: boolean;
+      errors?: any;
+      test_endpoint?: string;
+    };
+  }> => {
+    return fetchApi(`/api/github/connections/${connectionId}/projects`);
+  },
+
+  // Link GitHub Project to Wraptron project
+  linkGitHubProject: async (
+    projectId: number,
+    data: LinkGitHubProjectInput
+  ): Promise<GitHubProject> => {
+    return fetchApi<GitHubProject>(
+      `/api/projects/${projectId}/github/projects`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  // Get linked GitHub Projects for a project
+  getProjectGitHubProjects: async (projectId: number): Promise<GitHubProjectsResponse> => {
+    return fetchApi<GitHubProjectsResponse>(
+      `/api/projects/${projectId}/github/projects`
+    );
+  },
+
+  // Get items from a GitHub Project
+  getGitHubProjectItems: async (
+    projectId: number,
+    githubProjectId: number
+  ): Promise<GitHubProjectItemsResponse> => {
+    return fetchApi<GitHubProjectItemsResponse>(
+      `/api/projects/${projectId}/github/projects/${githubProjectId}/items`
+    );
+  },
+
+  // Map GitHub Project item to task
+  mapProjectItemToTask: async (
+    projectId: number,
+    githubProjectId: number,
+    itemId: string,
+    taskId: number
+  ): Promise<{
+    id: number;
+    project_id: number;
+    github_project_id: number;
+    task_id: number;
+    github_item_id: string;
+  }> => {
+    return fetchApi(
+      `/api/projects/${projectId}/github/projects/${githubProjectId}/items/${itemId}/map-to-task`,
+      {
+        method: "POST",
+        body: JSON.stringify({ task_id: taskId }),
+      }
+    );
+  },
+
+  // Unmap GitHub Project item from task
+  unmapProjectItemFromTask: async (
+    projectId: number,
+    githubProjectId: number,
+    itemId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return fetchApi(
+      `/api/projects/${projectId}/github/projects/${githubProjectId}/items/${itemId}/map-to-task`,
+      {
+        method: "DELETE",
+      }
+    );
+  },
+
+  // Sync GitHub Project items
+  syncGitHubProject: async (
+    projectId: number,
+    githubProjectId: number
+  ): Promise<{
+    success: boolean;
+    message: string;
+    items_synced: number;
+    total_items: number;
+  }> => {
+    return fetchApi(
+      `/api/projects/${projectId}/github/projects/${githubProjectId}/sync`,
+      {
+        method: "POST",
+      }
+    );
+  },
+
+  // Unlink GitHub Project
+  unlinkGitHubProject: async (projectId: number, githubProjectId: number): Promise<void> => {
+    return fetchApi<void>(
+      `/api/projects/${projectId}/github/projects/${githubProjectId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  },
+};
+
+// ============================================================================
+// Admin User Management Types and API
+// ============================================================================
+
 export interface AdminUser {
   id: number;
   email: string;
@@ -787,7 +1760,7 @@ export const adminApi = {
 
     const query = searchParams.toString();
     return fetchApi<AdminUsersResponse>(
-      `/api/admin/users${query ? `?${query}` : ""}`,
+      `/api/admin/users${query ? `?${query}` : ""}`
     );
   },
 
@@ -797,7 +1770,9 @@ export const adminApi = {
   },
 
   // Create user
-  createUser: async (data: CreateAdminUserInput): Promise<{ user: AdminUser }> => {
+  createUser: async (
+    data: CreateAdminUserInput
+  ): Promise<{ user: AdminUser }> => {
     return fetchApi<{ user: AdminUser }>("/api/admin/users", {
       method: "POST",
       body: JSON.stringify(data),
@@ -807,7 +1782,7 @@ export const adminApi = {
   // Update user
   updateUser: async (
     id: number,
-    data: Partial<UpdateAdminUserInput>,
+    data: Partial<UpdateAdminUserInput>
   ): Promise<{ user: AdminUser }> => {
     return fetchApi<{ user: AdminUser }>(`/api/admin/users/${id}`, {
       method: "PUT",
@@ -840,52 +1815,16 @@ export const adminApi = {
   // Assign permissions to role
   assignRolePermissions: async (
     role: string,
-    permissionIds: number[],
+    permissionIds: number[]
   ): Promise<{ message: string; role: string; permission_count: number }> => {
-    return fetchApi<{ message: string; role: string; permission_count: number }>(
-      `/api/admin/roles/${role}/permissions`,
-      {
-        method: "POST",
-        body: JSON.stringify({ permission_ids: permissionIds }),
-      },
-    );
-  },
-};
-
-// AI Chat types and API
-export interface ChatMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
-
-export interface ChatRequest {
-  message: string;
-  conversationHistory?: ChatMessage[];
-}
-
-export interface ChatResponse {
-  message: string;
-  model: string;
-}
-
-export interface ModelsResponse {
-  models: Array<{
-    name: string;
-    modified_at: string;
-    size: number;
-  }>;
-}
-
-export const aiChatApi = {
-  chat: async (data: ChatRequest): Promise<ChatResponse> => {
-    return fetchApi<ChatResponse>("/api/ai/chat", {
+    return fetchApi<{
+      message: string;
+      role: string;
+      permission_count: number;
+    }>(`/api/admin/roles/${role}/permissions`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ permission_ids: permissionIds }),
     });
-  },
-
-  getModels: async (): Promise<ModelsResponse> => {
-    return fetchApi<ModelsResponse>("/api/ai/models");
   },
 };
 

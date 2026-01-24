@@ -1,3 +1,492 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { usePageTitle } from "@/contexts/page-title-context";
+import { githubApi, type GitHubConnection } from "@/lib/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
 export default function Settings() {
-  return <div>Settings</div>;
+  const { setTitle } = usePageTitle();
+  const [connections, setConnections] = useState<GitHubConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<GitHubConnection | null>(null);
+
+  // Form states
+  const [connectionName, setConnectionName] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Verification state
+  const [verifying, setVerifying] = useState<number | null>(null);
+
+  useEffect(() => {
+    setTitle("Settings");
+    return () => setTitle(null);
+  }, [setTitle]);
+
+  useEffect(() => {
+    fetchConnections();
+  }, []);
+
+  const fetchConnections = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await githubApi.getConnections();
+      setConnections(response.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch connections");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddConnection = async () => {
+    if (!connectionName.trim() || !accessToken.trim()) {
+      setError("Connection name and access token are required");
+      return;
+    }
+
+    setFormLoading(true);
+    setError(null);
+    try {
+      await githubApi.createConnection({
+        connection_name: connectionName,
+        access_token: accessToken,
+      });
+      setSuccessMessage("GitHub connection added successfully!");
+      setAddDialogOpen(false);
+      setConnectionName("");
+      setAccessToken("");
+      fetchConnections();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add connection");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleEditConnection = async () => {
+    if (!selectedConnection) return;
+
+    setFormLoading(true);
+    setError(null);
+    try {
+      const updateData: { connection_name?: string; access_token?: string } = {};
+      if (connectionName.trim()) updateData.connection_name = connectionName;
+      if (accessToken.trim()) updateData.access_token = accessToken;
+
+      await githubApi.updateConnection(selectedConnection.id, updateData);
+      setSuccessMessage("GitHub connection updated successfully!");
+      setEditDialogOpen(false);
+      setConnectionName("");
+      setAccessToken("");
+      setSelectedConnection(null);
+      fetchConnections();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update connection");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteConnection = async () => {
+    if (!selectedConnection) return;
+
+    setFormLoading(true);
+    setError(null);
+    try {
+      await githubApi.deleteConnection(selectedConnection.id);
+      setSuccessMessage("GitHub connection deleted successfully!");
+      setDeleteDialogOpen(false);
+      setSelectedConnection(null);
+      fetchConnections();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete connection");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleVerifyConnection = async (connection: GitHubConnection) => {
+    setVerifying(connection.id);
+    setError(null);
+    try {
+      const result = await githubApi.verifyConnection(connection.id);
+      if (result.success) {
+        setSuccessMessage(`Connection verified! Connected as ${result.github_user}`);
+        fetchConnections();
+      } else {
+        setError(result.error || "Verification failed");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to verify connection");
+    } finally {
+      setVerifying(null);
+    }
+  };
+
+  const openEditDialog = (connection: GitHubConnection) => {
+    setSelectedConnection(connection);
+    setConnectionName(connection.connection_name);
+    setAccessToken("");
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (connection: GitHubConnection) => {
+    setSelectedConnection(connection);
+    setDeleteDialogOpen(true);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Never";
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Success Message */}
+        {successMessage && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Alert className="mb-6 bg-red-50 border-red-200">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* GitHub Connections Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Github className="h-5 w-5" />
+                  GitHub Connections
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Manage global GitHub connections to link repositories with your projects
+                </CardDescription>
+              </div>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Connection
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">Loading connections...</div>
+            ) : connections.length === 0 ? (
+              <div className="text-center py-12">
+                <Github className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No GitHub connections</h3>
+                <p className="text-gray-600 mb-4">
+                  Add a GitHub connection to start linking repositories to your projects
+                </p>
+                <Button onClick={() => setAddDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Connection
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-md border bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Connection Name</TableHead>
+                      <TableHead>GitHub User</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Verified</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {connections.map((connection) => (
+                      <TableRow key={connection.id}>
+                        <TableCell className="font-medium">
+                          {connection.connection_name}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {connection.github_user ? (
+                              <>
+                                <span>{connection.github_user}</span>
+                                {connection.github_email && (
+                                  <span className="text-sm text-gray-500">
+                                    ({connection.github_email})
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Not verified</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              connection.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }
+                          >
+                            {connection.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(connection.last_verified_at)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleVerifyConnection(connection)}
+                              disabled={verifying === connection.id}
+                            >
+                              <RefreshCw
+                                className={`h-4 w-4 ${
+                                  verifying === connection.id ? "animate-spin" : ""
+                                }`}
+                              />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(connection)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(connection)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Help Section */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>How to create a GitHub Personal Access Token</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+              <li>Go to GitHub Settings → Developer settings → Personal access tokens</li>
+              <li>Click "Generate new token (classic)"</li>
+              <li>
+                Give it a descriptive name and select the following scopes:
+                <ul className="list-disc list-inside ml-6 mt-1 space-y-1">
+                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">repo</code> - Full control of private repositories</li>
+                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">read:user</code> - Read user profile data</li>
+                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">project</code> - Full control of user projects (required for GitHub Projects integration)</li>
+                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">read:org</code> - Read org and team membership (if using organization projects)</li>
+                </ul>
+              </li>
+              <li>Click "Generate token" and copy the token immediately (you won't see it again)</li>
+              <li>Paste the token here when creating a new connection</li>
+            </ol>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-900 mb-1">💡 Note about GitHub Projects:</p>
+              <p className="text-xs text-blue-800">
+                GitHub Projects (V2) are different from repositories. You need to create them separately at{" "}
+                <a href="https://github.com/users/YOUR_USERNAME/projects/new" target="_blank" rel="noopener noreferrer" className="underline">
+                  github.com/users/YOUR_USERNAME/projects/new
+                </a>
+                . Make sure your token has the <code className="bg-blue-100 px-1 py-0.5 rounded">project</code> scope to access them.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Add Connection Dialog */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add GitHub Connection</DialogTitle>
+              <DialogDescription>
+                Connect your GitHub account to link repositories with projects
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="connection-name">Connection Name</Label>
+                <Input
+                  id="connection-name"
+                  placeholder="e.g., My GitHub Account"
+                  value={connectionName}
+                  onChange={(e) => setConnectionName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="access-token">Personal Access Token</Label>
+                <Input
+                  id="access-token"
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  Your token will be encrypted and stored securely
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAddDialogOpen(false);
+                  setConnectionName("");
+                  setAccessToken("");
+                }}
+                disabled={formLoading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddConnection} disabled={formLoading}>
+                {formLoading ? "Adding..." : "Add Connection"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Connection Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit GitHub Connection</DialogTitle>
+              <DialogDescription>
+                Update connection name or access token
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-connection-name">Connection Name</Label>
+                <Input
+                  id="edit-connection-name"
+                  placeholder="e.g., My GitHub Account"
+                  value={connectionName}
+                  onChange={(e) => setConnectionName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-access-token">
+                  New Personal Access Token (optional)
+                </Label>
+                <Input
+                  id="edit-access-token"
+                  type="password"
+                  placeholder="Leave empty to keep existing token"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  setConnectionName("");
+                  setAccessToken("");
+                  setSelectedConnection(null);
+                }}
+                disabled={formLoading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEditConnection} disabled={formLoading}>
+                {formLoading ? "Updating..." : "Update Connection"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Connection Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete GitHub Connection</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedConnection?.connection_name}"?
+                This will also remove all repository links using this connection.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSelectedConnection(null);
+                }}
+                disabled={formLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteConnection}
+                disabled={formLoading}
+              >
+                {formLoading ? "Deleting..." : "Delete Connection"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
 }

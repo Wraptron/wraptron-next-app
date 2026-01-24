@@ -15,10 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { usePageTitle } from "@/contexts/page-title-context";
 import { GlobalSearch } from "@/components/global-search";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
+  const { title, subtitle } = usePageTitle();
   const [notificationCount, setNotificationCount] = useState(3);
 
   const handleNotificationClick = () => {
@@ -52,8 +54,20 @@ export default function TopNavbar() {
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40">
       <div className="flex items-center justify-between w-full">
-        {/* Left side - App name and mobile menu */}
-        <div className="flex items-center space-x-4"></div>
+        {/* Left side - Page title */}
+        <div className="flex items-center space-x-4">
+          {title && (
+            <div className="flex items-center space-x-3">
+              <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+              {subtitle && (
+                <>
+                  <span className="text-gray-300">/</span>
+                  <h2 className="text-lg font-medium text-gray-600">{subtitle}</h2>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Right side - Command, Notifications and Profile */}
         <div className="flex items-center space-x-4">

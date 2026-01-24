@@ -132,11 +132,16 @@ interface ProjectFormData {
   incident_alerts: string[];
 }
 
-export default function NewProjectPage() {
+export default function EditProjectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
+  const [projectId, setProjectId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+
   const [objectiveSearch, setObjectiveSearch] = useState("");
   const [showObjectiveDropdown, setShowObjectiveDropdown] = useState(false);
   const [availableObjectives, setAvailableObjectives] = useState<string[]>([
@@ -147,27 +152,60 @@ export default function NewProjectPage() {
 
   // Fetch objectives from API on component mount
   useEffect(() => {
-    const fetchObjectives = async () => {
+    const init = async () => {
       try {
-        const response = await projectsApi.getObjectives();
-        if (response.objectives && response.objectives.length > 0) {
-          setAvailableObjectives(response.objectives);
-        } else {
-          // Fallback to hardcoded list if API returns empty
-          setAvailableObjectives([...OBJECTIVE_OPTIONS]);
+        // Resolve params
+        const resolvedParams = await params;
+        const id = parseInt(resolvedParams.id);
+        if (isNaN(id)) {
+          setError("Invalid project ID");
+          return;
+        }
+        setProjectId(id);
+
+        // Fetch project details
+        const project = await projectsApi.getById(id);
+        
+        // Populate form data
+        setFormData({
+            project_name: project.project_name,
+            services_offered: (project.services_offered?.[0] as ServiceOption) || null,
+            other_service_description: project.other_service_description || "",
+            planned_date: project.start_date ? project.start_date.split('T')[0] : "",
+            target_date: project.target_date ? project.target_date.split('T')[0] : "",
+            ux_preference: project.ux_preference || "",
+            pages_views: project.pages_views || [],
+            target_audience: project.target_audience || "",
+            functional_requirements: project.functional_requirements || "",
+            non_functional_requirements: project.non_functional_requirements || "",
+            technology_stack: project.technology_stack || "",
+            business_objectives: project.business_objectives ? (typeof project.business_objectives === 'string' ? JSON.parse(project.business_objectives) : project.business_objectives) : [], 
+            kpi: project.kpi || "",
+            target_users: project.target_users || "",
+            references: project.project_references || "",
+            support_coverage: project.support_coverage || "",
+            support_engagement_model: project.support_engagement_model || [],
+            support_channels: project.support_channels || [],
+            scheduled_review_calls: project.scheduled_review_calls || "",
+            backup_frequency: project.backup_frequency || "",
+            backup_retention_period: project.backup_retention_period || "",
+            reports_required: project.reports_required || [],
+            incident_alerts: project.incident_alerts || [],
+        });
+
+        // Fetch objectives
+        const objResponse = await projectsApi.getObjectives();
+        if (objResponse.objectives && objResponse.objectives.length > 0) {
+          setAvailableObjectives(objResponse.objectives);
         }
       } catch (err) {
-        console.error(
-          "Failed to fetch objectives from API, using fallback:",
-          err
-        );
-        // Fallback to hardcoded list on error
-        setAvailableObjectives([...OBJECTIVE_OPTIONS]);
+        console.error("Error initializing edit page:", err);
+        setError("Failed to load project details");
       }
     };
 
-    fetchObjectives();
-  }, []);
+    init();
+  }, [params]);
 
   const [formData, setFormData] = useState<ProjectFormData>({
     project_name: "",
@@ -195,89 +233,28 @@ export default function NewProjectPage() {
     incident_alerts: [],
   });
 
-  const validatePage1 = (): boolean => {
-    if (!formData.project_name.trim()) {
-      setError("Project name is required");
-      return false;
-    }
-    if (!formData.services_offered) {
-      setError("Please select a service");
-      return false;
-    }
-    if (
-      formData.services_offered === "Other" &&
-      !formData.other_service_description.trim()
-    ) {
-      setError("Please provide a description for the 'Other' service");
-      return false;
-    }
 
-    return true;
-  };
-
-  const validatePage3 = (): boolean => {
-    if (!formData.support_coverage) {
-      setError("Please select a Preferred Support Coverage option");
-      return false;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    setError(null);
-    if (currentPage === 1 && !validatePage1()) {
-      return;
-    }
-    if (currentPage < 3) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-      setError(null);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
+    if (!projectId) return;
 
-    // Only submit if we're on the last page (page 3)
-    if (currentPage !== 3) {
-      // If not on last page, just go to next page and prevent any submission
-      handleNext();
-      return;
-    }
-
-    // Double check we're on page 3 before proceeding
-    if (currentPage !== 3) {
-      return;
-    }
-
-    setError(null);
     setLoading(true);
+    setError(null);
 
-    // Final validation
-    if (!validatePage1()) {
-      setLoading(false);
-      return;
-    }
-    if (!validatePage3()) {
+    // Basic Validation
+    if (!formData.project_name.trim()) {
+      setError("Project name is required");
       setLoading(false);
       return;
     }
 
     try {
-      // Prepare project data for REST API
       const projectData = {
+        id: projectId,
         project_name: formData.project_name,
-        services_offered: formData.services_offered
-          ? [formData.services_offered]
-          : [],
-        other_service_description:
-          formData.other_service_description || undefined,
+        services_offered: formData.services_offered ? [formData.services_offered] : [],
+        other_service_description: formData.other_service_description || undefined,
         start_date: formData.planned_date,
         target_date: formData.target_date,
         ux_preference: formData.ux_preference,
@@ -286,7 +263,7 @@ export default function NewProjectPage() {
         functional_requirements: formData.functional_requirements,
         non_functional_requirements: formData.non_functional_requirements,
         technology_stack: formData.technology_stack,
-        business_objectives: formData.business_objectives,
+        business_objectives: formData.business_objectives, // API might expect stringified JSON if it's a text field in DB? Based on GET it seems likely, but Create used direct array. Assuming Update supports array too.
         kpi: formData.kpi,
         target_users: formData.target_users,
         project_references: formData.references,
@@ -300,14 +277,11 @@ export default function NewProjectPage() {
         incident_alerts: formData.incident_alerts,
       };
 
-      // Create project using REST API
-      await projectsApi.create(projectData);
-
-      // Redirect to projects page on success
-      router.push("/projects");
+      await projectsApi.update(projectId, projectData);
+      router.push(`/projects/${projectId}`);
     } catch (err) {
-      console.error("Error creating project:", err);
-      setError(err instanceof Error ? err.message : "Failed to create project");
+      console.error("Error updating project:", err);
+      setError(err instanceof Error ? err.message : "Failed to update project");
     } finally {
       setLoading(false);
     }
@@ -323,9 +297,9 @@ export default function NewProjectPage() {
               Back to Projects
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">Create New Project</h1>
+          <h1 className="text-3xl font-bold">Edit Project</h1>
           <p className="text-gray-600 mt-2">
-            Fill in the details to create a new project
+            Update project details
           </p>
         </div>
 
@@ -335,88 +309,10 @@ export default function NewProjectPage() {
           </div>
         )}
 
-        {/* Page Indicator */}
-        <div className="mb-6">
-          <div className="flex items-center justify-center space-x-4">
-            <div
-              className={`flex items-center ${
-                currentPage >= 1 ? "text-blue-600" : "text-gray-400"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  currentPage >= 1
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                1
-              </div>
-              <span className="ml-2 font-medium">Basic Info</span>
-            </div>
-            <div
-              className={`h-0.5 w-16 ${
-                currentPage >= 2 ? "bg-blue-600" : "bg-gray-300"
-              }`}
-            />
-            <div
-              className={`flex items-center ${
-                currentPage >= 2 ? "text-blue-600" : "text-gray-400"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  currentPage >= 2
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : currentPage > 2
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                2
-              </div>
-              <span className="ml-2 font-medium">Requirements</span>
-            </div>
-            <div
-              className={`h-0.5 w-16 ${
-                currentPage >= 3 ? "bg-blue-600" : "bg-gray-300"
-              }`}
-            />
-            <div
-              className={`flex items-center ${
-                currentPage >= 3 ? "text-blue-600" : "text-gray-400"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  currentPage >= 3
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
-                }`}
-              >
-                3
-              </div>
-              <span className="ml-2 font-medium">Support</span>
-            </div>
-          </div>
-        </div>
 
-        <form
-          onSubmit={handleSubmit}
-          onKeyDown={(e) => {
-            // Prevent form submission on Enter key unless we're on page 3
-            if (e.key === "Enter" && currentPage !== 3) {
-              e.preventDefault();
-              // If on page 2, navigate to page 3 instead
-              if (currentPage === 2) {
-                handleNext();
-              }
-            }
-          }}
-        >
-          {/* Page 1: Basic Information */}
-          {currentPage === 1 && (
-            <div className="space-y-6">
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+
               <Card>
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>
@@ -844,11 +740,7 @@ export default function NewProjectPage() {
                 </div>
               </CardContent>
             </Card>
-            </div>
-          )}
 
-          {/* Page 2: Requirements */}
-          {currentPage === 2 && (
             <Card>
               <CardHeader>
                 <CardTitle>Requirements</CardTitle>
@@ -1074,10 +966,7 @@ export default function NewProjectPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Page 3: Support */}
-          {currentPage === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle>Support Configuration</CardTitle>
@@ -1332,63 +1221,27 @@ export default function NewProjectPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t">
-            <div>
-              {currentPage > 1 && (
-                <Button
-                  type="button"
-                  onClick={handlePrevious}
-                  variant="outline"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-4">
-              <Link href="/projects">
+          <div className="flex justify-end items-center mt-8 pt-6 border-t gap-4">
+              <Link href={projectId ? `/projects/${projectId}` : "/projects"}>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </Link>
-              {currentPage < 3 ? (
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleNext();
-                  }}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  disabled={loading || currentPage !== 3}
-                  onClick={(e) => {
-                    if (currentPage !== 3) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Project"
-                  )}
-                </Button>
-              )}
-            </div>
+              <Button
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Project"
+                )}
+              </Button>
           </div>
         </form>
       </div>

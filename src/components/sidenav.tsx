@@ -10,6 +10,10 @@ import {
   Headset,
   ChartPie,
   Shield,
+  Users,
+  Building2,
+  TrendingUp,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,22 +36,35 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/dashboard",
   },
   {
+    id: "customers",
+    label: "Customers",
+    icon: Users,
+    href: "/customers",
+  },
+
+  {
     id: "projects",
     label: "Projects",
     icon: Box,
     href: "/projects",
   },
   {
-    id: "support",
-    label: "Support",
-    icon: Headset,
-    href: "/support",
+    id: "hiring",
+    label: "Hiring",
+    icon: Users,
+    href: "/hiring",
   },
   {
-    id: "billing",
-    label: "Billing",
+    id: "transactions",
+    label: "Transactions",
     icon: CreditCard,
-    href: "/payments",
+    href: "/transactions",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    href: "/settings",
   },
 ];
 
@@ -66,17 +83,17 @@ export default function SideNav() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { user } = useAuth();
   const [activeItem, setActiveItem] = useState<string>("");
-  
+
   const isAdmin = user?.role === "admin";
-  const menuItems = isAdmin ? [...MAIN_MENU_ITEMS, ...ADMIN_MENU_ITEMS] : MAIN_MENU_ITEMS;
+  const menuItems = isAdmin
+    ? [...MAIN_MENU_ITEMS, ...ADMIN_MENU_ITEMS]
+    : MAIN_MENU_ITEMS;
 
   // Determine active item based on pathname
   useEffect(() => {
     if (!pathname) return;
 
-    const mainItem = menuItems.find((item) =>
-      pathname.startsWith(item.href)
-    );
+    const mainItem = menuItems.find((item) => pathname.startsWith(item.href));
     if (mainItem) setActiveItem(mainItem.id);
   }, [pathname, menuItems]);
 
@@ -165,3 +182,5 @@ export default function SideNav() {
     </div>
   );
 }
+
+

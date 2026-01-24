@@ -35,10 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Check if user is authenticated on mount and when pathname changes
+  // Check if user is authenticated on mount only
   useEffect(() => {
     checkAuth();
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkAuth = async () => {
     try {
@@ -53,12 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Verify token and get user
+      console.log("🔐 Checking authentication...");
       const response = await authApi.getMe();
       setUser(response.user);
+      console.log("✅ Authentication successful:", response.user.email);
     } catch (error) {
-      console.error("Auth check failed:", error);
-      setUser(null);
-      setAuthToken(null);
+      console.error("❌ Auth check failed:", error);
+      // Only clear token if it's actually invalid (401), not for network errors
+      if (error instanceof Error && error.message.includes("401")) {
+        console.log("🔓 Invalid token - logging out");
+        setUser(null);
+        setAuthToken(null);
+      } else {
+        console.log("⚠️ Auth check failed but keeping existing session (network error)");
+        // Keep the user logged in for network errors
+      }
       // Don't redirect here - let ProtectedRoute handle it
     } finally {
       setLoading(false);
