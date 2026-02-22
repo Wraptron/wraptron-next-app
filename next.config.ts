@@ -67,8 +67,11 @@
 
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  // Set the output file tracing root to this directory to avoid lockfile warnings
+  outputFileTracingRoot: path.join(__dirname),
   webpack: (config, { isServer }) => {
     // Cloudflare Workers compatibility
     if (!isServer) {

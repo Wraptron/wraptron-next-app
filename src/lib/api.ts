@@ -67,7 +67,7 @@ async function fetchApi<T>(
     // Handle network errors
     if (error.message?.includes("Failed to fetch") || error.message?.includes("Broken pipe")) {
       throw new ApiError(
-        `Network error: Cannot connect to server at ${API_BASE_URL}. Please ensure the backend is running.`,
+        `Network error: Cannot connect to server at ${API_BASE_URL}. Please ensure the backend is running (and set NEXT_PUBLIC_API_URL for dev/prod if needed).`,
         0,
         { networkError: true, originalError: error.message }
       );
@@ -873,8 +873,10 @@ export const employeesApi = {
 // Contacts
 export interface Contact {
   id: number;
+  prefix?: string;
   first_name: string;
   last_name?: string;
+  title?: string;
   email?: string;
   phone?: string;
   mobile?: string;
@@ -893,18 +895,25 @@ export interface Contact {
   is_primary: boolean;
   preferred_contact_method?: string;
   linkedin_url?: string;
+  instagram?: string;
+  timezone?: string;
   birthday?: string;
+  anniversary_date?: string;
   created_by?: number;
   updated_by?: number;
   created_at: string;
   updated_at: string;
   client_name?: string;
   client_company_name?: string;
+  companies_associated?: number[];
+  deals_associated?: number[];
 }
 
 export interface CreateContactInput {
+  prefix?: string;
   first_name: string;
   last_name?: string;
+  title?: string;
   email?: string;
   phone?: string;
   mobile?: string;
@@ -923,7 +932,12 @@ export interface CreateContactInput {
   is_primary?: boolean;
   preferred_contact_method?: string;
   linkedin_url?: string;
+  instagram?: string;
+  timezone?: string;
   birthday?: string;
+  anniversary_date?: string;
+  companies_associated?: number[];
+  deals_associated?: number[];
 }
 
 export interface ContactsResponse {
@@ -996,6 +1010,8 @@ export interface Client {
   website?: string;
   industry?: string;
   company_size?: string;
+  contacts_associated?: number[];
+  deals_associated?: number[];
   address?: string;
   city?: string;
   state?: string;
@@ -1024,6 +1040,8 @@ export interface CreateClientInput {
   website?: string;
   industry?: string;
   company_size?: string;
+  contacts_associated?: number[];
+  deals_associated?: number[];
   address?: string;
   city?: string;
   state?: string;
@@ -1135,6 +1153,8 @@ export interface Deal {
   client_company_name?: string;
   contact_name?: string;
   owner_name?: string;
+  contacts_associated?: number[];
+  companies_associated?: number[];
 }
 
 export interface CreateDealInput {
@@ -1153,6 +1173,8 @@ export interface CreateDealInput {
   notes?: string;
   status?: string;
   next_follow_up_date?: string;
+  contacts_associated?: number[];
+  companies_associated?: number[];
 }
 
 export interface DealsResponse {

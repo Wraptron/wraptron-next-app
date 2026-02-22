@@ -159,7 +159,7 @@ export default function NewProjectPage() {
       } catch (err) {
         console.error(
           "Failed to fetch objectives from API, using fallback:",
-          err
+          err,
         );
         // Fallback to hardcoded list on error
         setAvailableObjectives([...OBJECTIVE_OPTIONS]);
@@ -320,7 +320,7 @@ export default function NewProjectPage() {
           <Link href="/projects">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
+              Back to PPM
             </Button>
           </Link>
           <h1 className="text-3xl font-bold">Create New Project</h1>
@@ -369,8 +369,8 @@ export default function NewProjectPage() {
                   currentPage >= 2
                     ? "bg-blue-600 border-blue-600 text-white"
                     : currentPage > 2
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-gray-300"
                 }`}
               >
                 2
@@ -553,7 +553,7 @@ export default function NewProjectPage() {
                       </div>
                     )}
                   </div>
-                
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="planned_date">Planned Date</Label>
@@ -586,264 +586,268 @@ export default function NewProjectPage() {
                       />
                     </div>
                   </div>
-                
-                <div>
-                  <Label>Project Objectives</Label>
-                  <p className="text-xs text-gray-500 mt-1 mb-3">
-                    Search and select all applicable business objectives for
-                    this project
-                  </p>
 
-                  {/* Selected Objectives as Badges */}
-                  {formData.business_objectives.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {formData.business_objectives.map((objective) => (
-                        <Badge
-                          key={objective}
-                          variant="secondary"
-                          className="px-3 py-1 text-sm flex items-center gap-2"
-                        >
-                          {objective}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                business_objectives:
-                                  formData.business_objectives.filter(
-                                    (obj) => obj !== objective
-                                  ),
-                              });
-                            }}
-                            className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
-                            aria-label={`Remove ${objective}`}
+                  <div>
+                    <Label>Project Objectives</Label>
+                    <p className="text-xs text-gray-500 mt-1 mb-3">
+                      Search and select all applicable business objectives for
+                      this project
+                    </p>
+
+                    {/* Selected Objectives as Badges */}
+                    {formData.business_objectives.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {formData.business_objectives.map((objective) => (
+                          <Badge
+                            key={objective}
+                            variant="secondary"
+                            className="px-3 py-1 text-sm flex items-center gap-2"
                           >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Search Input and Dropdown */}
-                  <div className="relative">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="text"
-                        placeholder="Add objectives..."
-                        value={objectiveSearch}
-                        onChange={(e) => {
-                          setObjectiveSearch(e.target.value);
-                          setShowObjectiveDropdown(true);
-                        }}
-                        onFocus={() => setShowObjectiveDropdown(true)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && objectiveSearch.trim()) {
-                            e.preventDefault();
-                            const trimmed = objectiveSearch.trim();
-                            const isExisting = availableObjectives.some(
-                              (opt) =>
-                                opt.toLowerCase() === trimmed.toLowerCase()
-                            );
-                            const isAlreadySelected =
-                              formData.business_objectives.some(
-                                (obj) =>
-                                  obj.toLowerCase() === trimmed.toLowerCase()
-                              );
-
-                            if (!isExisting && !isAlreadySelected) {
-                              setFormData({
-                                ...formData,
-                                business_objectives: [
-                                  ...formData.business_objectives,
-                                  trimmed,
-                                ],
-                              });
-                              setObjectiveSearch("");
-                              setShowObjectiveDropdown(false);
-                            } else if (isExisting && !isAlreadySelected) {
-                              setFormData({
-                                ...formData,
-                                business_objectives: [
-                                  ...formData.business_objectives,
-                                  availableObjectives.find(
-                                    (opt) =>
-                                      opt.toLowerCase() ===
-                                      trimmed.toLowerCase()
-                                  )!,
-                                ],
-                              });
-                              setObjectiveSearch("");
-                              setShowObjectiveDropdown(false);
-                            }
-                          }
-                        }}
-                        className="pl-10"
-                      />
-                    </div>
-
-                    {/* Dropdown List */}
-                    {showObjectiveDropdown && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => {
-                            setShowObjectiveDropdown(false);
-                            setObjectiveSearch("");
-                          }}
-                        />
-                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                          {(() => {
-                            const filteredOptions = availableObjectives.filter(
-                              (objective) =>
-                                !formData.business_objectives.includes(
-                                  objective
-                                ) &&
-                                objective
-                                  .toLowerCase()
-                                  .includes(objectiveSearch.toLowerCase())
-                            );
-
-                            const canAddCustom =
-                              objectiveSearch.trim() &&
-                              !availableObjectives.some(
-                                (opt) =>
-                                  opt.toLowerCase() ===
-                                  objectiveSearch.trim().toLowerCase()
-                              ) &&
-                              !formData.business_objectives.some(
-                                (obj) =>
-                                  obj.toLowerCase() ===
-                                  objectiveSearch.trim().toLowerCase()
-                              );
-
-                            if (filteredOptions.length === 0 && !canAddCustom) {
-                              return (
-                                <div className="px-4 py-3 text-sm text-gray-500">
-                                  {objectiveSearch
-                                    ? "No matching objectives found"
-                                    : "All objectives selected"}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <>
-                                {filteredOptions.map((objective) => (
-                                  <button
-                                    key={objective}
-                                    type="button"
-                                    onClick={() => {
-                                      setFormData({
-                                        ...formData,
-                                        business_objectives: [
-                                          ...formData.business_objectives,
-                                          objective,
-                                        ],
-                                      });
-                                      setObjectiveSearch("");
-                                      setShowObjectiveDropdown(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
-                                  >
-                                    {objective}
-                                  </button>
-                                ))}
-                                {canAddCustom && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFormData({
-                                        ...formData,
-                                        business_objectives: [
-                                          ...formData.business_objectives,
-                                          objectiveSearch.trim(),
-                                        ],
-                                      });
-                                      setObjectiveSearch("");
-                                      setShowObjectiveDropdown(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm transition-colors border-t border-gray-200 flex items-center gap-2"
-                                  >
-                                    <span className="text-blue-600">
-                                      Add "{objectiveSearch.trim()}"
-                                    </span>
-                                  </button>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </>
+                            {objective}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  business_objectives:
+                                    formData.business_objectives.filter(
+                                      (obj) => obj !== objective,
+                                    ),
+                                });
+                              }}
+                              className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                              aria-label={`Remove ${objective}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
                     )}
+
+                    {/* Search Input and Dropdown */}
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          placeholder="Add objectives..."
+                          value={objectiveSearch}
+                          onChange={(e) => {
+                            setObjectiveSearch(e.target.value);
+                            setShowObjectiveDropdown(true);
+                          }}
+                          onFocus={() => setShowObjectiveDropdown(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && objectiveSearch.trim()) {
+                              e.preventDefault();
+                              const trimmed = objectiveSearch.trim();
+                              const isExisting = availableObjectives.some(
+                                (opt) =>
+                                  opt.toLowerCase() === trimmed.toLowerCase(),
+                              );
+                              const isAlreadySelected =
+                                formData.business_objectives.some(
+                                  (obj) =>
+                                    obj.toLowerCase() === trimmed.toLowerCase(),
+                                );
+
+                              if (!isExisting && !isAlreadySelected) {
+                                setFormData({
+                                  ...formData,
+                                  business_objectives: [
+                                    ...formData.business_objectives,
+                                    trimmed,
+                                  ],
+                                });
+                                setObjectiveSearch("");
+                                setShowObjectiveDropdown(false);
+                              } else if (isExisting && !isAlreadySelected) {
+                                setFormData({
+                                  ...formData,
+                                  business_objectives: [
+                                    ...formData.business_objectives,
+                                    availableObjectives.find(
+                                      (opt) =>
+                                        opt.toLowerCase() ===
+                                        trimmed.toLowerCase(),
+                                    )!,
+                                  ],
+                                });
+                                setObjectiveSearch("");
+                                setShowObjectiveDropdown(false);
+                              }
+                            }
+                          }}
+                          className="pl-10"
+                        />
+                      </div>
+
+                      {/* Dropdown List */}
+                      {showObjectiveDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => {
+                              setShowObjectiveDropdown(false);
+                              setObjectiveSearch("");
+                            }}
+                          />
+                          <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                            {(() => {
+                              const filteredOptions =
+                                availableObjectives.filter(
+                                  (objective) =>
+                                    !formData.business_objectives.includes(
+                                      objective,
+                                    ) &&
+                                    objective
+                                      .toLowerCase()
+                                      .includes(objectiveSearch.toLowerCase()),
+                                );
+
+                              const canAddCustom =
+                                objectiveSearch.trim() &&
+                                !availableObjectives.some(
+                                  (opt) =>
+                                    opt.toLowerCase() ===
+                                    objectiveSearch.trim().toLowerCase(),
+                                ) &&
+                                !formData.business_objectives.some(
+                                  (obj) =>
+                                    obj.toLowerCase() ===
+                                    objectiveSearch.trim().toLowerCase(),
+                                );
+
+                              if (
+                                filteredOptions.length === 0 &&
+                                !canAddCustom
+                              ) {
+                                return (
+                                  <div className="px-4 py-3 text-sm text-gray-500">
+                                    {objectiveSearch
+                                      ? "No matching objectives found"
+                                      : "All objectives selected"}
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <>
+                                  {filteredOptions.map((objective) => (
+                                    <button
+                                      key={objective}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({
+                                          ...formData,
+                                          business_objectives: [
+                                            ...formData.business_objectives,
+                                            objective,
+                                          ],
+                                        });
+                                        setObjectiveSearch("");
+                                        setShowObjectiveDropdown(false);
+                                      }}
+                                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                                    >
+                                      {objective}
+                                    </button>
+                                  ))}
+                                  {canAddCustom && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({
+                                          ...formData,
+                                          business_objectives: [
+                                            ...formData.business_objectives,
+                                            objectiveSearch.trim(),
+                                          ],
+                                        });
+                                        setObjectiveSearch("");
+                                        setShowObjectiveDropdown(false);
+                                      }}
+                                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm transition-colors border-t border-gray-200 flex items-center gap-2"
+                                    >
+                                      <span className="text-blue-600">
+                                        Add "{objectiveSearch.trim()}"
+                                      </span>
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="kpi">Goals</Label>
-                  <Textarea
-                    id="kpi"
-                    value={formData.kpi}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        kpi: e.target.value,
-                      })
-                    }
-                    placeholder="# SMART Goals and KPIs&#10;&#10;## Specific&#10;- Increase monthly sign-ups by 25%&#10;&#10;## Measurable&#10;- Track conversion rate (target: 5%)&#10;&#10;## Achievable&#10;- Improve page load time to &lt; 2 seconds&#10;&#10;## Relevant&#10;- Align with Q4 business targets&#10;&#10;## Time-bound&#10;- Achieve goals within 6 months&#10;&#10;## Key Performance Indicators&#10;- User engagement rate&#10;- Conversion rate&#10;- Customer satisfaction score"
-                    rows={12}
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Define Specific, Measurable, Achievable, Relevant, and
-                    Time-bound goals along with Key Performance Indicators
-                  </p>
-                </div>
+                  <div>
+                    <Label htmlFor="kpi">Goals</Label>
+                    <Textarea
+                      id="kpi"
+                      value={formData.kpi}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          kpi: e.target.value,
+                        })
+                      }
+                      placeholder="# SMART Goals and KPIs&#10;&#10;## Specific&#10;- Increase monthly sign-ups by 25%&#10;&#10;## Measurable&#10;- Track conversion rate (target: 5%)&#10;&#10;## Achievable&#10;- Improve page load time to &lt; 2 seconds&#10;&#10;## Relevant&#10;- Align with Q4 business targets&#10;&#10;## Time-bound&#10;- Achieve goals within 6 months&#10;&#10;## Key Performance Indicators&#10;- User engagement rate&#10;- Conversion rate&#10;- Customer satisfaction score"
+                      rows={12}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Define Specific, Measurable, Achievable, Relevant, and
+                      Time-bound goals along with Key Performance Indicators
+                    </p>
+                  </div>
 
-                <div>
-                  <Label htmlFor="target_users">Target Users</Label>
-                  <Textarea
-                    id="target_users"
-                    value={formData.target_users}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        target_users: e.target.value,
-                      })
-                    }
-                    placeholder="# Target Users&#10;&#10;## Primary Audience&#10;- Age: 25-45&#10;- Occupation: Small business owners&#10;- Location: Urban areas&#10;- Tech-savviness: Moderate&#10;&#10;## User Personas&#10;&#10;### Persona 1: The Entrepreneur&#10;- Demographics: 30-40 years old, business owner&#10;- Goals: Grow online presence, attract customers&#10;- Pain points: Limited time, budget constraints&#10;&#10;### Persona 2: The Marketing Manager&#10;- Demographics: 28-35 years old, marketing professional&#10;- Goals: Generate leads, track performance&#10;- Pain points: Need data-driven insights"
-                    rows={12}
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Describe your target users, including demographics,
-                    personas, goals, and pain points
-                  </p>
-                </div>
+                  <div>
+                    <Label htmlFor="target_users">Target Users</Label>
+                    <Textarea
+                      id="target_users"
+                      value={formData.target_users}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          target_users: e.target.value,
+                        })
+                      }
+                      placeholder="# Target Users&#10;&#10;## Primary Audience&#10;- Age: 25-45&#10;- Occupation: Small business owners&#10;- Location: Urban areas&#10;- Tech-savviness: Moderate&#10;&#10;## User Personas&#10;&#10;### Persona 1: The Entrepreneur&#10;- Demographics: 30-40 years old, business owner&#10;- Goals: Grow online presence, attract customers&#10;- Pain points: Limited time, budget constraints&#10;&#10;### Persona 2: The Marketing Manager&#10;- Demographics: 28-35 years old, marketing professional&#10;- Goals: Generate leads, track performance&#10;- Pain points: Need data-driven insights"
+                      rows={12}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Describe your target users, including demographics,
+                      personas, goals, and pain points
+                    </p>
+                  </div>
 
-                <div>
-                  <Label htmlFor="references">References</Label>
-                  <Textarea
-                    id="references"
-                    value={formData.references}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        references: e.target.value,
-                      })
-                    }
-                    placeholder="# References&#10;&#10;## Design Inspiration&#10;- Website: https://example.com/design&#10;- App: https://example.com/app&#10;&#10;## Competitor Analysis&#10;- Competitor 1: https://competitor1.com&#10;- Competitor 2: https://competitor2.com&#10;&#10;## Brand Guidelines&#10;- Brand colors: #FF5733, #33C3F0&#10;- Typography: Inter, Roboto&#10;&#10;## Additional Resources&#10;- Documentation: https://docs.example.com&#10;- Style guide: https://style.example.com"
-                    rows={10}
-                    className="font-mono text-sm h-80"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Add links to design inspirations, competitor websites, brand
-                    guidelines, or any other relevant references
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                  <div>
+                    <Label htmlFor="references">References</Label>
+                    <Textarea
+                      id="references"
+                      value={formData.references}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          references: e.target.value,
+                        })
+                      }
+                      placeholder="# References&#10;&#10;## Design Inspiration&#10;- Website: https://example.com/design&#10;- App: https://example.com/app&#10;&#10;## Competitor Analysis&#10;- Competitor 1: https://competitor1.com&#10;- Competitor 2: https://competitor2.com&#10;&#10;## Brand Guidelines&#10;- Brand colors: #FF5733, #33C3F0&#10;- Typography: Inter, Roboto&#10;&#10;## Additional Resources&#10;- Documentation: https://docs.example.com&#10;- Style guide: https://style.example.com"
+                      rows={10}
+                      className="font-mono text-sm h-80"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Add links to design inspirations, competitor websites,
+                      brand guidelines, or any other relevant references
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -900,7 +904,7 @@ export default function NewProjectPage() {
                               setFormData({
                                 ...formData,
                                 pages_views: formData.pages_views.filter(
-                                  (pv) => pv !== pageView
+                                  (pv) => pv !== pageView,
                                 ),
                               });
                             }}
@@ -932,7 +936,8 @@ export default function NewProjectPage() {
                             e.preventDefault();
                             const trimmed = pageViewSearch.trim();
                             const isAlreadySelected = formData.pages_views.some(
-                              (pv) => pv.toLowerCase() === trimmed.toLowerCase()
+                              (pv) =>
+                                pv.toLowerCase() === trimmed.toLowerCase(),
                             );
 
                             if (!isAlreadySelected) {
@@ -966,7 +971,7 @@ export default function NewProjectPage() {
                               !formData.pages_views.some(
                                 (pv) =>
                                   pv.toLowerCase() ===
-                                  pageViewSearch.trim().toLowerCase()
+                                  pageViewSearch.trim().toLowerCase(),
                               );
 
                             if (!canAddCustom) {
@@ -1236,7 +1241,7 @@ export default function NewProjectPage() {
                                 ...formData,
                                 reports_required:
                                   formData.reports_required.filter(
-                                    (item) => item !== option
+                                    (item) => item !== option,
                                   ),
                               });
                             }
@@ -1279,7 +1284,7 @@ export default function NewProjectPage() {
                                 ...formData,
                                 support_channels:
                                   formData.support_channels.filter(
-                                    (item) => item !== option
+                                    (item) => item !== option,
                                   ),
                               });
                             }
@@ -1318,7 +1323,7 @@ export default function NewProjectPage() {
                                 ...formData,
                                 incident_alerts:
                                   formData.incident_alerts.filter(
-                                    (item) => item !== option
+                                    (item) => item !== option,
                                   ),
                               });
                             }

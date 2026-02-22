@@ -72,12 +72,12 @@ export default function EditTaskPage() {
         if (foundTask) {
           setTask(foundTask);
           setTitle(foundTask.title); // Set page title
-          
+
           // Populate form
           setTitleValue(foundTask.title);
           setDescription(foundTask.description || "");
           setStatus(foundTask.status || "pending");
-          
+
           // Populate new fields if they exist in the task object
           // Since we are adding these fields now, they might be undefined initially
           // We'll treat foundTask as any to access potential new properties safely
@@ -115,21 +115,21 @@ export default function EditTaskPage() {
     try {
       // Since we don't have a direct updateTask endpoint yet, we'll mimic what we did for create
       // However, we should check if our backend supports task updates separately.
-      // Based on previous files, we only saw updateProject. 
+      // Based on previous files, we only saw updateProject.
       // We will likely need to fetch the project, update the specific task in the tasks array, and send it back.
       // OR better, we added createTask, maybe we should assume updateTask exists or add it.
       // Given the prompt "New task page to edit more details...", we need to support these new fields.
-      
-      // Let's assume we need to update the project with the modified task list for now, 
+
+      // Let's assume we need to update the project with the modified task list for now,
       // UNTIL we add a dedicated updateTask endpoint which is cleaner.
       // But re-uploading all tasks is risky for concurrency.
       // Ideally, we implement PATCH /api/projects/:id/tasks/:taskId on backend.
-      
+
       // For this step, I will assume we will add the backend capability via the same pattern as createTask
       // or update the project entirely if I must.
-      // Let's go with updating the project's task list as a continued workaround 
+      // Let's go with updating the project's task list as a continued workaround
       // OR even better, I'll assume we'll add the proper API method in the next step.
-      
+
       // Let's construct the updated task object
       const updatedTask = {
         ...task,
@@ -148,7 +148,7 @@ export default function EditTaskPage() {
       // We will implement a `updateTask` method in api.ts next.
       await projectsApi.updateTask(projectId, taskId, updatedTask);
 
-      router.push(`/projects/${projectId}`);
+      router.push(`/ppm/projects/${projectId}`);
     } catch (err) {
       console.error("Error updating task:", err);
       // Show error toast or message
@@ -177,7 +177,7 @@ export default function EditTaskPage() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">{error || "Task not found"}</p>
-            <Link href={`/projects/${projectId}`}>
+            <Link href={`/ppm/projects/${projectId}`}>
               <Button>Back to Project</Button>
             </Link>
           </CardContent>
@@ -191,20 +191,25 @@ export default function EditTaskPage() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <Link href={`/projects/${projectId}`}>
-            <Button variant="ghost" className="mb-2 pl-0 hover:pl-2 transition-all">
+            <Button
+              variant="ghost"
+              className="mb-2 pl-0 hover:pl-2 transition-all"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Project
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Edit Task</h1>
-            <Badge variant={
+            <Badge
+              variant={
                 status === "completed" || status === "done"
                   ? "default"
                   : status === "in_progress"
-                  ? "secondary"
-                  : "outline"
-              }>
+                    ? "secondary"
+                    : "outline"
+              }
+            >
               {status}
             </Badge>
           </div>
@@ -326,7 +331,9 @@ export default function EditTaskPage() {
                       type="number"
                       min="0"
                       value={storyPoints}
-                      onChange={(e) => setStoryPoints(parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setStoryPoints(parseInt(e.target.value) || 0)
+                      }
                       placeholder="e.g. 1, 2, 3, 5, 8..."
                     />
                   </div>
@@ -354,7 +361,7 @@ export default function EditTaskPage() {
           </Card>
 
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Link href={`/projects/${projectId}`}>
+            <Link href={`/ppm/projects/${projectId}`}>
               <Button type="button" variant="outline">
                 Cancel
               </Button>

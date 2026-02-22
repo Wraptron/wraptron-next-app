@@ -1,6 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is the Wraptron frontend, built with [Next.js](https://nextjs.org) and deployed via OpenNext (Cloudflare).
 
 ## Getting Started
+
+### Environment configuration (dev vs prod)
+
+The frontend talks to the backend using `NEXT_PUBLIC_API_URL`.
+
+- **Development**: configured in `.env.development`
+- **Production**: configured in `.env.production`
+- **Template**: `.env.example`
+- **Personal overrides**: create `.env.local` (ignored by git)
+
+Example:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### Run the development server
 
 First, run the development server:
 
@@ -29,9 +46,34 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Deploy to Cloudflare Workers (OpenNext)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# wraptron-next-app
+This project is set up to deploy as a **Cloudflare Worker** using OpenNext.
+
+Prerequisites:
+- Cloudflare account
+- Wrangler auth (`wrangler login`)
+- A **publicly reachable backend API** (your prod backend cannot be `localhost`)
+
+Steps:
+
+1) Set the production API URL (build-time):
+
+```bash
+cd frontend/web
+echo "NEXT_PUBLIC_API_URL=https://api.your-domain.com" > .env.production
+```
+
+2) Build + deploy:
+
+```bash
+npm install
+npm run cf:deploy:prod
+```
+
+3) (Optional) Custom domain routing:
+- Edit `wrangler.jsonc` and add `routes` under `env.production`.
+
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

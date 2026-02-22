@@ -26,7 +26,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { RefreshCw, Plus, Menu, LayoutGrid, Columns3, Trash2 } from "lucide-react";
+import {
+  RefreshCw,
+  Plus,
+  Menu,
+  LayoutGrid,
+  Columns3,
+  Trash2,
+} from "lucide-react";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "Not set";
@@ -128,7 +135,7 @@ const Projects = () => {
     setSelectedProjects((prev) =>
       prev.includes(projectId)
         ? prev.filter((id) => id !== projectId)
-        : [...prev, projectId]
+        : [...prev, projectId],
     );
   };
 
@@ -147,7 +154,7 @@ const Projects = () => {
 
       // Remove deleted projects from list
       setProjects((prev) =>
-        prev.filter((p) => !selectedProjects.includes(p.id))
+        prev.filter((p) => !selectedProjects.includes(p.id)),
       );
       setSelectedProjects([]);
       setDeleteDialogOpen(false);
@@ -180,7 +187,7 @@ const Projects = () => {
 
   // Set page title in header
   useEffect(() => {
-    setTitle("Projects");
+    setTitle("PPM");
     // Cleanup: clear title when component unmounts
     return () => setTitle(null);
   }, [setTitle]);
@@ -243,7 +250,7 @@ const Projects = () => {
               {projects.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    No projects found.
+                    No PPM items found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -320,7 +327,7 @@ const Projects = () => {
                 ))}
                 {(!grouped[column.key] || grouped[column.key].length === 0) && (
                   <div className="text-sm text-gray-500 text-center py-4">
-                    No projects
+                    No items
                   </div>
                 )}
               </div>
@@ -379,7 +386,7 @@ const Projects = () => {
             </Button>
             <Link href="/projects/new">
               <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-1" /> Add Project
+                <Plus className="h-4 w-4 mr-1" /> Add Item
               </Button>
             </Link>
           </div>
@@ -388,7 +395,7 @@ const Projects = () => {
         {selectedProjects.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
             <span className="text-sm font-medium">
-              {selectedProjects.length} project
+              {selectedProjects.length} item
               {selectedProjects.length === 1 ? "" : "s"} selected
             </span>
             <div className="flex gap-2">
@@ -408,10 +415,10 @@ const Projects = () => {
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Projects</DialogTitle>
+              <DialogTitle>Delete PPM Items</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete {selectedProjects.length} selected
-                projects? This action cannot be undone.
+                Are you sure you want to delete {selectedProjects.length}{" "}
+                selected items? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -440,8 +447,8 @@ const Projects = () => {
           !error &&
           (projects.length === 0 ? (
             <div className="text-center py-16">
-              <h3 className="text-xl mb-2">No projects yet</h3>
-              <p className="text-gray-600">Create your first project above.</p>
+              <h3 className="text-xl mb-2">No PPM items yet</h3>
+              <p className="text-gray-600">Create your first PPM item above.</p>
             </div>
           ) : (
             renderProjects()

@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { useCurrency } from "@/contexts/currency-context";
 import { githubApi, type GitHubConnection } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -24,11 +26,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
 
 export default function Settings() {
   const { setTitle } = usePageTitle();
+  const { currency, setCurrency, formatCurrency } = useCurrency();
   const [connections, setConnections] = useState<GitHubConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +201,41 @@ export default function Settings() {
             <AlertDescription className="text-red-800">{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Currency Settings Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              <CardTitle>Currency Settings</CardTitle>
+            </div>
+            <CardDescription className="mt-2">
+              Set your preferred currency for displaying monetary values throughout the application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currency">Default Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger id="currency" className="w-[200px]">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((curr) => (
+                      <SelectItem key={curr} value={curr}>
+                        {curr} - {formatCurrency(1000, curr)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">
+                  Example: {formatCurrency(1000)} (1,000 in your selected currency)
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* GitHub Connections Section */}
         <Card>

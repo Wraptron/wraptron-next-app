@@ -10,14 +10,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Box, Users, Package, Briefcase, Search } from "lucide-react";
 import {
-  Box,
-  Users,
-  Package,
-  Briefcase,
-  Search,
-} from "lucide-react";
-import { customersApi, productsApi, employeesApi, projectsApi } from "@/lib/api";
+  customersApi,
+  productsApi,
+  employeesApi,
+  projectsApi,
+} from "@/lib/api";
 
 interface SearchResult {
   id: string | number;
@@ -76,7 +75,7 @@ export function GlobalSearch() {
               title: project.project_name,
               subtitle: project.status,
               type: "project",
-              url: `/projects/${project.id}`,
+              url: `/ppm/projects/${project.id}`,
             });
           });
         } catch (error) {
@@ -177,7 +176,7 @@ export function GlobalSearch() {
   const getTypeLabel = (type: SearchResult["type"]) => {
     switch (type) {
       case "project":
-        return "Projects";
+        return "PPM";
       case "customer":
         return "Customers";
       case "product":
@@ -190,13 +189,16 @@ export function GlobalSearch() {
   };
 
   // Group results by type
-  const groupedResults = results.reduce((acc, result) => {
-    if (!acc[result.type]) {
-      acc[result.type] = [];
-    }
-    acc[result.type].push(result);
-    return acc;
-  }, {} as Record<SearchResult["type"], SearchResult[]>);
+  const groupedResults = results.reduce(
+    (acc, result) => {
+      if (!acc[result.type]) {
+        acc[result.type] = [];
+      }
+      acc[result.type].push(result);
+      return acc;
+    },
+    {} as Record<SearchResult["type"], SearchResult[]>,
+  );
 
   return (
     <>
@@ -215,13 +217,13 @@ export function GlobalSearch() {
         open={open}
         onOpenChange={setOpen}
         title="Search Everything"
-        description="Search across projects, customers, products, employees, and more..."
+        description="Search across PPM, customers, products, employees, and more..."
         showCloseButton={false}
       >
         <div className="relative">
           <div className="[&_[data-slot=command-input-wrapper]]:pr-16">
             <CommandInput
-              placeholder="Search projects, customers, products, employees..."
+              placeholder="Search PPM, customers, products, employees..."
               value={query}
               onValueChange={setQuery}
             />
@@ -241,7 +243,10 @@ export function GlobalSearch() {
           )}
           {!loading &&
             Object.entries(groupedResults).map(([type, items]) => (
-              <CommandGroup key={type} heading={getTypeLabel(type as SearchResult["type"])}>
+              <CommandGroup
+                key={type}
+                heading={getTypeLabel(type as SearchResult["type"])}
+              >
                 {items.map((result) => (
                   <CommandItem
                     key={`${result.type}-${result.id}`}
@@ -266,4 +271,3 @@ export function GlobalSearch() {
     </>
   );
 }
-

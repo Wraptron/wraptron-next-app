@@ -32,8 +32,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-
-import { projectsApi, integrationsApi, type Project, type Task, type GitHubCommit, type Integration } from "@/lib/api";
+import {
+  projectsApi,
+  integrationsApi,
+  type Project,
+  type Task,
+  type GitHubCommit,
+  type Integration,
+} from "@/lib/api";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -48,7 +54,6 @@ import {
   List,
   LayoutGrid,
   Columns,
-
   ChevronRight,
   ChevronDown,
   Folder,
@@ -107,7 +112,11 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
     const windowUrl = "about:blank";
     const uniqueName = new Date();
     const windowName = "Print" + uniqueName.getTime();
-    const printWindow = window.open(windowUrl, windowName, "width=800,height=600");
+    const printWindow = window.open(
+      windowUrl,
+      windowName,
+      "width=800,height=600",
+    );
 
     if (printWindow && printContent) {
       printWindow.document.write(`
@@ -140,7 +149,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
 
   // Calculate Out of Scope Items (Services NOT selected)
   const outOfScope = SERVICE_OPTIONS.filter(
-    (s) => !project.services_offered?.includes(s) && s !== "Other"
+    (s) => !project.services_offered?.includes(s) && s !== "Other",
   );
 
   return (
@@ -155,7 +164,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
             </Button>
           </div>
         </DialogHeader>
-        
+
         <div id="project-charter-content" className="space-y-6 pt-4">
           {/* Header Info */}
           <div>
@@ -164,26 +173,42 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               Generated on {new Date().toLocaleDateString()}
             </div>
             <div className="mt-4 flex gap-6 text-sm text-gray-600">
-               <div><span className="font-semibold">ID:</span> {project.id}</div>
-               <div><span className="font-semibold">Status:</span> {project.status}</div>
-               <div><span className="font-semibold">Created:</span> {formatDate(project.created_at)}</div>
+              <div>
+                <span className="font-semibold">ID:</span> {project.id}
+              </div>
+              <div>
+                <span className="font-semibold">Status:</span> {project.status}
+              </div>
+              <div>
+                <span className="font-semibold">Created:</span>{" "}
+                {formatDate(project.created_at)}
+              </div>
             </div>
           </div>
 
           {/* 1. Executive Summary (Mapped to Basic Information) */}
           <div className="section">
-            <h2 className="text-lg font-semibold border-b pb-2 mb-3">1. Executive Summary</h2>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+              1. Executive Summary
+            </h2>
             <p className="text-sm text-gray-700">
-               This project, <strong>{project.project_name}</strong>, aims to deliver {project.services_offered.join(", ")}
-               {project.other_service_description ? ` and ${project.other_service_description}` : ""}.
-               The project is scheduled to start on {formatDate(project.start_date)} with a target completion date of {formatDate(project.target_date)}.
+              This project, <strong>{project.project_name}</strong>, aims to
+              deliver {project.services_offered.join(", ")}
+              {project.other_service_description
+                ? ` and ${project.other_service_description}`
+                : ""}
+              . The project is scheduled to start on{" "}
+              {formatDate(project.start_date)} with a target completion date of{" "}
+              {formatDate(project.target_date)}.
             </p>
           </div>
 
           {/* 2. Scope of Work (In Scope / Out of Scope) */}
           <div className="section grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-lg font-semibold border-b pb-2 mb-3">2. Scope of Work (In Scope)</h2>
+              <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+                2. Scope of Work (In Scope)
+              </h2>
               <ul className="list-disc list-inside text-sm text-gray-600">
                 {project.services_offered.map((s, i) => (
                   <li key={i}>{s}</li>
@@ -193,9 +218,11 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
                 )}
               </ul>
             </div>
-            
+
             <div>
-              <h2 className="text-lg font-semibold border-b pb-2 mb-3">Out of Scope</h2>
+              <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+                Out of Scope
+              </h2>
               <ul className="list-disc list-inside text-sm text-gray-500 italic">
                 {outOfScope.map((s, i) => (
                   <li key={i}>{s}</li>
@@ -207,113 +234,171 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
 
           {/* 3. Technical Architecture */}
           <div className="section">
-            <h2 className="text-lg font-semibold border-b pb-2 mb-3">3. Technical Architecture & Requirements</h2>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+              3. Technical Architecture & Requirements
+            </h2>
             <div className="space-y-4">
-               {/* Target Users & Tech Stack */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700">Target Users</h3>
-                    <p className="text-sm text-gray-600">{project.target_users || "Not specified"}</p>
-                 </div>
-                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700">Technology Stack</h3>
-                    <p className="text-sm text-gray-600">{project.technology_stack || "Not specified"}</p>
-                 </div>
-               </div>
+              {/* Target Users & Tech Stack */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Target Users
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {project.target_users || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Technology Stack
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {project.technology_stack || "Not specified"}
+                  </p>
+                </div>
+              </div>
 
-               {/* Requirements */}
-               <div className="space-y-3">
-                   <div>
-                       <h3 className="text-sm font-semibold text-gray-700">Business Requirements</h3>
-                       {project.functional_requirements ? (
-                           <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.functional_requirements}</p>
-                       ) : <p className="text-sm text-gray-500 italic">None specified</p>}
-                       {/* Note: Mapping functional_requirements to Business Requirements as per user intuition or lack of specific business_req field, 
+              {/* Requirements */}
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Business Requirements
+                  </h3>
+                  {project.functional_requirements ? (
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {project.functional_requirements}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      None specified
+                    </p>
+                  )}
+                  {/* Note: Mapping functional_requirements to Business Requirements as per user intuition or lack of specific business_req field, 
                            User asked for: "business requirements, functional requirements, non functional requirements". 
                            Since we don't have separate business/functional, we display functional here or assume they are mixed. 
                            Let's check if we can reuse functional_requirements for both or separate them if possible. 
                            The prompt asked to map "Technical Architecture with ... business requirements, functional requirements". 
                            We will display what we have. */}
-                   </div>
-                   
-                   <div>
-                        <h3 className="text-sm font-semibold text-gray-700">Functional Requirements</h3>
-                         {/* Since we mapped functional_requirements to "Business Requirements" above (often interchangeable in simple schemas), 
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Functional Requirements
+                  </h3>
+                  {/* Since we mapped functional_requirements to "Business Requirements" above (often interchangeable in simple schemas), 
                              let's duplicate or clarify. Actually, let's use the field `functional_requirements` strictly here 
                              and maybe use `business_objectives` for Business Requirements? The user explicitly said "Success criteria with business goals".
                              Let's use `functional_requirements` here. */}
-                        {project.functional_requirements ? (
-                           <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.functional_requirements}</p>
-                        ) : <p className="text-sm text-gray-500 italic">None specified</p>}
-                   </div>
+                  {project.functional_requirements ? (
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {project.functional_requirements}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      None specified
+                    </p>
+                  )}
+                </div>
 
-                   <div>
-                        <h3 className="text-sm font-semibold text-gray-700">Non-Functional Requirements</h3>
-                        {project.non_functional_requirements ? (
-                           <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.non_functional_requirements}</p>
-                        ) : <p className="text-sm text-gray-500 italic">None specified</p>}
-                   </div>
-               </div>
-               
-               {/* Pages / Views and UX */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                   <div>
-                      <h3 className="text-sm font-semibold text-gray-700">Pages / Views</h3>
-                      {project.pages_views && project.pages_views.length > 0 ? (
-                         <div className="flex flex-wrap gap-2 mt-1">
-                            {project.pages_views.map((page, i) => (
-                               <Badge key={i} variant="secondary">{page}</Badge>
-                            ))}
-                         </div>
-                      ) : <p className="text-sm text-gray-500 italic">No pages defined.</p>}
-                   </div>
-                   <div>
-                      <h3 className="text-sm font-semibold text-gray-700">UX Design Preferences</h3>
-                      <p className="text-sm text-gray-600">{project.ux_preference || "Not specified"}</p>
-                   </div>
-               </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Non-Functional Requirements
+                  </h3>
+                  {project.non_functional_requirements ? (
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {project.non_functional_requirements}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      None specified
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Pages / Views and UX */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Pages / Views
+                  </h3>
+                  {project.pages_views && project.pages_views.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {project.pages_views.map((page, i) => (
+                        <Badge key={i} variant="secondary">
+                          {page}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      No pages defined.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    UX Design Preferences
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {project.ux_preference || "Not specified"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* 4. Milestones & Releases */}
           <div className="section">
-             <h2 className="text-lg font-semibold border-b pb-2 mb-3">4. Milestones & Releases</h2>
-             <div className="text-sm text-gray-600">
-                <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
-                   <span className="font-medium">Project Start</span>
-                   <span>{formatDate(project.start_date)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
-                   <span className="font-medium">Target Completion</span>
-                   <span>{formatDate(project.target_date)}</span>
-                </div>
-                {/* Future: If we add a releases array to the Project type, iterate here */}
-             </div>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+              4. Milestones & Releases
+            </h2>
+            <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
+                <span className="font-medium">Project Start</span>
+                <span>{formatDate(project.start_date)}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
+                <span className="font-medium">Target Completion</span>
+                <span>{formatDate(project.target_date)}</span>
+              </div>
+              {/* Future: If we add a releases array to the Project type, iterate here */}
+            </div>
           </div>
 
           {/* 5. Success Criteria (Business Goals) */}
           <div className="section">
-             <h2 className="text-lg font-semibold border-b pb-2 mb-3">5. Success Criteria</h2>
-             <div className="space-y-3">
-                <div>
-                   <h3 className="text-sm font-semibold text-gray-700">Business Goals</h3>
-                   {project.business_objectives && project.business_objectives.length > 0 ? (
-                       <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
-                          {project.business_objectives.map((obj, i) => (
-                             <li key={i}>{obj}</li>
-                          ))}
-                       </ul>
-                   ) : <p className="text-sm text-gray-500 italic">None defined</p>}
-                </div>
-                {project.kpi && (
-                   <div>
-                      <h3 className="text-sm font-semibold text-gray-700">Key Performance Indicators (KPIs)</h3>
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.kpi}</p>
-                   </div>
+            <h2 className="text-lg font-semibold border-b pb-2 mb-3">
+              5. Success Criteria
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Business Goals
+                </h3>
+                {project.business_objectives &&
+                project.business_objectives.length > 0 ? (
+                  <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
+                    {project.business_objectives.map((obj, i) => (
+                      <li key={i}>{obj}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">None defined</p>
                 )}
-             </div>
+              </div>
+              {project.kpi && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Key Performance Indicators (KPIs)
+                  </h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {project.kpi}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-
         </div>
       </DialogContent>
     </Dialog>
@@ -329,7 +414,6 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [charterOpen, setCharterOpen] = useState(false);
-
 
   const projectId = params?.id ? parseInt(params.id as string) : null;
 
@@ -399,7 +483,7 @@ export default function ProjectPage() {
           <CardContent className="pt-6">
             <p className="text-red-600 mb-4">{error || "Project not found"}</p>
             <Link href="/projects">
-              <Button variant="outline">Back to Projects</Button>
+              <Button variant="outline">Back to PPM</Button>
             </Link>
           </CardContent>
         </Card>
@@ -423,7 +507,7 @@ export default function ProjectPage() {
           <Link href="/projects">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
+              Back to PPM
             </Button>
           </Link>
           <div className="flex items-center justify-between mb-4">
@@ -433,8 +517,8 @@ export default function ProjectPage() {
                   project.status === "completed"
                     ? "default"
                     : project.status === "in_progress"
-                    ? "secondary"
-                    : "outline"
+                      ? "secondary"
+                      : "outline"
                 }
               >
                 {project.status}
@@ -444,7 +528,11 @@ export default function ProjectPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCharterOpen(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCharterOpen(true)}
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Project Charter
               </Button>
@@ -529,11 +617,13 @@ export default function ProjectPage() {
                             Project Objectives
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {project.business_objectives.map((objective, idx) => (
-                              <Badge key={idx} variant="outline">
-                                {objective}
-                              </Badge>
-                            ))}
+                            {project.business_objectives.map(
+                              (objective, idx) => (
+                                <Badge key={idx} variant="outline">
+                                  {objective}
+                                </Badge>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
@@ -580,14 +670,16 @@ export default function ProjectPage() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
-             <Card>
-                <CardHeader>
-                   <CardTitle>Analytics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                   <p className="text-gray-500">Analytics data will appear here.</p>
-                </CardContent>
-             </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500">
+                  Analytics data will appear here.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="requirements" className="space-y-4">
@@ -704,7 +796,9 @@ export default function ProjectPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">Team management will appear here.</p>
+                <p className="text-gray-500">
+                  Team management will appear here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -841,8 +935,6 @@ export default function ProjectPage() {
   );
 }
 
-
-
 // Task View Switcher Component
 type TaskViewMode = "list" | "board" | "card" | "calendar";
 
@@ -858,7 +950,12 @@ function TaskViewSwitcher({
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("tasks_view_mode");
-      if (saved === "list" || saved === "board" || saved === "card" || saved === "calendar") {
+      if (
+        saved === "list" ||
+        saved === "board" ||
+        saved === "card" ||
+        saved === "calendar"
+      ) {
         return saved as TaskViewMode;
       }
     }
@@ -881,8 +978,8 @@ function TaskViewSwitcher({
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <Button onClick={() => setAddTaskOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
+          <Plus className="h-4 w-4 mr-2" />
+          Add Task
         </Button>
         <div className="flex items-center border rounded-lg p-1">
           <Button
@@ -949,10 +1046,9 @@ function TaskViewSwitcher({
         />
       )}
 
-      
-      <AddTaskDialog 
-        open={addTaskOpen} 
-        onOpenChange={setAddTaskOpen} 
+      <AddTaskDialog
+        open={addTaskOpen}
+        onOpenChange={setAddTaskOpen}
         projectId={projectId}
         onSuccess={refreshTasks}
       />
@@ -991,7 +1087,7 @@ function TaskBoard({
       done: "done",
     };
     return tasks.filter(
-      (task) => statusMap[task.status] === status || task.status === status
+      (task) => statusMap[task.status] === status || task.status === status,
     );
   };
 
@@ -1113,8 +1209,8 @@ function TaskCard({
             task.status === "completed" || task.status === "done"
               ? "default"
               : task.status === "in_progress"
-              ? "secondary"
-              : "outline"
+                ? "secondary"
+                : "outline"
           }
           className="text-xs"
         >
@@ -1242,13 +1338,19 @@ function TaskListView({
 
         let taskValue = "";
         // Handle specific type conversions for filtering
-        if (col.id === "created_at" || col.id === "start_date" || col.id === "end_date") {
-             const dateVal = task[col.id as keyof Task];
-             taskValue = dateVal ? new Date(String(dateVal)).toLocaleDateString() : "";
+        if (
+          col.id === "created_at" ||
+          col.id === "start_date" ||
+          col.id === "end_date"
+        ) {
+          const dateVal = task[col.id as keyof Task];
+          taskValue = dateVal
+            ? new Date(String(dateVal)).toLocaleDateString()
+            : "";
         } else {
-            taskValue = String(task[col.id as keyof Task] || "");
+          taskValue = String(task[col.id as keyof Task] || "");
         }
-        
+
         return taskValue.toLowerCase().includes(filterValue.toLowerCase());
       });
     })
@@ -1278,8 +1380,8 @@ function TaskListView({
                 task.status === "completed" || task.status === "done"
                   ? "default"
                   : task.status === "in_progress"
-                  ? "secondary"
-                  : "outline"
+                    ? "secondary"
+                    : "outline"
               }
               className="text-xs"
             >
@@ -1348,18 +1450,18 @@ function TaskListView({
   return (
     <Card>
       <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-         <div className="text-sm font-medium text-gray-500">
-             {processedTasks.length} task{processedTasks.length !== 1 && 's'}
-         </div>
-         <Button
-            variant={showFilters ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="h-8"
-         >
-             <Filter className="h-4 w-4 mr-2" />
-             Filters
-         </Button>
+        <div className="text-sm font-medium text-gray-500">
+          {processedTasks.length} task{processedTasks.length !== 1 && "s"}
+        </div>
+        <Button
+          variant={showFilters ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="h-8"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters
+        </Button>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -1392,11 +1494,13 @@ function TaskListView({
                   onDrop={(e) => handleDrop(e, column.id)}
                   onClick={() => handleSort(column.id)}
                 >
-                  <div className={`flex items-center gap-1 ${column.align === 'right' ? 'justify-end' : ''}`}>
-                    <GripVertical 
-                        className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
-                        onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
-                        onClick={(e) => e.stopPropagation()}
+                  <div
+                    className={`flex items-center gap-1 ${column.align === "right" ? "justify-end" : ""}`}
+                  >
+                    <GripVertical
+                      className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+                      onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
+                      onClick={(e) => e.stopPropagation()}
                     />
                     {column.label}
                     {sortConfig?.key === column.id ? (
@@ -1434,42 +1538,46 @@ function TaskListView({
           </TableHeader>
           <TableBody>
             {processedTasks.length === 0 ? (
-                 <TableRow>
-                     <TableCell colSpan={columns.length + 1} className="h-24 text-center">
-                         No results found.
-                     </TableCell>
-                 </TableRow>
-            ) : (
-            processedTasks.map((task) => (
-              <TableRow
-                key={task.id}
-                className={`hover:bg-gray-50 ${
-                  selectedTasks.has(task.id) ? "bg-blue-50/50" : ""
-                }`}
-              >
-                {/* Checkbox Cell */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTasks.has(task.id)}
-                    onChange={() => toggleSelect(task.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="h-24 text-center"
+                >
+                  No results found.
                 </TableCell>
-                {/* Dynamic Cells */}
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    className="cursor-pointer"
-                    onClick={() =>
-                      router.push(`/projects/${projectId}/tasks/${task.id}`)
-                    }
-                  >
-                    {renderCellContent(task, column.id)}
-                  </TableCell>
-                ))}
               </TableRow>
-            )))}
+            ) : (
+              processedTasks.map((task) => (
+                <TableRow
+                  key={task.id}
+                  className={`hover:bg-gray-50 ${
+                    selectedTasks.has(task.id) ? "bg-blue-50/50" : ""
+                  }`}
+                >
+                  {/* Checkbox Cell */}
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTasks.has(task.id)}
+                      onChange={() => toggleSelect(task.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </TableCell>
+                  {/* Dynamic Cells */}
+                  {columns.map((column) => (
+                    <TableCell
+                      key={column.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        router.push(`/projects/${projectId}/tasks/${task.id}`)
+                      }
+                    >
+                      {renderCellContent(task, column.id)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>
@@ -1501,40 +1609,38 @@ function TaskCardView({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {tasks.map((task) => (
         <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
-        <Card
-          className="hover:shadow-md transition-shadow cursor-pointer h-full"
-        >
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2 flex-1">
-                {getStatusIconHelper(task.status)}
-                <h4 className="font-medium text-sm flex-1">{task.title}</h4>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2 flex-1">
+                  {getStatusIconHelper(task.status)}
+                  <h4 className="font-medium text-sm flex-1">{task.title}</h4>
+                </div>
               </div>
-            </div>
-            {task.description && (
-              <p className="text-xs text-gray-600 mt-2 line-clamp-3">
-                {task.description}
-              </p>
-            )}
-            <div className="flex items-center justify-between mt-3">
-              <Badge
-                variant={
-                  task.status === "completed" || task.status === "done"
-                    ? "default"
-                    : task.status === "in_progress"
-                    ? "secondary"
-                    : "outline"
-                }
-                className="text-xs"
-              >
-                {task.status}
-              </Badge>
-              <span className="text-xs text-gray-500">
-                {new Date(task.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+              {task.description && (
+                <p className="text-xs text-gray-600 mt-2 line-clamp-3">
+                  {task.description}
+                </p>
+              )}
+              <div className="flex items-center justify-between mt-3">
+                <Badge
+                  variant={
+                    task.status === "completed" || task.status === "done"
+                      ? "default"
+                      : task.status === "in_progress"
+                        ? "secondary"
+                        : "outline"
+                  }
+                  className="text-xs"
+                >
+                  {task.status}
+                </Badge>
+                <span className="text-xs text-gray-500">
+                  {new Date(task.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </Link>
       ))}
     </div>
@@ -1552,93 +1658,129 @@ function TaskCalendarView({
   onUpdate: () => void;
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
-  
+
   const getFirstDayOfMonth = (year: number, month: number) => {
     return new Date(year, month, 1).getDay();
   };
-  
+
   const prevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+    );
   };
-  
+
   const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+    );
   };
-  
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
-  
+
   const days = [];
   // Add empty slots for days before start of month
   for (let i = 0; i < firstDay; i++) {
-    days.push(<div key={`empty-${i}`} className="h-32 bg-gray-50/50 border-b border-r" />);
+    days.push(
+      <div
+        key={`empty-${i}`}
+        className="h-32 bg-gray-50/50 border-b border-r"
+      />,
+    );
   }
-  
+
   // Add actual days
   for (let d = 1; d <= daysInMonth; d++) {
     const currentDayDate = new Date(year, month, d);
     currentDayDate.setHours(0, 0, 0, 0);
 
-    const isToday = 
-      d === today.getDate() && 
-      month === today.getMonth() && 
+    const isToday =
+      d === today.getDate() &&
+      month === today.getMonth() &&
       year === today.getFullYear();
-    
+
     // Find tasks active on this day
-    const dayTasks = tasks.filter(task => {
-        const startDate = task.start_date ? new Date(task.start_date) : new Date(task.created_at);
-        startDate.setHours(0, 0, 0, 0);
+    const dayTasks = tasks.filter((task) => {
+      const startDate = task.start_date
+        ? new Date(task.start_date)
+        : new Date(task.created_at);
+      startDate.setHours(0, 0, 0, 0);
 
-        const endDate = task.end_date ? new Date(task.end_date) : new Date(startDate);
-        endDate.setHours(0, 0, 0, 0);
+      const endDate = task.end_date
+        ? new Date(task.end_date)
+        : new Date(startDate);
+      endDate.setHours(0, 0, 0, 0);
 
-        // Ensure endDate is at least startDate (sanity check)
-        if (endDate < startDate) {
-            endDate.setTime(startDate.getTime());
-        }
+      // Ensure endDate is at least startDate (sanity check)
+      if (endDate < startDate) {
+        endDate.setTime(startDate.getTime());
+      }
 
-        return currentDayDate >= startDate && currentDayDate <= endDate;
+      return currentDayDate >= startDate && currentDayDate <= endDate;
     });
 
-    
     days.push(
-      <div key={`day-${d}`} className={`h-32 border-b border-r p-2 overflow-y-auto ${isToday ? 'bg-blue-50' : 'bg-white'}`}>
-        <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-           {d}
+      <div
+        key={`day-${d}`}
+        className={`h-32 border-b border-r p-2 overflow-y-auto ${isToday ? "bg-blue-50" : "bg-white"}`}
+      >
+        <div
+          className={`text-sm font-medium mb-1 ${isToday ? "text-blue-600" : "text-gray-700"}`}
+        >
+          {d}
         </div>
         <div className="space-y-1">
-          {dayTasks.map(task => (
-            <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
-              <div 
+          {dayTasks.map((task) => (
+            <Link
+              key={task.id}
+              href={`/projects/${projectId}/tasks/${task.id}`}
+            >
+              <div
                 className="text-xs p-1 rounded border shadow-sm truncate cursor-pointer hover:shadow-md transition-shadow"
                 style={{
-                  backgroundColor: task.status === 'completed' || task.status === 'done' ? '#f0fdf4' : // green-50
-                                   task.status === 'in_progress' ? '#fefce8' : // yellow-50
-                                   '#ffffff', // white
-                  borderColor: task.status === 'completed' || task.status === 'done' ? '#bbf7d0' : // green-200
-                               task.status === 'in_progress' ? '#fde047' : // yellow-200
-                               '#e5e7eb' // gray-200
+                  backgroundColor:
+                    task.status === "completed" || task.status === "done"
+                      ? "#f0fdf4" // green-50
+                      : task.status === "in_progress"
+                        ? "#fefce8" // yellow-50
+                        : "#ffffff", // white
+                  borderColor:
+                    task.status === "completed" || task.status === "done"
+                      ? "#bbf7d0" // green-200
+                      : task.status === "in_progress"
+                        ? "#fde047" // yellow-200
+                        : "#e5e7eb", // gray-200
                 }}
               >
-                 {task.title}
+                {task.title}
               </div>
             </Link>
           ))}
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -1650,29 +1792,44 @@ function TaskCalendarView({
             {monthNames[month]} {year}
           </h2>
           <div className="flex items-center border rounded-md">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 hover:bg-gray-100">
-               <ChevronLeft className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={prevMonth}
+              className="h-8 w-8 hover:bg-gray-100"
+            >
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 hover:bg-gray-100">
-               <ChevronRight className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={nextMonth}
+              className="h-8 w-8 hover:bg-gray-100"
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentDate(new Date())}
+        >
           Today
         </Button>
       </div>
       <CardContent className="p-0">
-         <div className="grid grid-cols-7 border-b bg-gray-50">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r last:border-r-0">
-                {day}
-              </div>
-            ))}
-         </div>
-         <div className="grid grid-cols-7 border-l">
-            {days}
-         </div>
+        <div className="grid grid-cols-7 border-b bg-gray-50">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <div
+              key={day}
+              className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r last:border-r-0"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 border-l">{days}</div>
       </CardContent>
     </Card>
   );
@@ -1775,7 +1932,7 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
     return sortTree(
       Array.from(rootNodes)
         .map((path) => nodeMap.get(path))
-        .filter((node): node is TreeNode => node !== undefined)
+        .filter((node): node is TreeNode => node !== undefined),
     );
   };
 
@@ -1887,7 +2044,7 @@ function AddTaskDialog({
         description,
         status,
       });
-      
+
       onSuccess();
       onOpenChange(false);
       setTitle("");
@@ -1941,11 +2098,19 @@ function AddTaskDialog({
             </Select>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Task"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Add Task"
+              )}
             </Button>
           </DialogFooter>
         </form>
@@ -1959,7 +2124,11 @@ function CommitsView({ projectId }: { projectId: number }) {
   const [commits, setCommits] = useState<GitHubCommit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [repository, setRepository] = useState< {owner: string; name: string; branch: string} | null>(null);
+  const [repository, setRepository] = useState<{
+    owner: string;
+    name: string;
+    branch: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchCommits = async () => {
@@ -1971,7 +2140,9 @@ function CommitsView({ projectId }: { projectId: number }) {
         setRepository(data.repository);
       } catch (err) {
         console.error("Error fetching commits:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch commits");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch commits",
+        );
       } finally {
         setLoading(false);
       }
@@ -2002,9 +2173,12 @@ function CommitsView({ projectId }: { projectId: number }) {
         <CardContent>
           <div className="text-center py-8">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">No GitHub integration configured</p>
+            <p className="text-gray-600 mb-2">
+              No GitHub integration configured
+            </p>
             <p className="text-sm text-gray-500 mb-4">
-              Configure GitHub integration in the Integrations tab to view commits
+              Configure GitHub integration in the Integrations tab to view
+              commits
             </p>
           </div>
         </CardContent>
@@ -2041,7 +2215,7 @@ function CommitsView({ projectId }: { projectId: number }) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="font-medium text-sm mb-1">
-                      {commit.commit.message.split('\n')[0]}
+                      {commit.commit.message.split("\n")[0]}
                     </p>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       {commit.author && (
@@ -2053,7 +2227,9 @@ function CommitsView({ projectId }: { projectId: number }) {
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         <span>
-                          {new Date(commit.commit.author.date).toLocaleDateString()}
+                          {new Date(
+                            commit.commit.author.date,
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                       <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">
@@ -2101,7 +2277,9 @@ function IntegrationsView({ projectId }: { projectId: number }) {
     }
   };
 
-  const githubIntegration = integrations.find(i => i.integration_type === 'github');
+  const githubIntegration = integrations.find(
+    (i) => i.integration_type === "github",
+  );
 
   if (loading) {
     return (
@@ -2130,7 +2308,9 @@ function IntegrationsView({ projectId }: { projectId: number }) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* GitHub Integration Card */}
-            <div className={`border rounded-lg p-4 ${githubIntegration ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+            <div
+              className={`border rounded-lg p-4 ${githubIntegration ? "bg-green-50 border-green-200" : "bg-gray-50"}`}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-black flex items-center justify-center">
@@ -2139,7 +2319,7 @@ function IntegrationsView({ projectId }: { projectId: number }) {
                   <div>
                     <h3 className="font-medium">GitHub</h3>
                     <p className="text-xs text-gray-600">
-                      {githubIntegration ? 'Connected' : 'Not connected'}
+                      {githubIntegration ? "Connected" : "Not connected"}
                     </p>
                   </div>
                 </div>
@@ -2149,18 +2329,17 @@ function IntegrationsView({ projectId }: { projectId: number }) {
                     Active
                   </Badge>
                 ) : (
-                  <Badge variant="outline">
-                    Inactive
-                  </Badge>
+                  <Badge variant="outline">Inactive</Badge>
                 )}
               </div>
               {githubIntegration && (
                 <div className="mt-3 pt-3 border-t text-sm space-y-1">
                   <p className="font-mono text-xs text-gray-600">
-                    {githubIntegration.config.repo_owner}/{githubIntegration.config.repo_name}
+                    {githubIntegration.config.repo_owner}/
+                    {githubIntegration.config.repo_name}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Branch: {githubIntegration.config.branch || 'main'}
+                    Branch: {githubIntegration.config.branch || "main"}
                   </p>
                 </div>
               )}
@@ -2181,12 +2360,17 @@ function IntegrationsView({ projectId }: { projectId: number }) {
                       variant="outline"
                       className="flex-1"
                       onClick={async () => {
-                        if (confirm('Are you sure you want to disconnect GitHub?')) {
+                        if (
+                          confirm("Are you sure you want to disconnect GitHub?")
+                        ) {
                           try {
-                            await integrationsApi.delete(projectId, githubIntegration.id);
+                            await integrationsApi.delete(
+                              projectId,
+                              githubIntegration.id,
+                            );
                             fetchIntegrations();
                           } catch (err) {
-                            console.error('Error deleting integration:', err);
+                            console.error("Error deleting integration:", err);
                           }
                         }
                       }}
@@ -2237,17 +2421,31 @@ function GitHubIntegrationDialog({
   existingIntegration?: Integration;
   onSuccess: () => void;
 }) {
-  const [repoOwner, setRepoOwner] = useState(existingIntegration?.config.repo_owner || '');
-  const [repoName, setRepoName] = useState(existingIntegration?.config.repo_name || '');
-  const [accessToken, setAccessToken] = useState(existingIntegration?.config.access_token || '');
-  const [branch, setBranch] = useState(existingIntegration?.config.branch || 'main');
+  const [repoOwner, setRepoOwner] = useState(
+    existingIntegration?.config.repo_owner || "",
+  );
+  const [repoName, setRepoName] = useState(
+    existingIntegration?.config.repo_name || "",
+  );
+  const [accessToken, setAccessToken] = useState(
+    existingIntegration?.config.access_token || "",
+  );
+  const [branch, setBranch] = useState(
+    existingIntegration?.config.branch || "main",
+  );
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleTest = async () => {
     if (!repoOwner || !repoName) {
-      setTestResult({ success: false, message: 'Repository owner and name are required' });
+      setTestResult({
+        success: false,
+        message: "Repository owner and name are required",
+      });
       return;
     }
 
@@ -2268,13 +2466,14 @@ function GitHubIntegrationDialog({
       } else {
         setTestResult({
           success: false,
-          message: result.error || 'Failed to connect to repository',
+          message: result.error || "Failed to connect to repository",
         });
       }
     } catch (err) {
       setTestResult({
         success: false,
-        message: err instanceof Error ? err.message : 'Failed to test connection',
+        message:
+          err instanceof Error ? err.message : "Failed to test connection",
       });
     } finally {
       setTesting(false);
@@ -2283,14 +2482,17 @@ function GitHubIntegrationDialog({
 
   const handleSave = async () => {
     if (!repoOwner || !repoName) {
-      setTestResult({ success: false, message: 'Repository owner and name are required' });
+      setTestResult({
+        success: false,
+        message: "Repository owner and name are required",
+      });
       return;
     }
 
     try {
       setSaving(true);
       await integrationsApi.save(projectId, {
-        integration_type: 'github',
+        integration_type: "github",
         config: {
           repo_owner: repoOwner,
           repo_name: repoName,
@@ -2303,7 +2505,8 @@ function GitHubIntegrationDialog({
     } catch (err) {
       setTestResult({
         success: false,
-        message: err instanceof Error ? err.message : 'Failed to save integration',
+        message:
+          err instanceof Error ? err.message : "Failed to save integration",
       });
     } finally {
       setSaving(false);
@@ -2349,7 +2552,10 @@ function GitHubIntegrationDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="access-token">
-              Access Token <span className="text-xs text-gray-500">(Optional for public repos)</span>
+              Access Token{" "}
+              <span className="text-xs text-gray-500">
+                (Optional for public repos)
+              </span>
             </Label>
             <Input
               id="access-token"
@@ -2359,7 +2565,7 @@ function GitHubIntegrationDialog({
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             />
             <p className="text-xs text-gray-500">
-              Generate a personal access token at{' '}
+              Generate a personal access token at{" "}
               <a
                 href="https://github.com/settings/tokens"
                 target="_blank"
@@ -2375,8 +2581,8 @@ function GitHubIntegrationDialog({
             <div
               className={`p-3 rounded-lg text-sm ${
                 testResult.success
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
               }`}
             >
               {testResult.message}
@@ -2391,7 +2597,9 @@ function GitHubIntegrationDialog({
               disabled={testing || !repoOwner || !repoName}
               className="flex-1"
             >
-              {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {testing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Test Connection
             </Button>
             <Button
@@ -2399,8 +2607,10 @@ function GitHubIntegrationDialog({
               disabled={saving || !repoOwner || !repoName}
               className="flex-1"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {existingIntegration ? 'Update' : 'Save'}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              {existingIntegration ? "Update" : "Save"}
             </Button>
           </div>
         </div>

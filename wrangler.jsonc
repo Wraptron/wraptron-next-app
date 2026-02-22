@@ -43,6 +43,10 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
 	// "vars": { "MY_VARIABLE": "production_value" },
+	"vars": {
+		// Used by server runtime. For client code, NEXT_PUBLIC_* must be set at build time too.
+		"NEXT_PUBLIC_API_URL": "http://localhost:8000"
+	},
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
@@ -59,4 +63,21 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
 	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+
+	/**
+	 * Named environments
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environments
+	 */
+	"env": {
+		"production": {
+			"vars": {
+				"NEXT_PUBLIC_API_URL": "https://api.your-domain.com"
+			}
+			// For a custom domain, uncomment and set your route:
+			// ,
+			// "routes": [
+			// 	{ "pattern": "https://app.your-domain.com/*", "custom_domain": true }
+			// ]
+		}
+	}
 }
