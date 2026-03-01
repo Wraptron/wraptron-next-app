@@ -86,8 +86,8 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         title: formData.title,
         stage: formData.stage || "lead",
         currency: formData.currency || defaultCurrency,
-        expected_close_date: formData.expected_close_date || (deal ? null : undefined),
-        value: formData.value || (deal ? null : undefined),
+        expected_close_date: formData.expected_close_date || undefined,
+        value: formData.value || undefined,
         contacts_associated: formData.contacts_associated || [],
         companies_associated: formData.companies_associated || [],
       };

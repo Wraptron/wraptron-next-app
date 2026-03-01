@@ -135,7 +135,7 @@ export function PropertiesPanel() {
              </div>
         )}
 
-        <Accordion type="multiple" collapsible className="w-full">
+        <Accordion type="multiple" className="w-full">
             {/* Validation */}
             <AccordionItem value="validation">
                 <AccordionTrigger>Validation</AccordionTrigger>
