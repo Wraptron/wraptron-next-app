@@ -48,7 +48,10 @@ function MainContent({ children }: { children: React.ReactNode }) {
         <div className="flex-shrink-0">
           <Header />
         </div>
-        <div className="flex-1 overflow-y-auto ml-4 mr-4 mt-4 pb-4">
+        <div
+          id="main-content-portal"
+          className="flex-1 overflow-y-auto ml-4 mr-4 mt-4 pb-4 relative min-h-0"
+        >
           {children}
         </div>
       </div>

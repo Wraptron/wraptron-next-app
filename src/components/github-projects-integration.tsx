@@ -546,13 +546,9 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                               },
                             }
                           );
-                          const data = (await response.json()) as {
-                            success?: boolean;
-                            status?: string;
-                            response?: { data?: { viewer?: { projectsV2?: { totalCount?: number } } } };
-                          };
+                          const data = await response.json();
                           console.log("🔍 Test Results:", data);
-                          const totalCount = data.response?.data?.viewer?.projectsV2?.totalCount ?? 0;
+                          const totalCount = data.response?.data?.viewer?.projectsV2?.totalCount || 0;
                           alert(
                             `Test Results:\n\n` +
                             `Success: ${data.success}\n` +

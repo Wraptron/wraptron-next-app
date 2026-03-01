@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProjectFormSheet } from "@/components/project-form-sheet";
 
 import {
   RefreshCw,
@@ -130,6 +131,7 @@ const Projects = () => {
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
   const toggleProjectSelection = (projectId: number) => {
     setSelectedProjects((prev) =>
@@ -384,11 +386,13 @@ const Projects = () => {
             <Button onClick={fetchProjects} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Link href="/ppm/projects/new">
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-1" /> Add Item
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateSheetOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" /> New Project
+            </Button>
           </div>
         </div>
 
@@ -439,6 +443,12 @@ const Projects = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ProjectFormSheet
+          open={createSheetOpen}
+          onOpenChange={setCreateSheetOpen}
+          onSuccess={fetchProjects}
+        />
 
         {loading && <div className="text-center py-8">Loading...</div>}
         {error && <div className="text-red-600 text-center py-8">{error}</div>}

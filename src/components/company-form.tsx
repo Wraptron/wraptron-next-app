@@ -95,11 +95,11 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
       // Ensure name is set (backend requires it, use company_name if name is empty)
       const dataToSend: CreateClientInput = {
         name: formData.name || formData.company_name || "Company",
-        company_name: formData.company_name || undefined,
-        phone: formData.phone || undefined,
-        website: formData.website || undefined,
-        industry: formData.industry || undefined,
-        company_size: formData.company_size || undefined,
+        company_name: formData.company_name || (company ? null : undefined),
+        phone: formData.phone || (company ? null : undefined),
+        website: formData.website || (company ? null : undefined),
+        industry: formData.industry || (company ? null : undefined),
+        company_size: formData.company_size || (company ? null : undefined),
         contacts_associated: formData.contacts_associated || [],
         deals_associated: formData.deals_associated || [],
       };
