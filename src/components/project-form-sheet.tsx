@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSheetPush } from "@/contexts/sheet-push-context";
 import {
   Sheet,
   SheetContent,
@@ -70,10 +71,39 @@ export function ProjectFormSheet({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const setSheetOpen = useSheetPush()?.setSheetOpen;
 
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
   }, []);
+
+  // Report actual sheet width so layout only pushes by required width
+  useEffect(() => {
+    if (!open) {
+      setSheetOpen?.(false);
+      return;
+    }
+    const portal = document.getElementById(MAIN_CONTENT_PORTAL_ID);
+    const sheetEl = portal?.querySelector("[data-slot='sheet-content']");
+    if (!sheetEl) {
+      const t = setTimeout(() => {
+        const el = document.getElementById(MAIN_CONTENT_PORTAL_ID)?.querySelector("[data-slot='sheet-content']");
+        if (el) setSheetOpen?.(true, Math.ceil((el as HTMLElement).getBoundingClientRect().width));
+      }, 350);
+      return () => {
+        clearTimeout(t);
+        setSheetOpen?.(false);
+      };
+    }
+    const updateWidth = () => setSheetOpen?.(true, Math.ceil((sheetEl as HTMLElement).getBoundingClientRect().width));
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(sheetEl);
+    return () => {
+      ro.disconnect();
+      setSheetOpen?.(false);
+    };
+  }, [open, setSheetOpen]);
 
   const resetForm = () => {
     setFormData(initialFormState);
@@ -115,7 +145,7 @@ export function ProjectFormSheet({
     >
       <SheetContent
         side="right"
-        className="flex flex-col w-full sm:max-w-lg overflow-hidden"
+        className="flex flex-col w-[33.333vw] min-w-[280px] max-w-[100vw] overflow-hidden"
       >
         <SheetHeader>
           <SheetTitle>Create Project</SheetTitle>

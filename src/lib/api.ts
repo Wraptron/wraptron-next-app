@@ -727,6 +727,7 @@ export interface Employee {
   email?: string;
   phone?: string;
   work_phone?: string;
+  personal_email?: string;
   employment_type?:
     | "full_time"
     | "part_time"
@@ -746,11 +747,14 @@ export interface Employee {
   date_of_birth?: string;
   gender?: string;
   marital_status?: string;
+  bloodgroup?: string;
   aadhar_number?: string;
   pan?: string;
-  bloodgroup?: string;
   qualification?: string;
   education?: string;
+  education_institution?: string;
+  education_year_passing?: string;
+  education_grade?: string;
   e_contact?: string;
   department?: string;
   designation?: string;
@@ -758,6 +762,12 @@ export interface Employee {
   location?: string;
   permanent_address?: string;
   present_address?: string;
+  father_name?: string;
+  bank_account_name?: string;
+  bank_name?: string;
+  bank_ifsc?: string;
+  bank_account_number?: string;
+  salary_basic?: number;
   created_at: string;
   updated_at: string;
   manager_first_name?: string;
@@ -773,6 +783,7 @@ export interface CreateEmployeeInput {
   email?: string;
   phone?: string;
   work_phone?: string;
+  personal_email?: string;
   employment_type?:
     | "full_time"
     | "part_time"
@@ -792,11 +803,14 @@ export interface CreateEmployeeInput {
   date_of_birth?: string;
   gender?: string;
   marital_status?: string;
+  bloodgroup?: string;
   aadhar_number?: string;
   pan?: string;
-  bloodgroup?: string;
   qualification?: string;
   education?: string;
+  education_institution?: string;
+  education_year_passing?: string;
+  education_grade?: string;
   e_contact?: string;
   department?: string;
   designation?: string;
@@ -804,6 +818,12 @@ export interface CreateEmployeeInput {
   location?: string;
   permanent_address?: string;
   present_address?: string;
+  father_name?: string;
+  bank_account_name?: string;
+  bank_name?: string;
+  bank_ifsc?: string;
+  bank_account_number?: string;
+  salary_basic?: number;
 }
 
 export interface EmployeesResponse {
