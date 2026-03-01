@@ -29,7 +29,7 @@ export default function Login() {
   if (authLoading) {
     return (
       <main>
-        <div className="bg-white dark:bg-black">
+        <div className="bg-white">
           <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
@@ -69,15 +69,15 @@ export default function Login() {
 
   return (
     <main>
-      <div className="bg-white dark:bg-black">
+      <div className="bg-white">
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
           <a
             href="/"
-            className="flex items-center mb-6 text-2xl font-semibold text-neutral-900 dark:text-white"
+            className="flex items-center mb-6 text-2xl font-semibold text-neutral-900"
           >
             <Image width={250} height={40} src="/wordmark.svg" alt="logo" />
           </a>
-          <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="w-full bg-white rounded-lg shadow border border-gray-200 md:mt-0 sm:max-w-md xl:p-0">
             <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
               <h1 className="text-xl font-bold leading-tight tracking-tight text-neutral-900 md:text-2xl dark:text-white">
                 Sign in to your account
