@@ -440,6 +440,7 @@ export default function SideNav() {
     <div
       className={cn(
         "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
+        "hidden md:flex",
         isCollapsed ? "w-16" : "w-64",
       )}
     >
