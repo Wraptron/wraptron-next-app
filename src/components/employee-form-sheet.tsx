@@ -21,7 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { employeesApi, type CreateEmployeeInput, type Employee } from "@/lib/api";
+import {
+  employeesApi,
+  type CreateEmployeeInput,
+  type Employee,
+} from "@/lib/api";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const BLOOD_GROUP_OPTIONS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -48,7 +52,9 @@ export interface EmployeeFormSheetProps {
   employee?: Employee | null;
 }
 
-const getInitialFormState = (employee?: Employee | null): CreateEmployeeInput & { emp_code: string } => ({
+const getInitialFormState = (
+  employee?: Employee | null,
+): CreateEmployeeInput & { emp_code: string } => ({
   emp_code: employee?.emp_code ?? "",
   first_name: employee?.first_name ?? "",
   middle_name: employee?.middle_name ?? "",
@@ -63,7 +69,9 @@ const getInitialFormState = (employee?: Employee | null): CreateEmployeeInput & 
   present_address: employee?.present_address ?? "",
   permanent_address: employee?.permanent_address ?? "",
   e_contact: employee?.e_contact ?? "",
-  employment_status: (employee?.employment_status as CreateEmployeeInput["employment_status"]) ?? "active",
+  employment_status:
+    (employee?.employment_status as CreateEmployeeInput["employment_status"]) ??
+    "active",
   employment_type: employee?.employment_type ?? undefined,
   join_date: employee?.join_date?.slice(0, 10) ?? "",
   exit_date: employee?.exit_date?.slice(0, 10) ?? "",
@@ -127,15 +135,25 @@ export function EmployeeFormSheet({
     const sheetEl = portal?.querySelector("[data-slot='sheet-content']");
     if (!sheetEl) {
       const t = setTimeout(() => {
-        const el = document.getElementById(MAIN_CONTENT_PORTAL_ID)?.querySelector("[data-slot='sheet-content']");
-        if (el) setSheetOpen?.(true, Math.ceil((el as HTMLElement).getBoundingClientRect().width));
+        const el = document
+          .getElementById(MAIN_CONTENT_PORTAL_ID)
+          ?.querySelector("[data-slot='sheet-content']");
+        if (el)
+          setSheetOpen?.(
+            true,
+            Math.ceil((el as HTMLElement).getBoundingClientRect().width),
+          );
       }, 350);
       return () => {
         clearTimeout(t);
         setSheetOpen?.(false);
       };
     }
-    const updateWidth = () => setSheetOpen?.(true, Math.ceil((sheetEl as HTMLElement).getBoundingClientRect().width));
+    const updateWidth = () =>
+      setSheetOpen?.(
+        true,
+        Math.ceil((sheetEl as HTMLElement).getBoundingClientRect().width),
+      );
     updateWidth();
     const ro = new ResizeObserver(updateWidth);
     ro.observe(sheetEl);
@@ -213,10 +231,7 @@ export function EmployeeFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange} container={container}>
-      <SheetContent
-        side="right"
-        className="flex flex-col w-[33.333vw] min-w-[280px] max-w-[100vw] overflow-hidden"
-      >
+      <SheetContent side="right" className="flex flex-col w-full md:w-1/3 overflow-hidden">
         <SheetHeader>
           <SheetTitle>{employee ? "Edit Employee" : "Add Employee"}</SheetTitle>
           <SheetDescription>
@@ -293,7 +308,10 @@ export function EmployeeFormSheet({
                     type="date"
                     value={formData.date_of_birth ?? ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, date_of_birth: e.target.value })
+                      setFormData({
+                        ...formData,
+                        date_of_birth: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -439,7 +457,8 @@ export function EmployeeFormSheet({
                     onValueChange={(v) =>
                       setFormData({
                         ...formData,
-                        employment_status: v as CreateEmployeeInput["employment_status"],
+                        employment_status:
+                          v as CreateEmployeeInput["employment_status"],
                       })
                     }
                   >
@@ -462,7 +481,8 @@ export function EmployeeFormSheet({
                     onValueChange={(v) =>
                       setFormData({
                         ...formData,
-                        employment_type: v as CreateEmployeeInput["employment_type"],
+                        employment_type:
+                          v as CreateEmployeeInput["employment_type"],
                       })
                     }
                   >

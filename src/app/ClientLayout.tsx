@@ -8,13 +8,12 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 import { PageTitleProvider } from "@/contexts/page-title-context";
 import { CurrencyProvider } from "@/contexts/currency-context";
-import { SheetPushProvider, useSheetPush } from "@/contexts/sheet-push-context";
+import { SheetPushProvider } from "@/contexts/sheet-push-context";
 import { cn } from "@/lib/utils";
 
 function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isCollapsed } = useSidebar();
-  const { sheetWidthPx } = useSheetPush() ?? { sheetWidthPx: 0 };
 
   const isHomePage =
     pathname === "/" || pathname === null || pathname === undefined;
@@ -48,7 +47,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
         <div
           id="main-content-portal"
           className="flex-1 overflow-y-auto ml-4 mt-4 pb-4 relative min-h-0 transition-[margin] duration-300 ease-in-out"
-          style={{ marginRight: sheetWidthPx > 0 ? sheetWidthPx : 16 }}
+          style={{ marginRight: 0 }}
         >
           {children}
         </div>
