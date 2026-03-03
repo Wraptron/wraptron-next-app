@@ -91,6 +91,7 @@ export default function EmployeesPage() {
               <Card
                 key={employee.id}
                 className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => openEdit(employee)}
               >
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">

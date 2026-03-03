@@ -887,6 +887,75 @@ export const employeesApi = {
 };
 
 // ============================================================================
+// Attendance Types and API
+// ============================================================================
+
+export type WorkMode = "office" | "remote" | "client_site";
+export type AttendanceStatus = "logged_in" | "break" | "logged_out";
+
+export interface AttendanceSession {
+  id: number;
+  user_id: number;
+  employee_id: number | null;
+  date: string;
+  check_in_at: string;
+  check_out_at: string | null;
+  work_mode: WorkMode;
+  status: AttendanceStatus;
+  break_start_at: string | null;
+  break_end_at: string | null;
+  total_break_seconds: number;
+  location_lat: number | null;
+  location_lng: number | null;
+  device_info: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const attendanceApi = {
+  getMyToday: async (): Promise<{ session: AttendanceSession | null; today: string }> => {
+    return fetchApi("/api/attendance/me/today");
+  },
+  checkIn: async (data: {
+    work_mode: WorkMode;
+    location_lat?: number;
+    location_lng?: number;
+    device_info?: Record<string, unknown>;
+    ip_address?: string;
+  }): Promise<{ session: AttendanceSession }> => {
+    return fetchApi("/api/attendance/check-in", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  checkOut: async (): Promise<{ session: AttendanceSession }> => {
+    return fetchApi("/api/attendance/check-out", { method: "POST" });
+  },
+  breakStart: async (): Promise<{ session: AttendanceSession }> => {
+    return fetchApi("/api/attendance/break/start", { method: "POST" });
+  },
+  breakEnd: async (): Promise<{ session: AttendanceSession }> => {
+    return fetchApi("/api/attendance/break/end", { method: "POST" });
+  },
+  getTeam: async (): Promise<{
+    summary: Array<{
+      employee_id: number;
+      name: string;
+      email: string | null;
+      checked_in: boolean;
+      check_in_at: string | null;
+      work_mode: string | null;
+      status: string | null;
+    }>;
+    notCheckedIn: Array<{ employee_id: number; name: string; email: string | null }>;
+    utilizationPercent: number;
+  }> => {
+    return fetchApi("/api/attendance/team");
+  },
+};
+
+// ============================================================================
 // CRM Module Types and API
 // ============================================================================
 
