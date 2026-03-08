@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,9 +61,24 @@ export default function EmployeesPage() {
   const statusClass = (status?: string) => {
     const s = (status ?? "").toLowerCase();
     if (s === "active") return "bg-green-100 text-green-800";
-    if (s === "on_leave") return "bg-yellow-100 text-yellow-800";
-    if (s === "terminated" || s === "resigned") return "bg-red-100 text-red-800";
+    if (s === "candidate" || s === "offered") return "bg-blue-100 text-blue-800";
+    if (s === "pre_onboarding") return "bg-indigo-100 text-indigo-800";
+    if (s === "notice_period") return "bg-amber-100 text-amber-800";
+    if (s === "exited") return "bg-red-100 text-red-800";
     return "bg-gray-100 text-gray-800";
+  };
+
+  const statusLabel = (status?: string) => {
+    const s = (status ?? "").toLowerCase();
+    const map: Record<string, string> = {
+      candidate: "Candidate",
+      offered: "Offered",
+      pre_onboarding: "Pre-Onboarding",
+      active: "Active",
+      notice_period: "Notice Period",
+      exited: "Exited",
+    };
+    return map[s] ?? status ?? "—";
   };
 
   return (
@@ -88,54 +104,63 @@ export default function EmployeesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {employees.map((employee) => (
-              <Card
+              <Link
                 key={employee.id}
-                className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => openEdit(employee)}
+                href={`/workspace/employees/${employee.id}`}
+                className="block"
               >
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName(employee))}&background=random`}
-                        />
-                        <AvatarFallback>
-                          {employee.first_name?.charAt(0) ?? "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {displayName(employee)}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {employee.designation || employee.role || "—"}
-                        </p>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex gap-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName(employee))}&background=random`}
+                          />
+                          <AvatarFallback>
+                            {employee.first_name?.charAt(0) ?? "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {displayName(employee)}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {employee.designation || employee.role || "—"}
+                          </p>
+                        </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/workspace/employees/${employee.id}`}>
+                              View
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openEdit(employee);
+                            }}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(employee);
-                          }}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
 
                   <div className="space-y-2 mt-4">
                     {(employee.email || employee.phone) && (
@@ -163,12 +188,13 @@ export default function EmployeesPage() {
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusClass(employee.employment_status)}`}
                       >
-                        {employee.employment_status ?? "—"}
+                        {statusLabel(employee.employment_status)}
                       </span>
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

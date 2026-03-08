@@ -148,7 +148,7 @@ export default function EditTaskPage() {
       // We will implement a `updateTask` method in api.ts next.
       await projectsApi.updateTask(projectId, taskId, updatedTask);
 
-      router.push(`/ppm/projects/${projectId}`);
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       console.error("Error updating task:", err);
       // Show error toast or message
@@ -177,7 +177,7 @@ export default function EditTaskPage() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">{error || "Task not found"}</p>
-            <Link href={`/ppm/projects/${projectId}`}>
+            <Link href={`/projects/${projectId}`}>
               <Button>Back to Project</Button>
             </Link>
           </CardContent>
@@ -361,7 +361,7 @@ export default function EditTaskPage() {
           </Card>
 
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Link href={`/ppm/projects/${projectId}`}>
+            <Link href={`/projects/${projectId}`}>
               <Button type="button" variant="outline">
                 Cancel
               </Button>

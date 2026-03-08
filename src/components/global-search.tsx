@@ -75,7 +75,7 @@ export function GlobalSearch() {
               title: project.project_name,
               subtitle: project.status,
               type: "project",
-              url: `/ppm/projects/${project.id}`,
+              url: `/projects/${project.id}`,
             });
           });
         } catch (error) {

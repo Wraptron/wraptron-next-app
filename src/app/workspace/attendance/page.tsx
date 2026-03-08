@@ -13,12 +13,8 @@ import {
   Building2,
   LogIn,
   LogOut,
-  Coffee,
-  FileSpreadsheet,
-  Users,
-  FileBarChart,
+  Calendar,
 } from "lucide-react";
-import Link from "next/link";
 import { attendanceApi, type AttendanceSession, type WorkMode } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -65,8 +61,8 @@ export default function AttendancePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [workMode, setWorkMode] = useState<WorkMode | null>(null);
   const [liveSeconds, setLiveSeconds] = useState(0);
-  const [breakSeconds, setBreakSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<AttendanceSession[]>([]);
 
   const fetchToday = useCallback(async () => {
     try {
@@ -90,25 +86,28 @@ export default function AttendancePage() {
     fetchToday();
   }, [fetchToday]);
 
-  // Live timer: session duration and break duration
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await attendanceApi.getMySessions({ limit: 30 });
+      setSessions(res.sessions);
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  // Live timer: session duration
   useEffect(() => {
     if (!session || session.status === "logged_out") return;
     const start = new Date(session.check_in_at).getTime();
-    const totalBreak = session.total_break_seconds || 0;
-    const tick = () => {
-      const now = Date.now();
-      setLiveSeconds(Math.floor((now - start) / 1000));
-      if (session.status === "break" && session.break_start_at) {
-        const breakStart = new Date(session.break_start_at).getTime();
-        setBreakSeconds(totalBreak + Math.floor((now - breakStart) / 1000));
-      } else {
-        setBreakSeconds(totalBreak);
-      }
-    };
+    const tick = () => setLiveSeconds(Math.floor((Date.now() - start) / 1000));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [session?.id, session?.check_in_at, session?.status, session?.break_start_at, session?.total_break_seconds]);
+  }, [session?.id, session?.check_in_at, session?.status]);
 
   const handleCheckIn = async () => {
     if (!workMode) {
@@ -160,171 +159,104 @@ export default function AttendancePage() {
     }
   };
 
-  const handleBreakStart = async () => {
-    setError(null);
-    setActionLoading(true);
-    try {
-      const res = await attendanceApi.breakStart();
-      setSession(res.session);
-    } catch {
-      setError("Failed to start break");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleBreakEnd = async () => {
-    setError(null);
-    setActionLoading(true);
-    try {
-      const res = await attendanceApi.breakEnd();
-      setSession(res.session);
-    } catch {
-      setError("Failed to end break");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const now = new Date();
   const currentDateStr = now.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const currentTimeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
 
   const statusLabel =
-    !session ? "Not Logged In" : session.status === "logged_out" ? "Logged Out" : session.status === "break" ? "Break" : "Logged In";
+    !session ? "Not Logged In" : session.status === "logged_out" ? "Logged Out" : "Logged In";
   const statusColor =
-    !session ? "bg-gray-100 text-gray-800" : session.status === "logged_out" ? "bg-slate-100 text-slate-800" : session.status === "break" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800";
-
-  const netWorkingSeconds = session ? Math.max(0, liveSeconds - (session.status === "break" && session.break_start_at ? breakSeconds : (session.total_break_seconds || 0))) : 0;
+    !session ? "bg-gray-100 text-gray-800" : session.status === "logged_out" ? "bg-slate-100 text-slate-800" : "bg-green-100 text-green-800";
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-500">Loading attendance...</div>
       </div>
     );
   }
 
+  const currentWorkModeLabel = session?.work_mode
+    ? WORK_MODES.find((m) => m.value === session.work_mode)?.label ?? session.work_mode.replace("_", " ")
+    : null;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-lg mx-auto space-y-6">
-        <div className="flex flex-wrap gap-2 justify-center">
-          <Link href="/workspace/attendance/manager">
-            <Button variant="outline" size="sm">
-              <Users className="h-4 w-4 mr-1" />
-              Manager view
-            </Button>
-          </Link>
-          <Link href="/workspace/attendance/hr">
-            <Button variant="outline" size="sm">
-              <FileBarChart className="h-4 w-4 mr-1" />
-              HR view
-            </Button>
-          </Link>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+            <p className="text-gray-600 mt-1">Check in, track your session and view history</p>
+          </div>
         </div>
-        {/* Date & time (left) and status (right) */}
+
+        <div className="space-y-6">
+        {/* Single bar: time (left) + status + work mode when logged in + login/logout controls (right) */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-500">{currentDateStr}</p>
-                <p className="text-2xl font-semibold text-gray-900 mt-1" suppressHydrationWarning>
-                  {currentTimeStr}
-                </p>
+          <CardContent className="py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">{currentDateStr}</p>
+                  <p className="text-xl font-semibold text-gray-900 tabular-nums" suppressHydrationWarning>
+                    {currentTimeStr}
+                  </p>
+                </div>
+                <Badge className={cn("text-sm px-3 py-1.5 shrink-0", statusColor)}>{statusLabel}</Badge>
+                {session && session.status !== "logged_out" && currentWorkModeLabel && (
+                  <span className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+                    <Monitor className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium">{currentWorkModeLabel}</span>
+                  </span>
+                )}
               </div>
-              <Badge className={cn("text-sm px-4 py-2 shrink-0", statusColor)}>{statusLabel}</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                {!session ? (
+                  <>
+                    <div className="flex rounded-md border border-input bg-background p-1 gap-0.5">
+                      {WORK_MODES.map((mode) => {
+                        const Icon = mode.icon;
+                        return (
+                          <button
+                            key={mode.value}
+                            type="button"
+                            onClick={() => setWorkMode(mode.value)}
+                            className={cn(
+                              "rounded p-1.5 transition-colors",
+                              workMode === mode.value
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                            title={mode.label}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Button onClick={handleCheckIn} disabled={actionLoading} size="sm" className="shrink-0">
+                      <LogIn className="h-4 w-4 mr-1.5" />
+                      {actionLoading ? "…" : "Log In"}
+                    </Button>
+                  </>
+                ) : session.status === "logged_out" ? (
+                  <span className="text-sm text-gray-500">Logged out for today</span>
+                ) : (
+                  <Button size="sm" className="bg-slate-600 hover:bg-slate-700 shrink-0" onClick={handleCheckOut} disabled={actionLoading}>
+                    <LogOut className="h-4 w-4 mr-1.5" />
+                    Log Out
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Work mode (only when not logged in) */}
-        {!session && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Monitor className="h-4 w-4" />
-                Work Mode
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-3">Select work mode (required to check in)</p>
-              <div className="grid grid-cols-3 gap-2">
-                {WORK_MODES.map((mode) => {
-                  const Icon = mode.icon;
-                  return (
-                    <Button
-                      key={mode.value}
-                      type="button"
-                      variant={workMode === mode.value ? "default" : "outline"}
-                      className="flex flex-col h-auto py-3 gap-1"
-                      onClick={() => setWorkMode(mode.value)}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="text-xs">{mode.label}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
             {error}
           </div>
         )}
-
-        {/* Big center button */}
-        <Card>
-          <CardContent className="pt-6 pb-6 flex flex-col items-center gap-4">
-            {!session ? (
-              <Button
-                size="lg"
-                className="w-full max-w-xs h-14 text-lg"
-                onClick={handleCheckIn}
-                disabled={actionLoading}
-              >
-                <LogIn className="h-5 w-5 mr-2" />
-                {actionLoading ? "Checking in…" : "Log In"}
-              </Button>
-            ) : session.status === "logged_out" ? (
-              <p className="text-gray-500 text-sm">You are logged out for today.</p>
-            ) : session.status === "break" ? (
-              <Button
-                size="lg"
-                className="w-full max-w-xs h-14 text-lg bg-amber-600 hover:bg-amber-700"
-                onClick={handleBreakEnd}
-                disabled={actionLoading}
-              >
-                <Coffee className="h-5 w-5 mr-2" />
-                {actionLoading ? "Ending break…" : "End Break"}
-              </Button>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="flex-1 h-14"
-                  onClick={handleBreakStart}
-                  disabled={actionLoading}
-                >
-                  <Coffee className="h-5 w-5 mr-2" />
-                  Start Break
-                </Button>
-                <Button
-                  size="lg"
-                  className="flex-1 h-14 bg-slate-600 hover:bg-slate-700"
-                  onClick={handleCheckOut}
-                  disabled={actionLoading}
-                >
-                  <LogOut className="h-5 w-5 mr-2" />
-                  Log Out
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Live timer section */}
         {session && session.status !== "logged_out" && (
@@ -349,16 +281,6 @@ export default function AttendancePage() {
                   <p className="text-gray-500">Session duration</p>
                   <p className="font-medium text-green-700">{formatDuration(liveSeconds)}</p>
                 </div>
-                <div>
-                  <p className="text-gray-500">Break duration</p>
-                  <p className="font-medium text-amber-700">
-                    {formatDuration(session.status === "break" ? breakSeconds : session.total_break_seconds || 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Net working hours</p>
-                  <p className="font-medium">{formatDuration(netWorkingSeconds)}</p>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -376,23 +298,51 @@ export default function AttendancePage() {
                   <p className="text-gray-500">Logout time</p>
                   <p className="font-medium">{formatTime(session.check_out_at)}</p>
                 </div>
-                <div>
-                  <p className="text-gray-500">Total break</p>
-                  <p className="font-medium">{formatDuration(session.total_break_seconds || 0)}</p>
-                </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Add timesheet */}
-        <div className="flex justify-center">
-          <Button variant="outline" asChild>
-            <a href="/workspace/attendance/timesheet">
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Add timesheet
-            </a>
-          </Button>
+        {/* List of attendances */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Attendance history
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {sessions.length === 0 ? (
+              <p className="text-sm text-gray-500">No attendance records yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {sessions.map((s) => {
+                  const dateLabel = new Date(s.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                  const duration = s.check_out_at
+                    ? Math.floor((new Date(s.check_out_at).getTime() - new Date(s.check_in_at).getTime()) / 1000)
+                    : null;
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 last:border-0 text-sm"
+                    >
+                      <div>
+                        <span className="font-medium text-gray-900">{dateLabel}</span>
+                        <span className="text-gray-500 ml-2 capitalize">{s.work_mode.replace("_", " ")}</span>
+                      </div>
+                      <div className="flex items-center gap-4 tabular-nums">
+                        <span className="text-gray-600">{formatTime(s.check_in_at)} – {s.check_out_at ? formatTime(s.check_out_at) : "—"}</span>
+                        {duration != null && duration >= 0 && (
+                          <span className="text-green-700 font-medium">{formatDuration(duration)}</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
         </div>
       </div>
     </div>

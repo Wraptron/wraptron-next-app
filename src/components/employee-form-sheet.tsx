@@ -20,11 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Loader2, ChevronsUpDown, X } from "lucide-react";
 import {
   employeesApi,
+  adminApi,
   type CreateEmployeeInput,
   type Employee,
+  type EmployeeLinkUserPayload,
+  type AdminUser,
 } from "@/lib/api";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
@@ -38,11 +54,12 @@ const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "temporary", label: "Temporary" },
 ];
 const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: "candidate", label: "Candidate" },
+  { value: "offered", label: "Offered" },
+  { value: "pre_onboarding", label: "Pre-Onboarding" },
   { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "on_leave", label: "On Leave" },
-  { value: "terminated", label: "Terminated" },
-  { value: "resigned", label: "Resigned" },
+  { value: "notice_period", label: "Notice Period" },
+  { value: "exited", label: "Exited" },
 ];
 
 export interface EmployeeFormSheetProps {
@@ -54,7 +71,7 @@ export interface EmployeeFormSheetProps {
 
 const getInitialFormState = (
   employee?: Employee | null,
-): CreateEmployeeInput & { emp_code: string } => ({
+): CreateEmployeeInput & { emp_code: string } & EmployeeLinkUserPayload => ({
   emp_code: employee?.emp_code ?? "",
   first_name: employee?.first_name ?? "",
   middle_name: employee?.middle_name ?? "",
@@ -66,12 +83,13 @@ const getInitialFormState = (
   phone: employee?.phone ?? "",
   email: employee?.email ?? "",
   personal_email: employee?.personal_email ?? "",
+  link_user_email: employee?.linked_user_email ?? "",
   present_address: employee?.present_address ?? "",
   permanent_address: employee?.permanent_address ?? "",
   e_contact: employee?.e_contact ?? "",
   employment_status:
     (employee?.employment_status as CreateEmployeeInput["employment_status"]) ??
-    "active",
+    "candidate",
   employment_type: employee?.employment_type ?? undefined,
   join_date: employee?.join_date?.slice(0, 10) ?? "",
   exit_date: employee?.exit_date?.slice(0, 10) ?? "",
@@ -119,6 +137,10 @@ export function EmployeeFormSheet({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(getInitialFormState(employee));
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const [linkUserOpen, setLinkUserOpen] = useState(false);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersLoadError, setUsersLoadError] = useState(false);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
 
   useEffect(() => {
@@ -167,6 +189,25 @@ export function EmployeeFormSheet({
     if (open) setFormData(getInitialFormState(employee));
   }, [open, employee]);
 
+  // Load users when link-user popover opens (for searchable dropdown)
+  useEffect(() => {
+    if (!linkUserOpen) return;
+    setUsersLoadError(false);
+    setUsersLoading(true);
+    adminApi
+      .getUsers({ limit: 200 })
+      .then((res) => {
+        setUsers(res.users);
+      })
+      .catch(() => {
+        setUsersLoadError(true);
+        setUsers([]);
+      })
+      .finally(() => {
+        setUsersLoading(false);
+      });
+  }, [linkUserOpen]);
+
   const resetForm = () => {
     setFormData(getInitialFormState(null));
   };
@@ -180,7 +221,7 @@ export function EmployeeFormSheet({
     e.preventDefault();
     setLoading(true);
     try {
-      const payload: CreateEmployeeInput = {
+      const payload: CreateEmployeeInput & EmployeeLinkUserPayload = {
         emp_code: formData.emp_code.trim(),
         first_name: formData.first_name.trim(),
         middle_name: formData.middle_name?.trim() || undefined,
@@ -192,6 +233,7 @@ export function EmployeeFormSheet({
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         personal_email: formData.personal_email || undefined,
+        link_user_email: formData.link_user_email != null ? String(formData.link_user_email).trim() : undefined,
         present_address: formData.present_address || undefined,
         permanent_address: formData.permanent_address || undefined,
         e_contact: formData.e_contact || undefined,
@@ -409,6 +451,110 @@ export function EmployeeFormSheet({
                   }
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Link to user (attendance)</Label>
+                {usersLoadError ? (
+                  <Input
+                    type="email"
+                    value={formData.link_user_email ?? ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, link_user_email: e.target.value })
+                    }
+                    placeholder="User login email to link for attendance"
+                  />
+                ) : (
+                  <div className="flex gap-1">
+                    <Popover open={linkUserOpen} onOpenChange={setLinkUserOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 justify-between font-normal text-left"
+                        >
+                          {formData.link_user_email
+                            ? (() => {
+                                const u = users.find(
+                                  (x) => x.email === formData.link_user_email
+                                );
+                                return u
+                                  ? [u.first_name, u.last_name]
+                                    .filter(Boolean)
+                                    .join(" ") || u.email
+                                  : formData.link_user_email;
+                              })()
+                            : "Select user..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput placeholder="Search users..." />
+                          <CommandList>
+                            {usersLoading ? (
+                              <div className="flex items-center justify-center py-6">
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : (
+                              <>
+                                <CommandEmpty>No user found.</CommandEmpty>
+                                <CommandGroup>
+                                  {users.map((u) => {
+                                    const label =
+                                      [u.first_name, u.last_name]
+                                        .filter(Boolean)
+                                        .join(" ") +
+                                      (u.email ? ` ${u.email}` : "");
+                                    return (
+                                      <CommandItem
+                                        key={u.id}
+                                        value={label}
+                                        onSelect={() => {
+                                          setFormData({
+                                            ...formData,
+                                            link_user_email: u.email,
+                                          });
+                                          setLinkUserOpen(false);
+                                        }}
+                                      >
+                                        {[u.first_name, u.last_name]
+                                          .filter(Boolean)
+                                          .join(" ") || "—"}
+                                        {u.email ? ` (${u.email})` : ""}
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {formData.link_user_email && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label="Clear linked user"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            link_user_email: "",
+                          })
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Link this employee to a login account so check-in uses this employee record.
+                </p>
+              </div>
             </Section>
 
             <Section title="Address">
@@ -453,7 +599,7 @@ export function EmployeeFormSheet({
                 <div>
                   <Label>Employee Status</Label>
                   <Select
-                    value={formData.employment_status ?? "active"}
+                    value={formData.employment_status ?? "candidate"}
                     onValueChange={(v) =>
                       setFormData({
                         ...formData,

@@ -19,6 +19,12 @@ interface ContactFormProps {
   contact?: Contact;
   onSuccess: () => void;
   onCancel: () => void;
+  /** When true, do not render Cancel/Submit (e.g. when used inside a sheet with its own footer) */
+  hideActions?: boolean;
+  /** Form id for external submit button (e.g. sheet footer) */
+  formId?: string;
+  /** Called when loading state changes (for sheet footer spinner) */
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 const PREFIX_OPTIONS = ["Mr.", "Mrs.", "Ms.", "Dr.", "Prof."];
@@ -35,7 +41,7 @@ const TIMEZONE_OPTIONS = [
   "Australia/Sydney",
 ];
 
-export function ContactForm({ contact, onSuccess, onCancel }: ContactFormProps) {
+export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId, onLoadingChange }: ContactFormProps) {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Client[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -96,6 +102,7 @@ export function ContactForm({ contact, onSuccess, onCancel }: ContactFormProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    onLoadingChange?.(true);
     try {
       // Prepare data - convert empty strings to null/undefined appropriately
       const dataToSend: CreateContactInput = {
@@ -135,11 +142,16 @@ export function ContactForm({ contact, onSuccess, onCancel }: ContactFormProps) 
       alert("Failed to save contact. Please try again.");
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto">
+    <form
+      id={formId}
+      onSubmit={handleSubmit}
+      className={hideActions ? "space-y-4" : "space-y-4 max-h-[80vh] overflow-y-auto"}
+    >
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="prefix">Prefix</Label>
@@ -390,14 +402,16 @@ export function ContactForm({ contact, onSuccess, onCancel }: ContactFormProps) 
         )}
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : contact ? "Update" : "Create"}
-        </Button>
-      </div>
+      {!hideActions && (
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : contact ? "Update" : "Create"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

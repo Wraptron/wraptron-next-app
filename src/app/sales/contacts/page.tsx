@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { contactsApi, type Contact } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RefreshCw, Plus, Menu, LayoutGrid, Columns3, Edit, Trash2 } from "lucide-react";
-import { ContactForm } from "@/components/contact-form";
+import { ContactFormSheet } from "@/components/contact-form-sheet";
 
 type ViewMode = "list" | "card" | "kanban";
 
@@ -36,8 +36,8 @@ const getStatusColor = (status?: string) => {
   return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
 };
 
-const ContactCard = ({ contact, onEdit, onDelete }: { contact: Contact; onEdit: () => void; onDelete: () => void }) => (
-  <Card className="hover:shadow-md transition-shadow">
+const ContactCard = ({ contact, onClick, onEdit, onDelete }: { contact: Contact; onClick: () => void; onEdit: () => void; onDelete: () => void }) => (
+  <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
     <CardHeader>
       <div className="flex justify-between items-start">
         <div>
@@ -48,10 +48,10 @@ const ContactCard = ({ contact, onEdit, onDelete }: { contact: Contact; onEdit: 
           {contact.title && <p className="text-sm text-gray-600 mt-1">{contact.title}</p>}
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Edit">
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete">
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
         </div>
@@ -90,6 +90,7 @@ const ContactCard = ({ contact, onEdit, onDelete }: { contact: Contact; onEdit: 
 
 export default function ContactsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setTitle } = usePageTitle();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +108,22 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+
+  // Open edit sheet when URL has ?edit=id (e.g. from contact detail page)
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId) return;
+    const id = parseInt(editId, 10);
+    if (isNaN(id)) return;
+    contactsApi
+      .getById(id)
+      .then((c) => {
+        setEditingContact(c);
+        setFormDialogOpen(true);
+        router.replace("/contacts", { scroll: false });
+      })
+      .catch(() => {});
+  }, [searchParams, router]);
 
   const fetchContacts = async () => {
     setLoading(true);
@@ -196,7 +213,11 @@ export default function ContactsPage() {
                 </TableRow>
               ) : (
                 contacts.map((contact) => (
-                  <TableRow key={contact.id} className="hover:bg-gray-50">
+                  <TableRow
+                    key={contact.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => router.push(`/contacts/${contact.id}`)}
+                  >
                     <TableCell className="font-medium">
                       {contact.prefix && `${contact.prefix} `}
                       {contact.first_name} {contact.last_name || ""}
@@ -217,12 +238,12 @@ export default function ContactsPage() {
                         <span className="text-gray-400">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)} title="Edit">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)} title="Delete">
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
@@ -272,18 +293,22 @@ export default function ContactsPage() {
               </h3>
               <div className="space-y-2">
                 {grouped[column.key]?.map((contact) => (
-                  <Card key={contact.id} className="mb-2">
+                  <Card
+                    key={contact.id}
+                    className="mb-2 cursor-pointer hover:shadow-md"
+                    onClick={() => router.push(`/contacts/${contact.id}`)}
+                  >
                     <CardContent className="p-3">
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-sm">
                           {contact.prefix && `${contact.prefix} `}
                           {contact.first_name} {contact.last_name || ""}
                         </h4>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)}>
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)} title="Edit">
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)} title="Delete">
                             <Trash2 className="h-3 w-3 text-red-600" />
                           </Button>
                         </div>
@@ -310,6 +335,7 @@ export default function ContactsPage() {
           <ContactCard
             key={contact.id}
             contact={contact}
+            onClick={() => router.push(`/contacts/${contact.id}`)}
             onEdit={() => handleEdit(contact)}
             onDelete={() => handleDelete(contact)}
           />
@@ -376,21 +402,12 @@ export default function ContactsPage() {
           )
         )}
 
-        <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingContact ? "Edit Contact" : "New Contact"}</DialogTitle>
-            </DialogHeader>
-            <ContactForm
-              contact={editingContact}
-              onSuccess={handleFormSuccess}
-              onCancel={() => {
-                setFormDialogOpen(false);
-                setEditingContact(undefined);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <ContactFormSheet
+          open={formDialogOpen}
+          onOpenChange={setFormDialogOpen}
+          onSuccess={handleFormSuccess}
+          contact={editingContact}
+        />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>

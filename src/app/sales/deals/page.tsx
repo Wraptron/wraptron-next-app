@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { dealsApi, type Deal } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
-import { useCurrency } from "@/contexts/currency-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,16 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DealForm } from "@/components/deal-form";
-import { 
-  RefreshCw, 
-  Plus, 
-  Menu, 
-  LayoutGrid, 
-  Columns3,
-  Edit,
-  Trash2
-} from "lucide-react";
+import { DealFormSheet } from "@/components/deal-form-sheet";
+import { RefreshCw, Plus, Menu, LayoutGrid, Columns3, Edit, Trash2 } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -51,15 +43,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 type ViewMode = "list" | "card" | "kanban";
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "Not set";
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch {
-    return "Invalid date";
-  }
-};
 
 const getStageColor = (stage?: string) => {
   const colors: Record<string, string> = {
@@ -83,98 +66,74 @@ const getStatusColor = (status?: string) => {
   return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
 };
 
-const DealCard = ({ deal, onEdit, onDelete }: { deal: Deal; onEdit?: () => void; onDelete?: () => void }) => {
-  const { formatCurrency } = useCurrency();
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{deal.title}</CardTitle>
-          <div className="flex gap-1">
-            {onEdit && (
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-                <Trash2 className="h-4 w-4 text-red-600" />
-              </Button>
-            )}
-          </div>
+const DealCard = ({ deal, onClick, onEdit, onDelete }: { deal: Deal; onClick?: () => void; onEdit?: () => void; onDelete?: () => void }) => (
+  <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+    <CardHeader>
+      <div className="flex justify-between items-start">
+        <CardTitle className="text-lg">{deal.client_name || deal.client_company_name || "Deal"}</CardTitle>
+        <div className="flex gap-1">
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </Button>
+          )}
         </div>
-        <div className="flex gap-2 mt-2">
-          <Badge className={getStageColor(deal.stage)}>
-            {deal.stage || "No stage"}
-          </Badge>
-          <Badge className={getStatusColor(deal.status)}>
-            {deal.status || "No status"}
-          </Badge>
+      </div>
+      <div className="flex gap-2 mt-2">
+        <Badge className={getStageColor(deal.stage)}>{deal.stage || "No stage"}</Badge>
+        <Badge className={getStatusColor(deal.status)}>{deal.status || "No status"}</Badge>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-500">Contact:</span>
+          <span>{deal.contact_name || "N/A"}</span>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Value:</span>
-            <span className="font-medium">{formatCurrency(deal.value, deal.currency || undefined)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Client:</span>
-            <span>{deal.client_name || "N/A"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Probability:</span>
-            <span>{deal.probability}%</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Closing:</span>
-            <span>{formatDate(deal.expected_close_date)}</span>
-          </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Probability:</span>
+          <span>{deal.probability}%</span>
         </div>
-      </CardContent>
-    </Card>
-  );
-};
+      </div>
+    </CardContent>
+  </Card>
+);
 
-const DealKanbanCard = ({ deal, onEdit, onDelete }: { deal: Deal; onEdit?: () => void; onDelete?: () => void }) => {
-  const { formatCurrency } = useCurrency();
-  return (
-    <Card className="hover:shadow-md transition-shadow mb-3 bg-white cursor-grab active:cursor-grabbing">
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start mb-2">
-          <h4 className="font-semibold text-sm line-clamp-2 flex-1">{deal.title}</h4>
-          <div className="flex gap-1 ml-2">
-            {onEdit && (
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-6 w-6 p-0">
-                <Edit className="h-3 w-3" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }} className="h-6 w-6 p-0">
-                <Trash2 className="h-3 w-3 text-red-600" />
-              </Button>
-            )}
-          </div>
+const DealKanbanCard = ({ deal, onEdit, onDelete }: { deal: Deal; onEdit?: () => void; onDelete?: () => void }) => (
+  <Card className="hover:shadow-md transition-shadow mb-3 bg-white cursor-grab active:cursor-grabbing">
+    <CardContent className="p-3">
+      <div className="flex justify-between items-start mb-2">
+        <h4 className="font-semibold text-sm line-clamp-2 flex-1">
+          {deal.client_name || deal.client_company_name || "Deal"}
+        </h4>
+        <div className="flex gap-1 ml-2">
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-6 w-6 p-0">
+              <Edit className="h-3 w-3" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }} className="h-6 w-6 p-0">
+              <Trash2 className="h-3 w-3 text-red-600" />
+            </Button>
+          )}
         </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-bold text-sm text-gray-700">
-            {formatCurrency(deal.value, deal.currency || undefined)}
-          </span>
-          <Badge className={`text-[10px] px-1 py-0 ${getStatusColor(deal.status)}`}>
-            {deal.status}
-          </Badge>
-        </div>
-        <div className="text-xs text-gray-500">
-          <div className="truncate">{deal.client_name || "No Client"}</div>
-          <div className="mt-1 flex justify-between">
-            <span>{deal.probability}% Prob.</span>
-            <span>{formatDate(deal.expected_close_date)}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+      </div>
+      <div className="flex justify-between items-center mb-2">
+        <Badge className={`text-[10px] px-1 py-0 ${getStatusColor(deal.status)}`}>{deal.status}</Badge>
+      </div>
+      <div className="text-xs text-gray-500">
+        <div className="truncate">{deal.contact_name || "No contact"}</div>
+        <div className="mt-1">{deal.probability}% probability</div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 // Sortable Wrapper for Kanban Card
 const SortableDealCard = ({ deal, onEdit, onDelete }: { deal: Deal; onEdit: () => void; onDelete: () => void }) => {
@@ -201,25 +160,22 @@ const SortableDealCard = ({ deal, onEdit, onDelete }: { deal: Deal; onEdit: () =
 };
 
 // Droppable Column Component
-const KanbanColumn = ({ 
-    id, 
-    label, 
-    color, 
-    deals, 
-    onEdit, 
-    onDelete 
-}: { 
-    id: string; 
-    label: string; 
-    color: string; 
-    deals: Deal[]; 
+const KanbanColumn = ({
+    id,
+    label,
+    color,
+    deals,
+    onEdit,
+    onDelete,
+}: {
+    id: string;
+    label: string;
+    color: string;
+    deals: Deal[];
     onEdit: (deal: Deal) => void;
     onDelete: (deal: Deal) => void;
 }) => {
     const { setNodeRef } = useSortable({ id });
-    const { formatCurrency } = useCurrency();
-    
-    const stageTotal = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
 
     return (
         <div ref={setNodeRef} className={`flex-shrink-0 w-72 ${color} rounded-lg p-3 h-full overflow-y-auto`}>
@@ -230,9 +186,6 @@ const KanbanColumn = ({
                         {deals.length}
                     </span>
                 </h3>
-                <p className="text-xs text-gray-600 mt-1 font-medium">
-                    {formatCurrency(stageTotal)}
-                </p>
             </div>
              <SortableContext 
                 id={id}
@@ -241,8 +194,8 @@ const KanbanColumn = ({
             >
                 <div className="space-y-3 min-h-[100px]">
                     {deals.map((deal) => (
-                        <SortableDealCard 
-                            key={deal.id} 
+                        <SortableDealCard
+                            key={deal.id}
                             deal={deal}
                             onEdit={() => onEdit(deal)}
                             onDelete={() => onDelete(deal)}
@@ -260,12 +213,12 @@ const KanbanColumn = ({
 }
 
 export default function DealsPage() {
+  const router = useRouter();
   const { setTitle } = usePageTitle();
-  const { formatCurrency } = useCurrency();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
@@ -410,21 +363,18 @@ export default function DealsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[300px]">Title</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead className="w-[220px]">Client</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Value</TableHead>
                   <TableHead>Stage</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Probability</TableHead>
-                  <TableHead>Expected Close</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {deals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       No deals found.
                     </TableCell>
                   </TableRow>
@@ -432,34 +382,40 @@ export default function DealsPage() {
                   deals.map((deal) => (
                     <TableRow
                       key={deal.id}
-                      className="hover:bg-gray-50"
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => router.push(`/sales/deals/${deal.id}`)}
                     >
                       <TableCell className="font-medium">
-                        {deal.title}
+                        {deal.client_name || deal.client_company_name || "—"}
                       </TableCell>
-                      <TableCell>{deal.client_name || "N/A"}</TableCell>
-                      <TableCell>{deal.contact_name || "N/A"}</TableCell>
+                      <TableCell>{deal.contact_name || "—"}</TableCell>
                       <TableCell>
-                        {formatCurrency(deal.value, deal.currency || undefined)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStageColor(deal.stage)}>
-                          {deal.stage || "N/A"}
-                        </Badge>
+                        <Badge className={getStageColor(deal.stage)}>{deal.stage || "N/A"}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(deal.status)}>
-                          {deal.status || "N/A"}
-                        </Badge>
+                        <Badge className={getStatusColor(deal.status)}>{deal.status || "N/A"}</Badge>
                       </TableCell>
                       <TableCell>{deal.probability}%</TableCell>
-                      <TableCell>{formatDate(deal.expected_close_date)}</TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(deal); }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/sales/deals/${deal.id}`);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(deal); }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(deal);
+                            }}
+                          >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
@@ -500,7 +456,7 @@ export default function DealsPage() {
                                 label={column.label}
                                 color={column.color}
                                 deals={grouped[column.key] || []}
-                                onEdit={handleEdit}
+                                onEdit={(deal) => router.push(`/sales/deals/${deal.id}`)}
                                 onDelete={handleDelete}
                             />
                         ))}
@@ -519,10 +475,11 @@ export default function DealsPage() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {deals.map((deal) => (
-                <DealCard 
-                  key={deal.id} 
+                <DealCard
+                  key={deal.id}
                   deal={deal}
-                  onEdit={() => handleEdit(deal)}
+                  onClick={() => router.push(`/sales/deals/${deal.id}`)}
+                  onEdit={() => router.push(`/sales/deals/${deal.id}`)}
                   onDelete={() => handleDelete(deal)}
                 />
             ))}
@@ -532,12 +489,12 @@ export default function DealsPage() {
 
   const handleCreateNew = () => {
     setEditingDeal(undefined);
-    setFormDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const handleEdit = (deal: Deal) => {
     setEditingDeal(deal);
-    setFormDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const handleDelete = (deal: Deal) => {
@@ -559,7 +516,7 @@ export default function DealsPage() {
   };
 
   const handleFormSuccess = () => {
-    setFormDialogOpen(false);
+    setSheetOpen(false);
     setEditingDeal(undefined);
     fetchDeals();
   };
@@ -629,21 +586,12 @@ export default function DealsPage() {
             )
         )}
 
-        <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingDeal ? "Edit Deal" : "New Deal"}</DialogTitle>
-            </DialogHeader>
-            <DealForm
-              deal={editingDeal}
-              onSuccess={handleFormSuccess}
-              onCancel={() => {
-                setFormDialogOpen(false);
-                setEditingDeal(undefined);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <DealFormSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          onSuccess={handleFormSuccess}
+          deal={editingDeal ?? null}
+        />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
@@ -651,7 +599,7 @@ export default function DealsPage() {
               <DialogTitle>Delete Deal</DialogTitle>
             </DialogHeader>
             <p className="py-4">
-              Are you sure you want to delete {dealToDelete?.title}? This action cannot be undone.
+              Are you sure you want to delete this deal? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>

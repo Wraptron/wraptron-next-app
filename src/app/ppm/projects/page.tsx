@@ -62,7 +62,7 @@ type ViewMode = "list" | "card" | "kanban";
 
 const ProjectCard = ({ project }: { project: Project }) => (
   <Link
-    href={`/ppm/projects/${project.id.toString()}`}
+    href={`/projects/${project.id.toString()}`}
     className={`group block no-underline`}
   >
     <Card className="hover:shadow-md transition-shadow">
@@ -94,7 +94,7 @@ const ProjectCard = ({ project }: { project: Project }) => (
 
 const ProjectKanbanCard = ({ project }: { project: Project }) => (
   <Link
-    href={`/ppm/projects/${project.id.toString()}`}
+    href={`/projects/${project.id.toString()}`}
     className="group block no-underline"
   >
     <Card className="hover:shadow-md transition-shadow mb-3">
@@ -262,7 +262,7 @@ const Projects = () => {
                     className={`cursor-pointer hover:bg-gray-50 ${
                       selectedProjects.includes(project.id) ? "bg-blue-50" : ""
                     }`}
-                    onClick={() => router.push(`/ppm/projects/${project.id}`)}
+                    onClick={() => router.push(`/projects/${project.id}`)}
                   >
                     <TableCell
                       onClick={(e) => {
@@ -280,7 +280,7 @@ const Projects = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       <Link
-                        href={`/ppm/projects/${project.id.toString()}`}
+                        href={`/projects/${project.id.toString()}`}
                         className="hover:underline"
                       >
                         {project.project_name}

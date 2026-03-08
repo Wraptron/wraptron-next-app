@@ -72,6 +72,13 @@ import path from "path";
 const nextConfig: NextConfig = {
   // Set the output file tracing root to this directory to avoid lockfile warnings
   outputFileTracingRoot: path.join(__dirname),
+  async rewrites() {
+    return [
+      { source: "/projects", destination: "/ppm/projects" },
+      { source: "/projects/tasks", destination: "/ppm/projects/tasks" },
+      { source: "/projects/:path*", destination: "/ppm/projects/:path*" },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Cloudflare Workers compatibility
     if (!isServer) {

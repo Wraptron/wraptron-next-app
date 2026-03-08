@@ -24,6 +24,8 @@ import {
   CreditCard,
   Shield,
   Briefcase,
+  TrendingUp,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,20 +38,27 @@ interface App {
   color: string;
 }
 
-const APPS: App[] = [
+const ALL_APPS: App[] = [
   {
     id: "crm",
-    name: "CRM",
-    icon: Users,
-    href: "/crm",
+    name: "Sales",
+    icon: TrendingUp,
+    href: "/sales",
     color: "bg-green-500",
   },
   {
     id: "projects",
-    name: "PPM",
+    name: "Projects",
     icon: Box,
-    href: "/ppm",
+    href: "/projects",
     color: "bg-blue-500",
+  },
+  {
+    id: "products",
+    name: "Products",
+    icon: Store,
+    href: "/products",
+    color: "bg-teal-500",
   },
   {
     id: "finances",
@@ -180,7 +189,7 @@ export default function TopNavbar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="my-2" />
               <div className="grid grid-cols-3 gap-2">
-                {APPS.map((app) => {
+                {(user?.role === "admin" ? ALL_APPS : ALL_APPS.filter((app) => app.id !== "admin")).map((app) => {
                   const Icon = app.icon;
                   const isActive = pathname?.startsWith(app.href);
                   return (

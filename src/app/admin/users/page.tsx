@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { adminApi, type AdminUser, type CreateAdminUserInput } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,15 +44,10 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 
 const ROLES = [
-  "admin",
-  "user",
-  "sales",
-  "procurement",
-  "production_manager",
-  "quality",
-  "store",
-  "accounts",
-  "management",
+  { value: "user", label: "User" },
+  { value: "staff", label: "Staff" },
+  { value: "admin", label: "Admin" },
+  { value: "customer", label: "Customer" },
 ];
 
 const formatDate = (dateString?: string | null) => {
@@ -76,20 +72,18 @@ const formatDate = (dateString?: string | null) => {
 
 const getRoleColor = (role: string) => {
   const colors: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-800",
     user: "bg-blue-100 text-blue-800",
-    sales: "bg-green-100 text-green-800",
-    procurement: "bg-yellow-100 text-yellow-800",
-    production_manager: "bg-orange-100 text-orange-800",
-    quality: "bg-red-100 text-red-800",
-    store: "bg-indigo-100 text-indigo-800",
-    accounts: "bg-pink-100 text-pink-800",
-    management: "bg-gray-100 text-gray-800",
+    staff: "bg-green-100 text-green-800",
+    admin: "bg-purple-100 text-purple-800",
+    customer: "bg-amber-100 text-amber-800",
   };
   return colors[role] || "bg-gray-100 text-gray-800";
 };
 
+const getRoleLabel = (value: string) => ROLES.find((r) => r.value === value)?.label ?? value;
+
 export default function AdminUsersPage() {
+  const router = useRouter();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,9 +133,18 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Redirect non-admin users
   useEffect(() => {
+    if (currentUser === null) return; // still loading
+    if (currentUser?.role !== "admin") {
+      router.replace("/");
+    }
+  }, [currentUser, router]);
+
+  useEffect(() => {
+    if (currentUser?.role !== "admin") return;
     fetchUsers();
-  }, [page, roleFilter, statusFilter]);
+  }, [page, roleFilter, statusFilter, currentUser?.role]);
 
   useEffect(() => {
     // Debounce search
@@ -237,6 +240,15 @@ export default function AdminUsersPage() {
 
   const totalPages = Math.ceil(total / limit);
 
+  // Only show admin app to admin users
+  if (currentUser != null && currentUser?.role !== "admin") {
+    return (
+      <div className="container mx-auto py-8 px-4 flex items-center justify-center min-h-[40vh]">
+        <p className="text-gray-500">Access denied. Redirecting...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-6">
@@ -328,9 +340,9 @@ export default function AdminUsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                    {ROLES.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -371,9 +383,9 @@ export default function AdminUsersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                {ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                {ROLES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -443,7 +455,7 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell>
                           <Badge className={getRoleColor(user.role)}>
-                            {user.role}
+                            {getRoleLabel(user.role)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -595,9 +607,9 @@ export default function AdminUsersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                  {ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

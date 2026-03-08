@@ -304,7 +304,7 @@ export default function NewProjectPage() {
       await projectsApi.create(projectData);
 
       // Redirect to projects page on success
-      router.push("/ppm/projects");
+      router.push("/projects");
     } catch (err) {
       console.error("Error creating project:", err);
       setError(err instanceof Error ? err.message : "Failed to create project");
@@ -317,7 +317,7 @@ export default function NewProjectPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/ppm/projects">
+          <Link href="/projects">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to PPM
@@ -1354,7 +1354,7 @@ export default function NewProjectPage() {
               )}
             </div>
             <div className="flex gap-4">
-              <Link href="/ppm/projects">
+              <Link href="/projects">
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>

@@ -194,8 +194,31 @@ export interface Task {
   complexity?: string;
   story_points?: number;
   notes?: string;
+  billable?: string;
+  estimate_hours?: number;
+  is_recurring?: boolean;
+  recurrence_frequency?: string;
+  recurrence_interval?: number;
+  recurrence_anchor_date?: string;
+  recurrence_end_date?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateTaskInput {
+  title: string;
+  description?: string;
+  status?: string;
+  end_date?: string;
+  priority?: string;
+  notes?: string;
+  billable?: string;
+  estimate_hours?: number;
+  is_recurring?: boolean;
+  recurrence_frequency?: string;
+  recurrence_interval?: number;
+  recurrence_anchor_date?: string;
+  recurrence_end_date?: string;
 }
 
 export interface Project {
@@ -325,7 +348,7 @@ export const projectsApi = {
   },
 
   // Create task for project
-  createTask: async (projectId: number, data: { title: string; description?: string; status?: string }): Promise<Task> => {
+  createTask: async (projectId: number, data: CreateTaskInput): Promise<Task> => {
     return fetchApi<Task>(`/api/projects/${projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -735,11 +758,12 @@ export interface Employee {
     | "intern"
     | "temporary";
   employment_status?:
+    | "candidate"
+    | "offered"
+    | "pre_onboarding"
     | "active"
-    | "inactive"
-    | "on_leave"
-    | "terminated"
-    | "resigned";
+    | "notice_period"
+    | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -768,10 +792,12 @@ export interface Employee {
   bank_ifsc?: string;
   bank_account_number?: string;
   salary_basic?: number;
+  user_id?: number | null;
   created_at: string;
   updated_at: string;
   manager_first_name?: string;
   manager_last_name?: string;
+  linked_user_email?: string | null;
 }
 
 export interface CreateEmployeeInput {
@@ -791,11 +817,12 @@ export interface CreateEmployeeInput {
     | "intern"
     | "temporary";
   employment_status?:
+    | "candidate"
+    | "offered"
+    | "pre_onboarding"
     | "active"
-    | "inactive"
-    | "on_leave"
-    | "terminated"
-    | "resigned";
+    | "notice_period"
+    | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -824,7 +851,11 @@ export interface CreateEmployeeInput {
   bank_ifsc?: string;
   bank_account_number?: string;
   salary_basic?: number;
+  user_id?: number | null;
 }
+
+/** Sent on create/update to link this employee to a login user (by email). Used for attendance. */
+export type EmployeeLinkUserPayload = { link_user_email?: string };
 
 export interface EmployeesResponse {
   data: Employee[];
@@ -862,7 +893,7 @@ export const employeesApi = {
     return fetchApi<Employee>(`/api/employees/${id}`);
   },
 
-  create: async (data: CreateEmployeeInput): Promise<Employee> => {
+  create: async (data: CreateEmployeeInput & EmployeeLinkUserPayload): Promise<Employee> => {
     return fetchApi<Employee>("/api/employees", {
       method: "POST",
       body: JSON.stringify(data),
@@ -871,7 +902,7 @@ export const employeesApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateEmployeeInput>
+    data: Partial<CreateEmployeeInput> & EmployeeLinkUserPayload
   ): Promise<Employee> => {
     return fetchApi<Employee>(`/api/employees/${id}`, {
       method: "PUT",
@@ -891,7 +922,7 @@ export const employeesApi = {
 // ============================================================================
 
 export type WorkMode = "office" | "remote" | "client_site";
-export type AttendanceStatus = "logged_in" | "break" | "logged_out";
+export type AttendanceStatus = "logged_in" | "logged_out";
 
 export interface AttendanceSession {
   id: number;
@@ -902,9 +933,6 @@ export interface AttendanceSession {
   check_out_at: string | null;
   work_mode: WorkMode;
   status: AttendanceStatus;
-  break_start_at: string | null;
-  break_end_at: string | null;
-  total_break_seconds: number;
   location_lat: number | null;
   location_lng: number | null;
   device_info: Record<string, unknown> | null;
@@ -916,6 +944,13 @@ export interface AttendanceSession {
 export const attendanceApi = {
   getMyToday: async (): Promise<{ session: AttendanceSession | null; today: string }> => {
     return fetchApi("/api/attendance/me/today");
+  },
+  getMySessions: async (params?: { limit?: number; offset?: number }): Promise<{ sessions: AttendanceSession[] }> => {
+    const sp = new URLSearchParams();
+    if (params?.limit != null) sp.set("limit", String(params.limit));
+    if (params?.offset != null) sp.set("offset", String(params.offset));
+    const q = sp.toString();
+    return fetchApi(`/api/attendance/me/sessions${q ? `?${q}` : ""}`);
   },
   checkIn: async (data: {
     work_mode: WorkMode;
@@ -931,12 +966,6 @@ export const attendanceApi = {
   },
   checkOut: async (): Promise<{ session: AttendanceSession }> => {
     return fetchApi("/api/attendance/check-out", { method: "POST" });
-  },
-  breakStart: async (): Promise<{ session: AttendanceSession }> => {
-    return fetchApi("/api/attendance/break/start", { method: "POST" });
-  },
-  breakEnd: async (): Promise<{ session: AttendanceSession }> => {
-    return fetchApi("/api/attendance/break/end", { method: "POST" });
   },
   getTeam: async (): Promise<{
     summary: Array<{

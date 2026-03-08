@@ -7,8 +7,8 @@ export default function PPMPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to /ppm/projects
-    router.replace("/ppm/projects");
+    // Redirect to /projects
+    router.replace("/projects");
   }, [router]);
 
   return null;

@@ -42,6 +42,8 @@ import {
 } from "@/lib/api";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
+import { TaskFormSheet } from "@/components/task-form-sheet";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   ArrowLeft,
@@ -73,6 +75,8 @@ import {
   ExternalLink,
   GitBranch,
   Users,
+  Repeat,
+  RefreshCw,
 } from "lucide-react";
 
 const SERVICE_OPTIONS = [
@@ -482,7 +486,7 @@ export default function ProjectPage() {
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <p className="text-red-600 mb-4">{error || "Project not found"}</p>
-            <Link href="/ppm/projects">
+            <Link href="/projects">
               <Button variant="outline">Back to PPM</Button>
             </Link>
           </CardContent>
@@ -536,7 +540,7 @@ export default function ProjectPage() {
                 <FileText className="h-4 w-4 mr-2" />
                 Project Charter
               </Button>
-              <Link href={`/ppm/projects/${projectId}/edit`}>
+              <Link href={`/projects/${projectId}/edit`}>
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Project
@@ -976,43 +980,48 @@ function TaskViewSwitcher({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <Button onClick={() => setAddTaskOpen(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-        <div className="flex items-center border rounded-lg p-1">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="h-8"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "board" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("board")}
-            className="h-8"
-          >
-            <Columns className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "card" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("card")}
-            className="h-8"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "calendar" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("calendar")}
-            className="h-8"
-          >
-            <Calendar className="h-4 w-4" />
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-muted-foreground">
+          {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          <ButtonGroup orientation="horizontal">
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "board" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("board")}
+              aria-label="Board view"
+            >
+              <Columns className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "card" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("card")}
+              aria-label="Card view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              aria-label="Calendar view"
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+          </ButtonGroup>
+          <Button onClick={() => setAddTaskOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            New task
           </Button>
         </div>
       </div>
@@ -1046,11 +1055,11 @@ function TaskViewSwitcher({
         />
       )}
 
-      <AddTaskDialog
+      <TaskFormSheet
         open={addTaskOpen}
         onOpenChange={setAddTaskOpen}
-        projectId={projectId}
         onSuccess={refreshTasks}
+        projectId={projectId}
       />
     </div>
   );
@@ -1114,15 +1123,8 @@ function TaskBoard({
 
     if (draggedTask.status !== mappedStatus) {
       try {
-        // Update task status via API
-        await projectsApi.update(projectId, {
-          tasks: [
-            {
-              title: draggedTask.title,
-              description: draggedTask.description,
-              status: mappedStatus,
-            },
-          ],
+        await projectsApi.updateTask(projectId, draggedTask.id, {
+          status: mappedStatus,
         });
         onTaskUpdate();
       } catch (error) {
@@ -1184,7 +1186,7 @@ function TaskCard({
 
   const handleClick = () => {
     // Navigate to task edit page on click
-    router.push(`/ppm/projects/${task.project_id}/tasks/${task.id}`);
+    router.push(`/projects/${task.project_id}/tasks/${task.id}`);
   };
 
   return (
@@ -1196,7 +1198,14 @@ function TaskCard({
     >
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-medium text-sm flex-1">{task.title}</h4>
-        {getStatusIconHelper(task.status)}
+        <div className="flex items-center gap-1 shrink-0">
+          {task.is_recurring && (
+            <Badge variant="secondary" className="text-xs">
+              <Repeat className="h-3 w-3 mr-0.5" />
+            </Badge>
+          )}
+          {getStatusIconHelper(task.status)}
+        </div>
       </div>
       {task.description && (
         <p className="text-xs text-gray-600 mt-1 line-clamp-2">
@@ -1237,6 +1246,7 @@ function TaskListView({
   const [columns, setColumns] = useState([
     { id: "status", label: "Status", width: "w-[150px]" },
     { id: "title", label: "Title" },
+    { id: "recurring", label: "Recurring", width: "w-[90px]" },
     { id: "priority", label: "Priority" },
     { id: "complexity", label: "Complexity" },
     { id: "start_date", label: "Start Date" },
@@ -1338,7 +1348,9 @@ function TaskListView({
 
         let taskValue = "";
         // Handle specific type conversions for filtering
-        if (
+        if (col.id === "recurring") {
+          taskValue = task.is_recurring ? "recurring" : "one-time";
+        } else if (
           col.id === "created_at" ||
           col.id === "start_date" ||
           col.id === "end_date"
@@ -1358,8 +1370,12 @@ function TaskListView({
       if (!sortConfig) return 0;
       const { key, direction } = sortConfig;
 
-      const valA = a[key as keyof Task];
-      const valB = b[key as keyof Task];
+      let valA: unknown = a[key as keyof Task];
+      let valB: unknown = b[key as keyof Task];
+      if (key === "recurring") {
+        valA = a.is_recurring ? 1 : 0;
+        valB = b.is_recurring ? 1 : 0;
+      }
 
       if (valA === valB) return 0;
       if (valA === undefined || valA === null) return 1;
@@ -1399,6 +1415,15 @@ function TaskListView({
               </div>
             )}
           </div>
+        );
+      case "recurring":
+        return task.is_recurring ? (
+          <Badge variant="secondary" className="text-xs">
+            <Repeat className="h-3 w-3 mr-1 inline" />
+            Recurring
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
         );
       case "priority":
         return task.priority ? (
@@ -1570,7 +1595,7 @@ function TaskListView({
                       className="cursor-pointer"
                       onClick={() =>
                         router.push(
-                          `/ppm/projects/${projectId}/tasks/${task.id}`,
+                          `/projects/${projectId}/tasks/${task.id}`,
                         )
                       }
                     >
@@ -1612,7 +1637,7 @@ function TaskCardView({
       {tasks.map((task) => (
         <Link
           key={task.id}
-          href={`/ppm/projects/${projectId}/tasks/${task.id}`}
+          href={`/projects/${projectId}/tasks/${task.id}`}
         >
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardContent className="p-4">
@@ -1620,6 +1645,11 @@ function TaskCardView({
                 <div className="flex items-center gap-2 flex-1">
                   {getStatusIconHelper(task.status)}
                   <h4 className="font-medium text-sm flex-1">{task.title}</h4>
+                  {task.is_recurring && (
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      <Repeat className="h-3 w-3 mr-0.5" />
+                    </Badge>
+                  )}
                 </div>
               </div>
               {task.description && (
@@ -1761,7 +1791,7 @@ function TaskCalendarView({
           {dayTasks.map((task) => (
             <Link
               key={task.id}
-              href={`/ppm/projects/${projectId}/tasks/${task.id}`}
+              href={`/projects/${projectId}/tasks/${task.id}`}
             >
               <div
                 className="text-xs p-1 rounded border shadow-sm truncate cursor-pointer hover:shadow-md transition-shadow"
@@ -2019,108 +2049,6 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
         )}
       </div>
     </div>
-  );
-}
-
-function AddTaskDialog({
-  open,
-  onOpenChange,
-  projectId,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId: number;
-  onSuccess: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("pending");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    setLoading(true);
-    try {
-      await projectsApi.createTask(projectId, {
-        title,
-        description,
-        status,
-      });
-
-      onSuccess();
-      onOpenChange(false);
-      setTitle("");
-      setDescription("");
-      setStatus("pending");
-    } catch (error) {
-      console.error("Failed to create task:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-desc">Description</Label>
-            <Textarea
-              id="task-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Task description"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-status">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Add Task"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

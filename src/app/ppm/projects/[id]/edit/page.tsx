@@ -289,7 +289,7 @@ export default function EditProjectPage({
       };
 
       await projectsApi.update(projectId, projectData);
-      router.push(`/ppm/projects/${projectId}`);
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       console.error("Error updating project:", err);
       setError(err instanceof Error ? err.message : "Failed to update project");
@@ -302,7 +302,7 @@ export default function EditProjectPage({
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/ppm/projects">
+          <Link href="/projects">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to PPM
@@ -1219,7 +1219,7 @@ export default function EditProjectPage({
           {/* Navigation Buttons */}
           <div className="flex justify-end items-center mt-8 pt-6 border-t gap-4">
             <Link
-              href={projectId ? `/ppm/projects/${projectId}` : "/ppm/projects"}
+              href={projectId ? `/projects/${projectId}` : "/projects"}
             >
               <Button type="button" variant="outline">
                 Cancel

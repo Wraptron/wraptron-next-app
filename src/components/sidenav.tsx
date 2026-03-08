@@ -20,6 +20,7 @@ import {
   User,
   CheckSquare,
   FileText,
+  FileSpreadsheet,
   ShoppingCart,
   Receipt,
   DollarSign,
@@ -51,15 +52,21 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "customers",
-    label: "CRM",
-    icon: Users,
-    href: "/crm",
+    label: "Sales",
+    icon: TrendingUp,
+    href: "/sales",
   },
   {
     id: "projects",
     label: "Projects",
     icon: Box,
-    href: "/ppm/projects",
+    href: "/projects",
+  },
+  {
+    id: "products",
+    label: "Products",
+    icon: Store,
+    href: "/products",
   },
   {
     id: "hiring", // Keeping this as is, maybe redundant with workspace but user didn't ask to remove
@@ -87,30 +94,54 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-const CRM_MENU_ITEMS: MenuItem[] = [
+const SALES_MENU_ITEMS: MenuItem[] = [
   {
     id: "deals",
     label: "Deals",
     icon: AlignHorizontalJustifyStart,
-    href: "/crm/deals",
+    href: "/sales/deals",
   },
   {
     id: "contacts",
     label: "Contacts",
-    icon: User,
-    href: "/crm/contacts",
+    icon: Users,
+    href: "/sales/contacts",
   },
   {
     id: "companies",
     label: "Companies",
     icon: Building2,
-    href: "/crm/companies",
+    href: "/sales/companies",
   },
   {
     id: "tasks",
     label: "Tasks",
     icon: CheckSquare,
-    href: "/crm/tasks",
+    href: "/sales/tasks",
+  },
+];
+
+const PROJECTS_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "projects-list",
+    label: "Projects",
+    icon: Box,
+    href: "/projects",
+  },
+  {
+    id: "projects-tasks",
+    label: "Tasks",
+    icon: CheckSquare,
+    href: "/projects/tasks",
+  },
+];
+
+const PRODUCTS_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "products-list",
+    label: "Products",
+    icon: Store,
+    href: "/products",
   },
 ];
 
@@ -126,6 +157,12 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     label: "Attendance",
     icon: ClipboardCheck,
     href: "/workspace/attendance",
+  },
+  {
+    id: "timesheet",
+    label: "Timesheet",
+    icon: FileSpreadsheet,
+    href: "/workspace/timesheet",
   },
   {
     id: "payslips",
@@ -244,10 +281,12 @@ export default function SideNav() {
     ? [...MAIN_MENU_ITEMS, ...ADMIN_MENU_ITEMS]
     : MAIN_MENU_ITEMS;
 
-  // When on /ppm, show only projects in sidebar
-  const isProjectsPage = pathname?.startsWith("/ppm");
-  // When on /crm, show only CRM menu items (Deals, Contacts, Companies, Tasks)
-  const isCrmPage = pathname?.startsWith("/crm");
+  // When on /projects, show Projects and Tasks in sidebar
+  const isProjectsPage = pathname?.startsWith("/projects");
+  // When on /products, show Products menu items
+  const isProductsPage = pathname?.startsWith("/products");
+  // When on /sales, show Sales menu items (Deals, Leads, Companies, Tasks)
+  const isSalesPage = pathname?.startsWith("/sales");
   // When on /finances, show only finance menu items
   const isFinancePage = pathname?.startsWith("/finances");
   // When on /workspace, show workspace menu items
@@ -255,9 +294,11 @@ export default function SideNav() {
 
   let menuItems: MenuItem[];
   if (isProjectsPage) {
-    menuItems = MAIN_MENU_ITEMS.filter((item) => item.id === "projects");
-  } else if (isCrmPage) {
-    menuItems = CRM_MENU_ITEMS;
+    menuItems = PROJECTS_MENU_ITEMS;
+  } else if (isProductsPage) {
+    menuItems = PRODUCTS_MENU_ITEMS;
+  } else if (isSalesPage) {
+    menuItems = SALES_MENU_ITEMS;
   } else if (isFinancePage) {
     menuItems = FINANCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
@@ -270,18 +311,44 @@ export default function SideNav() {
   useEffect(() => {
     if (!pathname) return;
 
-    // For CRM page, check CRM menu items first
-    if (isCrmPage) {
-      const crmItem = CRM_MENU_ITEMS.find((item) =>
+    // For projects page
+    if (isProjectsPage) {
+      const projectsItem = PROJECTS_MENU_ITEMS.find((item) =>
         pathname.startsWith(item.href),
       );
-      if (crmItem) {
-        setActiveItem(crmItem.id);
+      if (projectsItem) {
+        setActiveItem(projectsItem.id);
         return;
       }
-      // If on /crm but no specific sub-route, default to first item
-      if (pathname === "/crm") {
-        setActiveItem(CRM_MENU_ITEMS[0]?.id || "");
+      setActiveItem("projects-list");
+      return;
+    }
+
+    // For products page
+    if (isProductsPage) {
+      const productsItem = PRODUCTS_MENU_ITEMS.find((item) =>
+        pathname.startsWith(item.href),
+      );
+      if (productsItem) {
+        setActiveItem(productsItem.id);
+        return;
+      }
+      setActiveItem("products-list");
+      return;
+    }
+
+    // For Sales page, check Sales menu items
+    if (isSalesPage) {
+      const salesItem = SALES_MENU_ITEMS.find((item) =>
+        pathname.startsWith(item.href),
+      );
+      if (salesItem) {
+        setActiveItem(salesItem.id);
+        return;
+      }
+      // If on /sales but no specific sub-route, default to first item
+      if (pathname === "/sales") {
+        setActiveItem(SALES_MENU_ITEMS[0]?.id || "");
       }
       return;
     }
@@ -350,7 +417,7 @@ export default function SideNav() {
 
     const mainItem = menuItems.find((item) => pathname.startsWith(item.href));
     if (mainItem) setActiveItem(mainItem.id);
-  }, [pathname, menuItems, isCrmPage, isFinancePage]);
+  }, [pathname, menuItems, isSalesPage, isFinancePage, isProjectsPage]);
 
   const handleItemClick = (
     itemId: string,
@@ -477,7 +544,7 @@ export default function SideNav() {
           {menuItems.map((item) => renderMenuItem(item))}
           {isAdmin &&
             !isProjectsPage &&
-            !isCrmPage &&
+            !isSalesPage &&
             !isFinancePage && (
               <>
                 <li className="pt-4 pb-2">

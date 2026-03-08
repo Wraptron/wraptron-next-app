@@ -1,15 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 import {
   Box,
-  Users,
   CreditCard,
   Settings,
   Shield,
   Briefcase,
+  TrendingUp,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,22 +24,30 @@ interface App {
   color: string;
 }
 
-const APPS: App[] = [
+const ALL_APPS: App[] = [
   {
     id: "crm",
-    name: "CRM",
-    description: "Manage customer relationships",
-    icon: Users,
-    href: "/crm",
+    name: "Sales",
+    description: "Deals, contacts, and companies",
+    icon: TrendingUp,
+    href: "/sales",
     color: "bg-green-500",
   },
   {
     id: "projects",
-    name: "PPM",
+    name: "Projects",
     description: "Manage your projects and tasks",
     icon: Box,
-    href: "/ppm",
+    href: "/projects",
     color: "bg-blue-500",
+  },
+  {
+    id: "products",
+    name: "Products",
+    description: "Product catalog and inventory",
+    icon: Store,
+    href: "/products",
+    color: "bg-teal-500",
   },
   {
     id: "finances",
@@ -75,6 +85,15 @@ const APPS: App[] = [
 
 export function AppDrawer() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  const apps = useMemo(
+    () =>
+      user?.role === "admin"
+        ? ALL_APPS
+        : ALL_APPS.filter((app) => app.id !== "admin"),
+    [user?.role],
+  );
 
   const handleAppClick = (href: string) => {
     router.push(href);
@@ -88,7 +107,7 @@ export function AppDrawer() {
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-8">
-        {APPS.map((app) => {
+        {apps.map((app) => {
           const Icon = app.icon;
           return (
             <div
