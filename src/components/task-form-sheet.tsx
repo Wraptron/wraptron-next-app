@@ -100,10 +100,8 @@ export function TaskFormSheet({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!effectiveProjectId) {
-      if (!projectId && !selectedProjectId) {
-        return;
-      }
+    if (effectiveProjectId == null || Number.isNaN(effectiveProjectId)) {
+      return;
     }
     setLoading(true);
     try {

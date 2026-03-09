@@ -225,7 +225,7 @@ export function DealFormSheet({
         company_name: newCompany.company_name.trim() || undefined,
       };
       const created = await clientsApi.create(payload);
-      setCompanies((prev) => [{ id: created.id, name: created.name, company_name: created.company_name }, ...prev]);
+      setCompanies((prev) => [created, ...prev]);
       setCompany(created.id);
       setNewCompany({ name: "", company_name: "" });
       setCreateCompanyOpen(false);
