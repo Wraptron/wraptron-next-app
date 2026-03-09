@@ -1389,6 +1389,47 @@ export const dealsApi = {
 };
 
 // ============================================================================
+// Sales Stages (Settings) Types and API
+// ============================================================================
+
+export interface SalesStage {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const salesStagesApi = {
+  getAll: async (): Promise<{ data: SalesStage[] }> => {
+    return fetchApi<{ data: SalesStage[] }>("/api/sales-stages");
+  },
+
+  create: async (data: { name: string; sort_order?: number }): Promise<SalesStage> => {
+    return fetchApi<SalesStage>("/api/sales-stages", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number }
+  ): Promise<SalesStage> => {
+    return fetchApi<SalesStage>(`/api/sales-stages/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/sales-stages/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ============================================================================
 // GitHub Connections Types and API
 // ============================================================================
 

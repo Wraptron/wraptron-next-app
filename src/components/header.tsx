@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, User, Settings, LogOut, Grip } from "lucide-react";
+import { Bell, User, Settings, LogOut, Grip, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
 import {
   Box,
@@ -93,6 +94,7 @@ const ALL_APPS: App[] = [
 export default function TopNavbar() {
   const { user, logout } = useAuth();
   const { title, subtitle } = usePageTitle();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(3);
@@ -126,10 +128,32 @@ export default function TopNavbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-40">
+    <nav className="bg-white border-b border-gray-200 pl-2 pr-4 md:px-4 py-3 sticky top-0 z-40">
       <div className="flex items-center justify-between w-full">
-        {/* Left side - Page title */}
-        <div className="flex items-center space-x-4">
+        {/* Left side - Expand sidebar: top-left on mobile (always), when collapsed on desktop */}
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          {/* Visible on mobile only - always at top left */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 shrink-0 md:hidden"
+            onClick={toggleSidebar}
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          {/* Visible on desktop only when sidebar is collapsed */}
+          {isCollapsed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 shrink-0 hidden md:inline-flex"
+              onClick={toggleSidebar}
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
           {title && (
             <div className="flex items-center space-x-3">
               <h1 className="text-xl font-semibold text-gray-900">{title}</h1>

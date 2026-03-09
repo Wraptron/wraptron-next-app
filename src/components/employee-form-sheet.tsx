@@ -233,7 +233,10 @@ export function EmployeeFormSheet({
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         personal_email: formData.personal_email || undefined,
-        link_user_email: formData.link_user_email != null ? String(formData.link_user_email).trim() : undefined,
+        link_user_email:
+          formData.link_user_email != null
+            ? String(formData.link_user_email).trim()
+            : undefined,
         present_address: formData.present_address || undefined,
         permanent_address: formData.permanent_address || undefined,
         e_contact: formData.e_contact || undefined,
@@ -273,7 +276,10 @@ export function EmployeeFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange} container={container}>
-      <SheetContent side="right" className="flex flex-col w-full md:w-1/3 overflow-hidden">
+      <SheetContent
+        side="right"
+        className="flex flex-col w-full md:w-1/3 overflow-hidden"
+      >
         <SheetHeader>
           <SheetTitle>{employee ? "Edit Employee" : "Add Employee"}</SheetTitle>
           <SheetDescription>
@@ -458,7 +464,10 @@ export function EmployeeFormSheet({
                     type="email"
                     value={formData.link_user_email ?? ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, link_user_email: e.target.value })
+                      setFormData({
+                        ...formData,
+                        link_user_email: e.target.value,
+                      })
                     }
                     placeholder="User login email to link for attendance"
                   />
@@ -474,12 +483,12 @@ export function EmployeeFormSheet({
                           {formData.link_user_email
                             ? (() => {
                                 const u = users.find(
-                                  (x) => x.email === formData.link_user_email
+                                  (x) => x.email === formData.link_user_email,
                                 );
                                 return u
                                   ? [u.first_name, u.last_name]
-                                    .filter(Boolean)
-                                    .join(" ") || u.email
+                                      .filter(Boolean)
+                                      .join(" ") || u.email
                                   : formData.link_user_email;
                               })()
                             : "Select user..."}
@@ -552,7 +561,8 @@ export function EmployeeFormSheet({
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Link this employee to a login account so check-in uses this employee record.
+                  Link this employee to a login account so check-in uses this
+                  employee record.
                 </p>
               </div>
             </Section>

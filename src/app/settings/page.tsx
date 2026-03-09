@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useCurrency } from "@/contexts/currency-context";
-import { githubApi, type GitHubConnection } from "@/lib/api";
+import { githubApi, salesStagesApi, type GitHubConnection, type SalesStage } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github, DollarSign } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github, DollarSign, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
@@ -53,6 +53,16 @@ export default function Settings() {
   // Verification state
   const [verifying, setVerifying] = useState<number | null>(null);
 
+  // Sales stages state
+  const [stages, setStages] = useState<SalesStage[]>([]);
+  const [stagesLoading, setStagesLoading] = useState(true);
+  const [stageAddOpen, setStageAddOpen] = useState(false);
+  const [stageEditOpen, setStageEditOpen] = useState(false);
+  const [stageDeleteOpen, setStageDeleteOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<SalesStage | null>(null);
+  const [stageName, setStageName] = useState("");
+  const [stageFormLoading, setStageFormLoading] = useState(false);
+
   useEffect(() => {
     setTitle("Settings");
     return () => setTitle(null);
@@ -60,6 +70,21 @@ export default function Settings() {
 
   useEffect(() => {
     fetchConnections();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setStagesLoading(true);
+      try {
+        const res = await salesStagesApi.getAll();
+        setStages(res.data ?? []);
+      } catch {
+        setStages([]);
+      } finally {
+        setStagesLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const fetchConnections = async () => {
@@ -172,6 +197,85 @@ export default function Settings() {
     setDeleteDialogOpen(true);
   };
 
+  const fetchStages = async () => {
+    try {
+      const res = await salesStagesApi.getAll();
+      setStages(res.data ?? []);
+    } catch {
+      setStages([]);
+    }
+  };
+
+  const handleAddStage = async () => {
+    if (!stageName.trim()) {
+      setError("Stage name is required");
+      return;
+    }
+    setStageFormLoading(true);
+    setError(null);
+    try {
+      await salesStagesApi.create({ name: stageName.trim(), sort_order: stages.length });
+      setSuccessMessage("Sales stage added.");
+      setStageAddOpen(false);
+      setStageName("");
+      fetchStages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add stage");
+    } finally {
+      setStageFormLoading(false);
+    }
+  };
+
+  const handleEditStage = async () => {
+    if (!selectedStage) return;
+    if (!stageName.trim()) {
+      setError("Stage name is required");
+      return;
+    }
+    setStageFormLoading(true);
+    setError(null);
+    try {
+      await salesStagesApi.update(selectedStage.id, { name: stageName.trim() });
+      setSuccessMessage("Sales stage updated.");
+      setStageEditOpen(false);
+      setStageName("");
+      setSelectedStage(null);
+      fetchStages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update stage");
+    } finally {
+      setStageFormLoading(false);
+    }
+  };
+
+  const handleDeleteStage = async () => {
+    if (!selectedStage) return;
+    setStageFormLoading(true);
+    setError(null);
+    try {
+      await salesStagesApi.delete(selectedStage.id);
+      setSuccessMessage("Sales stage deleted.");
+      setStageDeleteOpen(false);
+      setSelectedStage(null);
+      fetchStages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete stage");
+    } finally {
+      setStageFormLoading(false);
+    }
+  };
+
+  const openEditStage = (s: SalesStage) => {
+    setSelectedStage(s);
+    setStageName(s.name);
+    setStageEditOpen(true);
+  };
+
+  const openDeleteStage = (s: SalesStage) => {
+    setSelectedStage(s);
+    setStageDeleteOpen(true);
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Never";
     try {
@@ -234,6 +338,71 @@ export default function Settings() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Sales Stages Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Sales stages
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Manage deal stages used in the sales pipeline (e.g. lead, qualified, won, lost)
+                </CardDescription>
+              </div>
+              <Button onClick={() => { setStageName(""); setStageAddOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add stage
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {stagesLoading ? (
+              <div className="text-center py-8">Loading stages...</div>
+            ) : stages.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                No stages yet. Add one to customize your pipeline.
+              </div>
+            ) : (
+              <div className="rounded-md border bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="w-[120px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stages.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.sort_order}</TableCell>
+                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => openEditStage(s)}>
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteStage(s)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -522,6 +691,87 @@ export default function Settings() {
                 disabled={formLoading}
               >
                 {formLoading ? "Deleting..." : "Delete Connection"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Sales Stage Dialog */}
+        <Dialog open={stageAddOpen} onOpenChange={setStageAddOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add sales stage</DialogTitle>
+              <DialogDescription>
+                Add a new stage to your sales pipeline (e.g. lead, qualified, won).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="stage-name">Name</Label>
+                <Input
+                  id="stage-name"
+                  placeholder="e.g. discovery"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setStageAddOpen(false); setStageName(""); }} disabled={stageFormLoading}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddStage} disabled={stageFormLoading || !stageName.trim()}>
+                {stageFormLoading ? "Adding..." : "Add stage"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Sales Stage Dialog */}
+        <Dialog open={stageEditOpen} onOpenChange={setStageEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit sales stage</DialogTitle>
+              <DialogDescription>
+                Change the stage name. Deals using this stage will show the new name.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-stage-name">Name</Label>
+                <Input
+                  id="edit-stage-name"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setStageEditOpen(false); setStageName(""); setSelectedStage(null); }} disabled={stageFormLoading}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditStage} disabled={stageFormLoading || !stageName.trim()}>
+                {stageFormLoading ? "Updating..." : "Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Sales Stage Dialog */}
+        <Dialog open={stageDeleteOpen} onOpenChange={setStageDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete sales stage</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedStage?.name}"? Deals in this stage will keep the stage value but it may no longer appear in pipeline lists until you add a stage with the same name again.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setStageDeleteOpen(false); setSelectedStage(null); }} disabled={stageFormLoading}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteStage} disabled={stageFormLoading}>
+                {stageFormLoading ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

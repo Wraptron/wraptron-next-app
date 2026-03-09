@@ -20,15 +20,18 @@ import { DealFormSheet } from "@/components/deal-form-sheet";
 import { ArrowLeft, Edit, Loader2, Trash2 } from "lucide-react";
 
 const getStageColor = (stage?: string) => {
+  const key = stage?.toLowerCase() || "";
   const colors: Record<string, string> = {
     lead: "bg-gray-100 text-gray-800",
     qualified: "bg-blue-100 text-blue-800",
-    proposal: "bg-yellow-100 text-yellow-800",
-    negotiation: "bg-orange-100 text-orange-800",
-    won: "bg-green-100 text-green-800",
-    lost: "bg-red-100 text-red-800",
+    "requirement gathered": "bg-slate-100 text-slate-800",
+    "solution proposed": "bg-yellow-100 text-yellow-800",
+    "negotiation/objection handling": "bg-orange-100 text-orange-800",
+    acceptance: "bg-emerald-100 text-emerald-800",
+    "project delivered - ready for resell": "bg-green-100 text-green-800",
+    "referral or testimonial": "bg-violet-100 text-violet-800",
   };
-  return colors[stage?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
+  return colors[key] || "bg-gray-100 text-gray-800";
 };
 
 const getStatusColor = (status?: string) => {

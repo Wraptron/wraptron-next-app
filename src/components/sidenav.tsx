@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import {
   CreditCard,
@@ -504,37 +505,59 @@ export default function SideNav() {
   };
 
   return (
-    <div
-      className={cn(
-        "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
-        "hidden md:flex",
-        isCollapsed ? "w-16" : "w-64",
+    <>
+      {/* Backdrop on mobile when sidebar is open */}
+      {!isCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
+          aria-hidden
+        />
       )}
-    >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <h2
-              className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+      <div
+        className={cn(
+          "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
+          isCollapsed ? "hidden md:flex" : "flex",
+          isCollapsed ? "w-16" : "w-64",
+        )}
+      >
+      {/* Header: when expanded show title + collapse; when collapsed show logo (web) */}
+      <div className={cn("border-b border-gray-200 flex-shrink-0", isCollapsed ? "px-0 py-3 flex justify-center" : "px-4 py-3")}>
+        <div className="flex items-center justify-between w-full">
+          {isCollapsed ? (
+            <button
+              type="button"
               onClick={() => router.push("/")}
+              className="flex items-center justify-center w-full min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 rounded"
+              aria-label="Wraptron home"
             >
-              Wraptron
-            </h2>
+              <Image
+                src="/icon-192.png"
+                alt="Wraptron"
+                width={40}
+                height={40}
+                className="object-contain shrink-0"
+              />
+            </button>
+          ) : (
+            <>
+              <h2
+                className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => router.push("/")}
+              >
+                Wraptron
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSidebar}
+                className="h-8 w-8 p-0"
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebar}
-            className="h-8 w-8 p-0"
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
         </div>
       </div>
 
@@ -560,5 +583,6 @@ export default function SideNav() {
         </ul>
       </nav>
     </div>
+    </>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -42,10 +43,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, ChevronsUpDown, Plus, X } from "lucide-react";
-import { dealsApi, contactsApi, clientsApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateClientInput, type Contact, type Client } from "@/lib/api";
+import { dealsApi, contactsApi, clientsApi, salesStagesApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateClientInput, type Contact, type Client, type SalesStage } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
 
-const DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation", "won", "lost"];
+const DEFAULT_DEAL_STAGES = [
+  "Lead",
+  "Qualified",
+  "Requirement gathered",
+  "Solution proposed",
+  "Negotiation/Objection handling",
+  "Acceptance",
+  "Project Delivered - Ready for Resell",
+  "Referral or testimonial",
+];
 
 const MAIN_CONTENT_PORTAL_ID = "main-content-portal";
 const DEAL_FORM_ID = "deal-form-sheet-form";
@@ -58,9 +68,12 @@ export interface DealFormSheetProps {
 }
 
 const initialFormState = {
-  stage: "lead" as string,
+  stage: "Lead" as string,
   contact_id: null as number | null,
   client_id: null as number | null,
+  value: "" as string,
+  expected_close_date: "" as string,
+  description: "" as string,
 };
 
 export function DealFormSheet({
@@ -83,7 +96,10 @@ export function DealFormSheet({
   const [createCompanyLoading, setCreateCompanyLoading] = useState(false);
   const [newContact, setNewContact] = useState({ first_name: "", last_name: "", email: "" });
   const [newCompany, setNewCompany] = useState({ name: "", company_name: "" });
+  const [stages, setStages] = useState<SalesStage[]>([]);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
+
+  const stageNames = stages.length > 0 ? stages.map((s) => s.name) : DEFAULT_DEAL_STAGES;
 
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
@@ -121,18 +137,23 @@ export function DealFormSheet({
     Promise.all([
       contactsApi.getAll({ limit: 1000 }),
       clientsApi.getAll({ limit: 1000 }),
-    ]).then(([contactsRes, companiesRes]) => {
+      salesStagesApi.getAll(),
+    ]).then(([contactsRes, companiesRes, stagesRes]) => {
       setContacts(contactsRes.data);
       setCompanies(companiesRes.data ?? []);
+      setStages(stagesRes.data ?? []);
     });
   }, [open]);
 
   useEffect(() => {
     if (open && deal) {
       setFormData({
-        stage: deal.stage || "lead",
+        stage: deal.stage || "Lead",
         contact_id: deal.contact_id ?? deal.contacts_associated?.[0] ?? null,
         client_id: deal.client_id ?? deal.companies_associated?.[0] ?? null,
+        value: deal.value != null ? String(deal.value) : "",
+        expected_close_date: deal.expected_close_date ?? "",
+        description: deal.description ?? "",
       });
     } else if (open && !deal) {
       setFormData(initialFormState);
@@ -154,12 +175,15 @@ export function DealFormSheet({
     try {
       const payload: CreateDealInput = {
         title: deal?.title ?? "Deal",
-        stage: formData.stage || "lead",
+        stage: formData.stage || "Lead",
         currency: defaultCurrency,
         contact_id: formData.contact_id ?? undefined,
         client_id: formData.client_id ?? undefined,
         contacts_associated: formData.contact_id ? [formData.contact_id] : [],
         companies_associated: formData.client_id ? [formData.client_id] : [],
+        value: formData.value ? Number(formData.value) : undefined,
+        expected_close_date: formData.expected_close_date || undefined,
+        description: formData.description.trim() || undefined,
       };
       if (deal) {
         await dealsApi.update(deal.id, payload);
@@ -260,25 +284,6 @@ export function DealFormSheet({
         >
           <div className="space-y-4 p-4">
             <div className="space-y-2">
-              <Label>Stage</Label>
-              <Select
-                value={formData.stage}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEAL_STAGES.map((stage) => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage.charAt(0).toUpperCase() + stage.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label>Contact</Label>
               <div className="flex gap-1">
                 <Popover open={contactOpen} onOpenChange={setContactOpen}>
@@ -340,53 +345,6 @@ export function DealFormSheet({
               </div>
             </div>
 
-            <Dialog open={createContactOpen} onOpenChange={setCreateContactOpen}>
-              <DialogContent className="sm:max-w-[400px]">
-                <DialogHeader>
-                  <DialogTitle>New contact</DialogTitle>
-                  <DialogDescription>Add a contact. First name is required.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-contact-first">First name *</Label>
-                    <Input
-                      id="new-contact-first"
-                      value={newContact.first_name}
-                      onChange={(e) => setNewContact((p) => ({ ...p, first_name: e.target.value }))}
-                      placeholder="First name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-contact-last">Last name</Label>
-                    <Input
-                      id="new-contact-last"
-                      value={newContact.last_name}
-                      onChange={(e) => setNewContact((p) => ({ ...p, last_name: e.target.value }))}
-                      placeholder="Last name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-contact-email">Email</Label>
-                    <Input
-                      id="new-contact-email"
-                      type="email"
-                      value={newContact.email}
-                      onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))}
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setCreateContactOpen(false)} disabled={createContactLoading}>
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={handleCreateContact} disabled={createContactLoading}>
-                    {createContactLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
             <div className="space-y-2">
               <Label>Company</Label>
               <div className="flex gap-1">
@@ -441,6 +399,104 @@ export function DealFormSheet({
                 )}
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Deal value</Label>
+              <Input
+                type="number"
+                min={0}
+                step="any"
+                placeholder="0.00"
+                value={formData.value}
+                onChange={(e) => setFormData((prev) => ({ ...prev, value: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Closing date</Label>
+              <Input
+                type="date"
+                value={formData.expected_close_date}
+                onChange={(e) => setFormData((prev) => ({ ...prev, expected_close_date: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Deal notes or description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Stage</Label>
+              <Select
+                value={formData.stage}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {stageNames.map((stage) => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Dialog open={createContactOpen} onOpenChange={setCreateContactOpen}>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle>New contact</DialogTitle>
+                  <DialogDescription>Add a contact. First name is required.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-contact-first">First name *</Label>
+                    <Input
+                      id="new-contact-first"
+                      value={newContact.first_name}
+                      onChange={(e) => setNewContact((p) => ({ ...p, first_name: e.target.value }))}
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-contact-last">Last name</Label>
+                    <Input
+                      id="new-contact-last"
+                      value={newContact.last_name}
+                      onChange={(e) => setNewContact((p) => ({ ...p, last_name: e.target.value }))}
+                      placeholder="Last name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-contact-email">Email</Label>
+                    <Input
+                      id="new-contact-email"
+                      type="email"
+                      value={newContact.email}
+                      onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setCreateContactOpen(false)} disabled={createContactLoading}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={handleCreateContact} disabled={createContactLoading}>
+                    {createContactLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Dialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen}>
               <DialogContent className="sm:max-w-[400px]">
