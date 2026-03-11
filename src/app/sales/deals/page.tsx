@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -25,6 +26,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -63,48 +66,26 @@ const sentenceCase = (s: string) =>
 
 const DealCard = ({
   deal,
-  onClick,
   onEdit,
   onDelete,
 }: {
   deal: Deal;
-  onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }) => (
-  <Card
-    className="border-[0.5px] border-gray-200 shadow-none cursor-pointer hover:border-gray-300 transition-colors"
-    onClick={onClick}
-  >
+  <div className="group block relative">
+    <Link href={`/sales/deals/${deal.id}`} className="block no-underline">
+    <Card className="hover:shadow-md transition-shadow">
     <CardHeader>
       <div className="flex justify-between items-start">
-        <CardTitle className="text-lg">
-          {deal.client_name || deal.client_company_name || "Deal"}
-        </CardTitle>
-        <div className="flex gap-1">
-          {onEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-            >
-              <Trash2 className="h-4 w-4 text-red-600" />
-            </Button>
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-lg">
+            {deal.title || deal.client_name || deal.client_company_name || "Deal"}
+          </CardTitle>
+          {(deal.client_id && (deal.client_company_name || deal.client_name)) && (
+            <p className="text-sm text-gray-500 mt-0.5 truncate">
+              Customer: {[deal.client_company_name, deal.client_name].filter(Boolean).join(" · ")}
+            </p>
           )}
         </div>
       </div>
@@ -126,6 +107,20 @@ const DealCard = ({
       </div>
     </CardContent>
   </Card>
+  </Link>
+  <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    {onEdit && (
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+        <Edit className="h-4 w-4" />
+      </Button>
+    )}
+    {onDelete && (
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    )}
+  </div>
+  </div>
 );
 
 const DealKanbanCard = ({
@@ -140,10 +135,17 @@ const DealKanbanCard = ({
   <Card className="border-[0.5px] border-gray-200 shadow-none cursor-grab active:cursor-grabbing bg-white">
     <CardContent className="p-3">
       <div className="flex justify-between items-start mb-2">
-        <h4 className="font-semibold text-sm line-clamp-2 flex-1">
-          {deal.client_name || deal.client_company_name || "Deal"}
-        </h4>
-        <div className="flex gap-1 ml-2">
+        <div className="min-w-0 flex-1">
+          <h4 className="font-semibold text-sm line-clamp-2">
+            {deal.title || deal.client_name || deal.client_company_name || "Deal"}
+          </h4>
+          {(deal.client_id && (deal.client_company_name || deal.client_name)) && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+              Customer: {[deal.client_company_name, deal.client_name].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-1 ml-2 shrink-0">
           {onEdit && (
             <Button
               variant="ghost"
@@ -212,7 +214,12 @@ const SortableDealCard = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <DealKanbanCard deal={deal} onEdit={onEdit} onDelete={onDelete} />
+      <Link
+        href={`/sales/deals/${deal.id}`}
+        className="block no-underline text-inherit"
+      >
+        <DealKanbanCard deal={deal} onEdit={onEdit} onDelete={onDelete} />
+      </Link>
     </div>
   );
 };
@@ -284,23 +291,25 @@ export default function DealsPage() {
   const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
   const [activeDragDeal, setActiveDragDeal] = useState<Deal | null>(null);
   const [stages, setStages] = useState<SalesStage[]>([]);
+  const [selectedDeals, setSelectedDeals] = useState<number[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const defaultStageNames = [
-    "lead",
+    "new lead",
     "qualified",
     "requirement gathered",
     "solution proposed",
     "negotiation/objection handling",
-    "acceptance",
-    "project delivered - ready for resell",
-    "referral or testimonial",
+    "proposal accepted",
+    "project implementation",
+    "maintenance - project delivered",
   ];
   const stageNames =
     stages.length > 0
       ? stages.map((s) => s.name.toLowerCase())
       : defaultStageNames;
 
-  // Default to kanban
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("deals_view_mode");
@@ -308,8 +317,38 @@ export default function DealsPage() {
         return saved as ViewMode;
       }
     }
-    return "kanban";
+    return "card";
   });
+
+  const toggleDealSelection = (dealId: number) => {
+    setSelectedDeals((prev) =>
+      prev.includes(dealId) ? prev.filter((id) => id !== dealId) : [...prev, dealId],
+    );
+  };
+
+  const toggleAllDeals = () => {
+    if (selectedDeals.length === deals.length) {
+      setSelectedDeals([]);
+    } else {
+      setSelectedDeals(deals.map((d) => d.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedDeals.map((id) => dealsApi.delete(id)));
+      setDeals((prev) => prev.filter((d) => !selectedDeals.includes(d.id)));
+      setSelectedDeals([]);
+      setBulkDeleteOpen(false);
+    } catch (err) {
+      console.error("Failed to delete deals:", err);
+      fetchDeals();
+      alert("Failed to delete some deals. Please try again.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -445,21 +484,29 @@ export default function DealsPage() {
   const renderDeals = () => {
     if (viewMode === "list") {
       return (
-        <div className="rounded-none border-[0.5px] border-gray-200 bg-white">
+        <div className="rounded-md border bg-white">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-gray-200 hover:bg-transparent">
-                <TableHead className="w-[220px] font-medium">Client</TableHead>
-                <TableHead className="font-medium">Contact</TableHead>
-                <TableHead className="font-medium">Stage</TableHead>
-                <TableHead className="font-medium">Status</TableHead>
-                <TableHead className="font-medium">Probability</TableHead>
-                <TableHead className="w-[100px] font-medium">Actions</TableHead>
+              <TableRow>
+                <TableHead className="w-[50px]">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    checked={deals.length > 0 && selectedDeals.length === deals.length}
+                    onChange={toggleAllDeals}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </TableHead>
+                <TableHead className="w-[300px]">Deal name</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Stage</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Probability</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deals.length === 0 ? (
-                <TableRow className="border-b border-gray-200 hover:bg-transparent">
+                <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     No deals found.
                   </TableCell>
@@ -468,11 +515,33 @@ export default function DealsPage() {
                 deals.map((deal) => (
                   <TableRow
                     key={deal.id}
-                    className="border-b border-gray-200 cursor-pointer hover:bg-transparent"
+                    className={`cursor-pointer hover:bg-gray-50 ${
+                      selectedDeals.includes(deal.id) ? "bg-blue-50" : ""
+                    }`}
                     onClick={() => router.push(`/sales/deals/${deal.id}`)}
                   >
+                    <TableCell
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleDealSelection(deal.id);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        checked={selectedDeals.includes(deal.id)}
+                        onChange={() => {}}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
-                      {deal.client_name || deal.client_company_name || "—"}
+                      <Link
+                        href={`/sales/deals/${deal.id}`}
+                        className="hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {deal.title || deal.client_name || deal.client_company_name || "Deal"}
+                      </Link>
                     </TableCell>
                     <TableCell>{deal.contact_name || "—"}</TableCell>
                     <TableCell>
@@ -482,30 +551,6 @@ export default function DealsPage() {
                       <Badge variant="outline">{deal.status || "N/A"}</Badge>
                     </TableCell>
                     <TableCell>{deal.probability}%</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/sales/deals/${deal.id}`);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(deal);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -574,8 +619,7 @@ export default function DealsPage() {
           <DealCard
             key={deal.id}
             deal={deal}
-            onClick={() => router.push(`/sales/deals/${deal.id}`)}
-            onEdit={() => router.push(`/sales/deals/${deal.id}`)}
+            onEdit={() => handleEdit(deal)}
             onDelete={() => handleDelete(deal)}
           />
         ))}
@@ -618,17 +662,19 @@ export default function DealsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-5">
-          <div className="flex items-center gap-1">
-            <ButtonGroup orientation="horizontal" className="gap-0">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <p className="text-gray-600">{deals.length} deals</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ButtonGroup orientation="horizontal">
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("list")}
                 aria-label="List view"
-                className="px-3"
               >
                 <Menu className="h-4 w-4" />
               </Button>
@@ -637,7 +683,6 @@ export default function DealsPage() {
                 size="sm"
                 onClick={() => setViewMode("card")}
                 aria-label="Card view"
-                className="px-3"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -646,25 +691,57 @@ export default function DealsPage() {
                 size="sm"
                 onClick={() => setViewMode("kanban")}
                 aria-label="Kanban view"
-                className="px-3"
               >
                 <Columns3 className="h-4 w-4" />
               </Button>
             </ButtonGroup>
-
-            <Button
-              onClick={fetchDeals}
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 shrink-0"
-            >
+            <Button onClick={fetchDeals} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="default" size="sm" onClick={handleCreateNew}>
-              <Plus className="h-4 w-4 mr-1" /> New deal
+            <Button variant="outline" size="sm" onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 mr-1" /> New Deal
             </Button>
           </div>
         </div>
+
+        {selectedDeals.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
+            <span className="text-sm font-medium">
+              {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"} selected
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isBulkDeleting}
+                className="bg-white hover:bg-blue-50 text-red-600 border-red-200 hover:border-red-300"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete deals</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {selectedDeals.length} selected deal
+                {selectedDeals.length === 1 ? "" : "s"}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={isBulkDeleting}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+                {isBulkDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {loading && <div className="text-center py-8">Loading...</div>}
         {error && <div className="text-red-600 text-center py-8">{error}</div>}
@@ -672,16 +749,9 @@ export default function DealsPage() {
         {!loading &&
           !error &&
           (deals.length === 0 ? (
-            <div className="text-center py-16 border border-gray-200 border-dashed">
-              <h3 className="text-xl font-medium mb-2">
-                No deals in the pipeline
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Create your first deal to get started.
-              </p>
-              <Button variant="default" onClick={handleCreateNew}>
-                <Plus className="h-4 w-4 mr-2" /> Create deal
-              </Button>
+            <div className="text-center py-16">
+              <h3 className="text-xl mb-2">No deals yet</h3>
+              <p className="text-gray-600">Create your first deal above.</p>
             </div>
           ) : (
             renderDeals()
@@ -698,22 +768,18 @@ export default function DealsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete deal</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this deal? This action cannot be undone.
+              </DialogDescription>
             </DialogHeader>
-            <p className="py-4">
-              Are you sure you want to delete this deal? This action cannot be
-              undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                 Cancel
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>
                 Delete
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

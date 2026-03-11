@@ -47,14 +47,14 @@ import { dealsApi, contactsApi, clientsApi, salesStagesApi, type Deal, type Crea
 import { useCurrency } from "@/contexts/currency-context";
 
 const DEFAULT_DEAL_STAGES = [
-  "Lead",
+  "New Lead",
   "Qualified",
   "Requirement gathered",
   "Solution proposed",
   "Negotiation/Objection handling",
-  "Acceptance",
-  "Project Delivered - Ready for Resell",
-  "Referral or testimonial",
+  "Proposal Accepted",
+  "Project Implementation",
+  "Maintenance - Project Delivered",
 ];
 
 const MAIN_CONTENT_PORTAL_ID = "main-content-portal";
@@ -68,7 +68,8 @@ export interface DealFormSheetProps {
 }
 
 const initialFormState = {
-  stage: "Lead" as string,
+  title: "" as string,
+  stage: "New Lead" as string,
   contact_id: null as number | null,
   client_id: null as number | null,
   value: "" as string,
@@ -148,7 +149,8 @@ export function DealFormSheet({
   useEffect(() => {
     if (open && deal) {
       setFormData({
-        stage: deal.stage || "Lead",
+        title: deal.title ?? "",
+        stage: deal.stage || "New Lead",
         contact_id: deal.contact_id ?? deal.contacts_associated?.[0] ?? null,
         client_id: deal.client_id ?? deal.companies_associated?.[0] ?? null,
         value: deal.value != null ? String(deal.value) : "",
@@ -174,8 +176,8 @@ export function DealFormSheet({
     setLoading(true);
     try {
       const payload: CreateDealInput = {
-        title: deal?.title ?? "Deal",
-        stage: formData.stage || "Lead",
+        title: formData.title.trim() || "Deal",
+        stage: formData.stage || "New Lead",
         currency: defaultCurrency,
         contact_id: formData.contact_id ?? undefined,
         client_id: formData.client_id ?? undefined,
@@ -283,6 +285,15 @@ export function DealFormSheet({
           className="flex flex-col flex-1 min-h-0 overflow-y-auto"
         >
           <div className="space-y-4 p-4">
+            <div className="space-y-2">
+              <Label>Deal name</Label>
+              <Input
+                placeholder="Enter deal name"
+                value={formData.title}
+                onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label>Contact</Label>
               <div className="flex gap-1">

@@ -664,16 +664,19 @@ export function EmployeeFormSheet({
                     }
                   />
                 </div>
-                <div>
-                  <Label>Exit Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.exit_date ?? ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, exit_date: e.target.value })
-                    }
-                  />
-                </div>
+                {(formData.employment_status === "notice_period" ||
+                  formData.employment_status === "exited") && (
+                  <div>
+                    <Label>Exit Date</Label>
+                    <Input
+                      type="date"
+                      value={formData.exit_date ?? ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, exit_date: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

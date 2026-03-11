@@ -224,10 +224,13 @@ export default function EmployeeDetailPage() {
                 label="Join date"
                 value={employee.join_date ? new Date(employee.join_date).toLocaleDateString() : undefined}
               />
-              <DetailRow
-                label="Exit date"
-                value={employee.exit_date ? new Date(employee.exit_date).toLocaleDateString() : undefined}
-              />
+              {(employee.employment_status === "notice_period" ||
+                employee.employment_status === "exited") && (
+                <DetailRow
+                  label="Exit date"
+                  value={employee.exit_date ? new Date(employee.exit_date).toLocaleDateString() : undefined}
+                />
+              )}
               <DetailRow label="Department" value={employee.department} />
               <DetailRow label="Designation" value={employee.designation} />
               <DetailRow label="Role" value={employee.role} />
