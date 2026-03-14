@@ -46,8 +46,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
         </div>
         <div
           id="main-content-portal"
-          className="flex-1 overflow-y-auto ml-4 mt-4 pb-4 relative min-h-0 transition-[margin] duration-300 ease-in-out"
-          style={{ marginRight: 0 }}
+          className="flex-1 overflow-y-auto pb-4 relative min-h-0"
         >
           {children}
         </div>

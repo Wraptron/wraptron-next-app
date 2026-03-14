@@ -32,14 +32,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DealFormSheet } from "@/components/deal-form-sheet";
+import { DealImportSheet } from "@/components/deal-import-sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   RefreshCw,
   Plus,
   Menu,
+  ChevronDown,
   LayoutGrid,
   Columns3,
   Edit,
   Trash2,
+  FileDown,
 } from "lucide-react";
 import {
   DndContext,
@@ -286,6 +295,7 @@ export default function DealsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
@@ -698,9 +708,24 @@ export default function DealsPage() {
             <Button onClick={fetchDeals} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleCreateNew}>
-              <Plus className="h-4 w-4 mr-1" /> New Deal
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> New Deal
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCreateNew}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Deal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportSheetOpen(true)}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Import
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -762,6 +787,12 @@ export default function DealsPage() {
           onOpenChange={setSheetOpen}
           onSuccess={handleFormSuccess}
           deal={editingDeal ?? null}
+        />
+
+        <DealImportSheet
+          open={importSheetOpen}
+          onOpenChange={setImportSheetOpen}
+          onSuccess={handleFormSuccess}
         />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
