@@ -518,7 +518,7 @@ export default function SideNav() {
         className={cn(
           "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
           isCollapsed ? "hidden md:flex" : "flex",
-          isCollapsed ? "w-16" : "w-64",
+          isCollapsed ? "w-16" : "w-full md:w-64",
         )}
       >
       {/* Header: when expanded show title + collapse; when collapsed show logo (web) */}
