@@ -40,6 +40,23 @@ import {
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  DragStartEvent,
+  DragEndEvent,
+  TouchSensor,
+  closestCorners,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -459,11 +476,12 @@ export default function ProjectPage() {
   useEffect(() => {
     const tabLabels: Record<string, string> = {
       overview: "",
-      analytics: "Analytics",
       requirements: "",
       releases: "Releases",
       tasks: "Tasks",
-      support: "",
+      commits: "",
+      teams: "",
+      integrations: "",
     };
     setSubtitle(tabLabels[activeTab] || null);
   }, [activeTab, setSubtitle]);
@@ -483,7 +501,7 @@ export default function ProjectPage() {
           <CardContent className="pt-6">
             <p className="text-red-600 mb-4">{error || "Project not found"}</p>
             <Link href="/projects">
-              <Button variant="outline">Back to PPM</Button>
+              <Button variant="outline">Back to Projects</Button>
             </Link>
           </CardContent>
         </Card>
@@ -502,16 +520,16 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-6">
+      <div className="max-w-6xl mx-auto px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
+        <div className="mb-4 sm:mb-6">
           <Link href="/projects">
-            <Button variant="ghost" className="mb-4">
+            <Button variant="ghost" className="mb-3 sm:mb-4 -ml-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to PPM
+              Back to Projects
             </Button>
           </Link>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
               <Badge
                 variant={
                   project.status === "completed"
@@ -523,22 +541,23 @@ export default function ProjectPage() {
               >
                 {project.status}
               </Badge>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 truncate">
                 Created {formatDate(project.created_at)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCharterOpen(true)}
+                className="flex-1 sm:flex-initial min-w-0"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Project Charter
+                <FileText className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">Project Charter</span>
               </Button>
-              <Link href={`/projects/${projectId}/edit`}>
-                <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4 mr-2" />
+              <Link href={`/projects/${projectId}/edit`} className="flex-1 sm:flex-initial min-w-0">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Edit className="h-4 w-4 mr-2 shrink-0" />
                   Edit Project
                 </Button>
               </Link>
@@ -557,16 +576,17 @@ export default function ProjectPage() {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="requirements">Requirements</TabsTrigger>
-            <TabsTrigger value="commits">Commits</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="teams">Teams</TabsTrigger>
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
-            <TabsTrigger value="settings">Support</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-max min-w-0 flex-nowrap">
+              <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
+              <TabsTrigger value="requirements" className="shrink-0">Requirements</TabsTrigger>
+              <TabsTrigger value="releases" className="shrink-0">Releases</TabsTrigger>
+              <TabsTrigger value="tasks" className="shrink-0">Tasks</TabsTrigger>
+              <TabsTrigger value="commits" className="shrink-0">Commits</TabsTrigger>
+              <TabsTrigger value="teams" className="shrink-0">Teams</TabsTrigger>
+              <TabsTrigger value="integrations" className="shrink-0">Integrations</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-4">
             <Card>
@@ -633,7 +653,7 @@ export default function ProjectPage() {
                           Goals & KPIs
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
                             {project.kpi}
                           </pre>
                         </div>
@@ -645,7 +665,7 @@ export default function ProjectPage() {
                           Target Users
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
                             {project.target_users}
                           </pre>
                         </div>
@@ -657,7 +677,7 @@ export default function ProjectPage() {
                           References
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
                             {project.project_references}
                           </pre>
                         </div>
@@ -665,19 +685,6 @@ export default function ProjectPage() {
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">
-                  Analytics data will appear here.
-                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -691,7 +698,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.ux_preference}
                       </pre>
                     </div>
@@ -717,7 +724,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.functional_requirements}
                       </pre>
                     </div>
@@ -732,7 +739,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.non_functional_requirements}
                       </pre>
                     </div>
@@ -747,7 +754,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.technology_stack}
                       </pre>
                     </div>
@@ -770,10 +777,6 @@ export default function ProjectPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="commits" className="space-y-4">
-            <GitHubCommitsView projectId={projectId!} />
-          </TabsContent>
-
           <TabsContent value="tasks" className="space-y-4">
             <TaskViewSwitcher
               tasks={project.tasks || []}
@@ -785,6 +788,10 @@ export default function ProjectPage() {
                 }
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="commits" className="space-y-4">
+            <GitHubCommitsView projectId={projectId!} />
           </TabsContent>
 
           <TabsContent value="teams" className="space-y-4">
@@ -807,128 +814,6 @@ export default function ProjectPage() {
             <GitHubIntegration projectId={projectId!} />
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Support Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {project.support_coverage && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Preferred Support Coverage
-                    </p>
-                    <p className="text-sm mt-1">{project.support_coverage}</p>
-                  </div>
-                )}
-
-                {project.support_engagement_model &&
-                  project.support_engagement_model.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Support Engagement Model
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {project.support_engagement_model.map((model, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {model}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {project.support_channels &&
-                  project.support_channels.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Support Channels
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {project.support_channels.map((channel, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {channel}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {project.scheduled_review_calls && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Scheduled Review Calls
-                    </p>
-                    <p className="text-sm mt-1">
-                      {project.scheduled_review_calls}
-                    </p>
-                  </div>
-                )}
-
-                {project.backup_frequency && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Backup Frequency
-                    </p>
-                    <p className="text-sm mt-1">{project.backup_frequency}</p>
-                  </div>
-                )}
-
-                {project.backup_retention_period && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Backup Retention Period
-                    </p>
-                    <p className="text-sm mt-1">
-                      {project.backup_retention_period}
-                    </p>
-                  </div>
-                )}
-
-                {project.reports_required &&
-                  project.reports_required.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Reports Required
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {project.reports_required.map((report, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {report}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {project.incident_alerts &&
-                  project.incident_alerts.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Incident Alerts & Notifications
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {project.incident_alerts.map((alert, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {alert}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {!project.support_coverage &&
-                  (!project.support_engagement_model ||
-                    project.support_engagement_model.length === 0) &&
-                  (!project.support_channels ||
-                    project.support_channels.length === 0) && (
-                    <p className="text-gray-500 text-center py-4">
-                      No support settings configured yet.
-                    </p>
-                  )}
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -976,12 +861,12 @@ function TaskViewSwitcher({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <Button onClick={() => setAddTaskOpen(true)} size="sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <Button onClick={() => setAddTaskOpen(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Task
         </Button>
-        <div className="flex items-center border rounded-lg p-1">
+        <div className="flex items-center border rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
@@ -1057,6 +942,135 @@ function TaskViewSwitcher({
 }
 
 // Task Board Component
+const TASK_COLUMN_KEYS = ["backlog", "todo", "in_progress", "review", "done"];
+const COLUMN_TO_STATUS: Record<string, string> = {
+  backlog: "pending",
+  todo: "todo",
+  in_progress: "in_progress",
+  review: "review",
+  done: "completed",
+};
+const STATUS_TO_COLUMN: Record<string, string> = {
+  pending: "backlog",
+  todo: "todo",
+  in_progress: "in_progress",
+  review: "review",
+  completed: "done",
+  done: "done",
+};
+
+function TaskKanbanCard({ task }: { task: Task }) {
+  return (
+    <Card className="border-[0.5px] border-gray-200 shadow-none cursor-grab active:cursor-grabbing bg-white">
+      <CardContent className="p-3">
+        <div className="flex justify-between items-start mb-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-semibold text-sm line-clamp-2">{task.title}</h4>
+          </div>
+          <div className="ml-2 shrink-0">{getStatusIconHelper(task.status)}</div>
+        </div>
+        {task.description && (
+          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+            {task.description}
+          </p>
+        )}
+        <div className="flex justify-between items-center mt-2">
+          <Badge
+            variant={
+              task.status === "completed" || task.status === "done"
+                ? "default"
+                : task.status === "in_progress"
+                  ? "secondary"
+                  : "outline"
+            }
+            className="text-[10px] px-1 py-0"
+          >
+            {task.status}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SortableTaskCard({ task, projectId }: { task: Task; projectId: number }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Link
+        href={`/projects/${projectId}/tasks/${task.id}`}
+        className="block no-underline text-inherit"
+      >
+        <TaskKanbanCard task={task} />
+      </Link>
+    </div>
+  );
+}
+
+function TaskKanbanColumn({
+  id,
+  label,
+  tasks: columnTasks,
+  projectId,
+  statusSubtext,
+}: {
+  id: string;
+  label: string;
+  tasks: Task[];
+  projectId: number;
+  statusSubtext: string;
+}) {
+  const { setNodeRef } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex-shrink-0 w-72 border-[0.5px] border-gray-200 bg-white rounded-none h-full overflow-y-auto flex flex-col"
+    >
+      <div className="border-b border-gray-200 px-3 py-2 flex-shrink-0">
+        <h3 className="font-medium text-sm text-gray-900">{label}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{statusSubtext}</p>
+      </div>
+      <div className="flex-1 p-2 min-h-0 overflow-y-auto">
+        <SortableContext
+          id={id}
+          items={columnTasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2 min-h-[80px]">
+            {columnTasks.map((task) => (
+              <SortableTaskCard
+                key={task.id}
+                task={task}
+                projectId={projectId}
+              />
+            ))}
+            {columnTasks.length === 0 && (
+              <div className="text-sm text-gray-400 text-center py-6 italic border border-dashed border-gray-200">
+                Drop here
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </div>
+    </div>
+  );
+}
+
 function TaskBoard({
   tasks,
   projectId,
@@ -1066,156 +1080,99 @@ function TaskBoard({
   projectId: number;
   onTaskUpdate: () => void;
 }) {
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
 
   const columns = [
-    { key: "backlog", label: "Backlog", color: "bg-gray-50" },
-    { key: "todo", label: "To Do", color: "bg-blue-50" },
-    { key: "in_progress", label: "In Progress", color: "bg-yellow-50" },
-    { key: "review", label: "Review", color: "bg-purple-50" },
-    { key: "done", label: "Done", color: "bg-green-50" },
+    { key: "backlog", label: "Backlog" },
+    { key: "todo", label: "To Do" },
+    { key: "in_progress", label: "In Progress" },
+    { key: "review", label: "Review" },
+    { key: "done", label: "Done" },
   ];
 
   const getTasksByStatus = (status: string) => {
-    // Map status values to column keys
-    const statusMap: Record<string, string> = {
-      pending: "backlog",
-      todo: "todo",
-      in_progress: "in_progress",
-      review: "review",
-      completed: "done",
-      done: "done",
-    };
     return tasks.filter(
-      (task) => statusMap[task.status] === status || task.status === status,
+      (task) =>
+        STATUS_TO_COLUMN[task.status] === status || task.status === status,
     );
   };
 
-  const handleDragStart = (task: Task) => {
-    setDraggedTask(task);
+  const getStatusSubtext = (columnTasks: Task[]) =>
+    `${columnTasks.length} task${columnTasks.length !== 1 ? "s" : ""}`;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = tasks.find((t) => t.id === event.active.id);
+    if (task) setActiveDragTask(task);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragTask(null);
+    if (!over) return;
 
-  const handleDrop = async (newStatus: string) => {
-    if (!draggedTask) return;
+    const task = tasks.find((t) => t.id === active.id);
+    if (!task) return;
 
-    const statusMap: Record<string, string> = {
-      backlog: "pending",
-      todo: "todo",
-      in_progress: "in_progress",
-      review: "review",
-      done: "completed",
-    };
-
-    const mappedStatus = statusMap[newStatus] || newStatus;
-
-    if (draggedTask.status !== mappedStatus) {
-      try {
-        // Update task status via API
-        await projectsApi.update(projectId, {
-          tasks: [
-            {
-              title: draggedTask.title,
-              description: draggedTask.description,
-              status: mappedStatus,
-            },
-          ],
-        });
-        onTaskUpdate();
-      } catch (error) {
-        console.error("Error updating task:", error);
+    let newColumn = "";
+    if (TASK_COLUMN_KEYS.includes(String(over.id))) {
+      newColumn = String(over.id);
+    } else {
+      const overTask = tasks.find((t) => t.id === over.id);
+      if (overTask) {
+        newColumn = STATUS_TO_COLUMN[overTask.status] || overTask.status;
+      } else {
+        return;
       }
     }
-    setDraggedTask(null);
+
+    const newStatus = COLUMN_TO_STATUS[newColumn] || newColumn;
+    const currentColumn =
+      STATUS_TO_COLUMN[task.status] || task.status || "backlog";
+    if (newColumn === currentColumn) return;
+
+    try {
+      await projectsApi.updateTask(projectId, task.id, { status: newStatus });
+      onTaskUpdate();
+    } catch (err) {
+      console.error("Error updating task status", err);
+    }
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {columns.map((column) => {
-        const columnTasks = getTasksByStatus(column.key);
-        return (
-          <div
-            key={column.key}
-            className={`flex-shrink-0 w-72 ${column.color} rounded-lg p-3 min-h-[400px]`}
-            onDragOver={handleDragOver}
-            onDrop={() => handleDrop(column.key)}
-          >
-            <h3 className="font-semibold mb-3 text-sm uppercase flex items-center justify-between">
-              <span>
-                {column.label} ({columnTasks.length})
-              </span>
-            </h3>
-            <div className="space-y-2">
-              {columnTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onDragStart={() => handleDragStart(task)}
-                  onUpdate={onTaskUpdate}
-                />
-              ))}
-              {columnTasks.length === 0 && (
-                <div className="text-sm text-gray-500 text-center py-8 border-2 border-dashed rounded">
-                  Drop tasks here
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Task Card Component
-function TaskCard({
-  task,
-  onDragStart,
-  onUpdate,
-}: {
-  task: Task;
-  onDragStart: () => void;
-  onUpdate: () => void;
-}) {
-  const router = useRouter();
-
-  const handleClick = () => {
-    // Navigate to task edit page on click
-    router.push(`/projects/${task.project_id}/tasks/${task.id}`);
-  };
-
-  return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onClick={handleClick}
-      className="bg-white border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm flex-1">{task.title}</h4>
-        {getStatusIconHelper(task.status)}
-      </div>
-      {task.description && (
-        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-          {task.description}
-        </p>
-      )}
-      <div className="flex items-center justify-between mt-2">
-        <Badge
-          variant={
-            task.status === "completed" || task.status === "done"
-              ? "default"
-              : task.status === "in_progress"
-                ? "secondary"
-                : "outline"
-          }
-          className="text-xs"
+    <div className="min-h-[260px] h-[calc(100vh-260px)] sm:h-[calc(100vh-280px)] border-[0.5px] border-gray-200 bg-white overflow-hidden flex flex-col">
+      <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          {task.status}
-        </Badge>
+          <div className="flex h-full py-0">
+            {columns.map((col) => {
+              const columnTasks = getTasksByStatus(col.key);
+              return (
+                <TaskKanbanColumn
+                  key={col.key}
+                  id={col.key}
+                  label={col.label}
+                  tasks={columnTasks}
+                  projectId={projectId}
+                  statusSubtext={getStatusSubtext(columnTasks)}
+                />
+              );
+            })}
+          </div>
+          <DragOverlay>
+            {activeDragTask ? (
+              <TaskKanbanCard task={activeDragTask} />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>
   );

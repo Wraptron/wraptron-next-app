@@ -176,7 +176,7 @@ export function GlobalSearch() {
   const getTypeLabel = (type: SearchResult["type"]) => {
     switch (type) {
       case "project":
-        return "PPM";
+        return "Projects";
       case "customer":
         return "Customers";
       case "product":
@@ -217,13 +217,13 @@ export function GlobalSearch() {
         open={open}
         onOpenChange={setOpen}
         title="Search Everything"
-        description="Search across PPM, customers, products, employees, and more..."
+        description="Search across projects, customers, products, employees, and more..."
         showCloseButton={false}
       >
         <div className="relative">
           <div className="[&_[data-slot=command-input-wrapper]]:pr-16">
             <CommandInput
-              placeholder="Search PPM, customers, products, employees..."
+              placeholder="Search projects, customers, products, employees..."
               value={query}
               onValueChange={setQuery}
             />

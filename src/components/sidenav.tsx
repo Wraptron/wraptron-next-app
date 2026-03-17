@@ -439,6 +439,10 @@ export default function SideNav() {
     } else {
       setActiveItem(itemId);
       router.push(href);
+      // Close sidebar on mobile after navigation
+      if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+        toggleSidebar();
+      }
     }
   };
 

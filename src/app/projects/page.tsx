@@ -343,7 +343,7 @@ const Projects = () => {
 
   // Set page title in header
   useEffect(() => {
-    setTitle("PPM");
+    setTitle("Projects");
     // Cleanup: clear title when component unmounts
     return () => setTitle(null);
   }, [setTitle]);
@@ -467,7 +467,7 @@ const Projects = () => {
               {projects.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    No PPM items found.
+                    No projects found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -650,7 +650,7 @@ const Projects = () => {
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete PPM Items</DialogTitle>
+              <DialogTitle>Delete projects</DialogTitle>
               <DialogDescription>
                 Are you sure you want to delete {selectedProjects.length}{" "}
                 selected items? This action cannot be undone.
@@ -688,8 +688,8 @@ const Projects = () => {
           !error &&
           (projects.length === 0 ? (
             <div className="text-center py-16">
-              <h3 className="text-xl mb-2">No PPM items yet</h3>
-              <p className="text-gray-600">Create your first PPM item above.</p>
+              <h3 className="text-xl mb-2">No projects yet</h3>
+              <p className="text-gray-600">Create your first project above.</p>
             </div>
           ) : (
             renderProjects()

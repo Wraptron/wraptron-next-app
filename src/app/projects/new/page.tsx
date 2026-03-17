@@ -320,7 +320,7 @@ export default function NewProjectPage() {
           <Link href="/projects">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to PPM
+              Back to Projects
             </Button>
           </Link>
           <h1 className="text-3xl font-bold">Create New Project</h1>
