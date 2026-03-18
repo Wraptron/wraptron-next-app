@@ -814,6 +814,17 @@ export default function ProjectPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="integrations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Integrations</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <GitHubIntegration projectId={projectId!} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </div>
     </div>
