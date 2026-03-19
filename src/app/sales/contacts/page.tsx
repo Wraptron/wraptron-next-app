@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { contactsApi, type Contact } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ import { ContactFormSheet } from "@/components/contact-form-sheet";
 import { ContactImportSheet } from "@/components/contact-import-sheet";
 
 type ViewMode = "list" | "card" | "kanban";
+const CONTACTS_PAGE_SIZE = 200;
 
 const getStatusColor = (status?: string) => {
   const colors: Record<string, string> = {
@@ -112,6 +113,8 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("contacts_view_mode");
@@ -126,6 +129,7 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const activeRequestRef = useRef(0);
 
   // Open edit sheet when URL has ?edit=id (e.g. from contact detail page)
   useEffect(() => {
@@ -143,16 +147,56 @@ export default function ContactsPage() {
       .catch(() => {});
   }, [searchParams, router]);
 
+  const formatLoadError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : "Failed to fetch contacts";
+    const lower = message.toLowerCase();
+    if (lower.includes("timeout") || lower.includes("timed out")) {
+      return "Request timed out. Showing partial data where available. Please retry.";
+    }
+    return message;
+  };
+
   const fetchContacts = async () => {
+    const requestId = ++activeRequestRef.current;
     setLoading(true);
+    setBackgroundLoading(false);
     setError(null);
+    setBackgroundError(null);
+
     try {
-      const response = await contactsApi.getAll();
-      setContacts(response.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch contacts");
-    } finally {
+      // Fast first paint: fetch first page, then progressively load the rest.
+      const first = await contactsApi.getAll({ limit: CONTACTS_PAGE_SIZE, offset: 0 });
+      if (requestId !== activeRequestRef.current) return;
+
+      setContacts(first.data);
       setLoading(false);
+
+      const total = first.total ?? first.data.length;
+      if (total > first.data.length) {
+        setBackgroundLoading(true);
+        for (let offset = first.data.length; offset < total; offset += CONTACTS_PAGE_SIZE) {
+          try {
+            const next = await contactsApi.getAll({
+              limit: CONTACTS_PAGE_SIZE,
+              offset,
+            });
+            if (requestId !== activeRequestRef.current) return;
+            setContacts((prev) => [...prev, ...next.data]);
+          } catch (bgErr) {
+            if (requestId !== activeRequestRef.current) return;
+            setBackgroundError(formatLoadError(bgErr));
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      if (requestId !== activeRequestRef.current) return;
+      setError(formatLoadError(err));
+    } finally {
+      if (requestId === activeRequestRef.current) {
+        setLoading(false);
+        setBackgroundLoading(false);
+      }
     }
   };
 
@@ -369,6 +413,12 @@ export default function ContactsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
             <p className="text-gray-600 mt-1">{contacts.length} contacts</p>
+            {backgroundLoading && (
+              <p className="text-xs text-gray-500 mt-1">Loading more contacts...</p>
+            )}
+            {backgroundError && (
+              <p className="text-xs text-amber-700 mt-1">{backgroundError}</p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <ButtonGroup orientation="horizontal">
