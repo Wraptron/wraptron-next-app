@@ -84,51 +84,74 @@ const DealCard = ({
 }) => (
   <div className="group block relative">
     <Link href={`/sales/deals/${deal.id}`} className="block no-underline">
-    <Card className="hover:shadow-md transition-shadow">
-    <CardHeader>
-      <div className="flex justify-between items-start">
-        <div className="min-w-0 flex-1">
-          <CardTitle className="text-lg">
-            {deal.title || deal.client_name || deal.client_company_name || "Deal"}
-          </CardTitle>
-          {(deal.client_id && (deal.client_company_name || deal.client_name)) && (
-            <p className="text-sm text-gray-500 mt-0.5 truncate">
-              Customer: {[deal.client_company_name, deal.client_name].filter(Boolean).join(" · ")}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex gap-2 mt-2">
-        <Badge variant="outline">{deal.stage || "No stage"}</Badge>
-        <Badge variant="outline">{deal.status || "No status"}</Badge>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-500">Contact:</span>
-          <span>{deal.contact_name || "N/A"}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">Probability:</span>
-          <span>{deal.probability}%</span>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-  </Link>
-  <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-    {onEdit && (
-      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-        <Edit className="h-4 w-4" />
-      </Button>
-    )}
-    {onDelete && (
-      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    )}
-  </div>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-lg">
+                {deal.title ||
+                  deal.client_name ||
+                  deal.client_company_name ||
+                  "Deal"}
+              </CardTitle>
+              {deal.client_id &&
+                (deal.client_company_name || deal.client_name) && (
+                  <p className="text-sm text-gray-500 mt-0.5 truncate">
+                    Customer:{" "}
+                    {[deal.client_company_name, deal.client_name]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+            </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline">{deal.stage || "No stage"}</Badge>
+            <Badge variant="outline">{deal.status || "No status"}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Contact:</span>
+              <span>{deal.contact_name || "N/A"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Probability:</span>
+              <span>{deal.probability}%</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+    <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {onEdit && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+      )}
+      {onDelete && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-red-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
   </div>
 );
 
@@ -146,11 +169,17 @@ const DealKanbanCard = ({
       <div className="flex justify-between items-start mb-2">
         <div className="min-w-0 flex-1">
           <h4 className="font-semibold text-sm line-clamp-2">
-            {deal.title || deal.client_name || deal.client_company_name || "Deal"}
+            {deal.title ||
+              deal.client_name ||
+              deal.client_company_name ||
+              "Deal"}
           </h4>
-          {(deal.client_id && (deal.client_company_name || deal.client_name)) && (
+          {deal.client_id && (deal.client_company_name || deal.client_name) && (
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-              Customer: {[deal.client_company_name, deal.client_name].filter(Boolean).join(" · ")}
+              Customer:{" "}
+              {[deal.client_company_name, deal.client_name]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           )}
         </div>
@@ -332,7 +361,9 @@ export default function DealsPage() {
 
   const toggleDealSelection = (dealId: number) => {
     setSelectedDeals((prev) =>
-      prev.includes(dealId) ? prev.filter((id) => id !== dealId) : [...prev, dealId],
+      prev.includes(dealId)
+        ? prev.filter((id) => id !== dealId)
+        : [...prev, dealId],
     );
   };
 
@@ -502,7 +533,9 @@ export default function DealsPage() {
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    checked={deals.length > 0 && selectedDeals.length === deals.length}
+                    checked={
+                      deals.length > 0 && selectedDeals.length === deals.length
+                    }
                     onChange={toggleAllDeals}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -550,7 +583,10 @@ export default function DealsPage() {
                         className="hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {deal.title || deal.client_name || deal.client_company_name || "Deal"}
+                        {deal.title ||
+                          deal.client_name ||
+                          deal.client_company_name ||
+                          "Deal"}
                       </Link>
                     </TableCell>
                     <TableCell>{deal.contact_name || "—"}</TableCell>
@@ -708,31 +744,42 @@ export default function DealsPage() {
             <Button onClick={fetchDeals} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-1" /> New Deal
-                  <ChevronDown className="h-4 w-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCreateNew}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Deal
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setImportSheetOpen(true)}>
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Import
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="inline-flex">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateNew}
+                className="rounded-r-none"
+              >
+                <Plus className="h-4 w-4 mr-1" /> New Deal
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-1 rounded-l-none border-l-0"
+                    aria-label="Deal actions"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setImportSheetOpen(true)}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Import
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
         {selectedDeals.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
             <span className="text-sm font-medium">
-              {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"} selected
+              {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"}{" "}
+              selected
             </span>
             <div className="flex gap-2">
               <Button
@@ -753,15 +800,25 @@ export default function DealsPage() {
             <DialogHeader>
               <DialogTitle>Delete deals</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete {selectedDeals.length} selected deal
-                {selectedDeals.length === 1 ? "" : "s"}? This action cannot be undone.
+                Are you sure you want to delete {selectedDeals.length} selected
+                deal
+                {selectedDeals.length === 1 ? "" : "s"}? This action cannot be
+                undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={isBulkDeleting}>
+              <Button
+                variant="outline"
+                onClick={() => setBulkDeleteOpen(false)}
+                disabled={isBulkDeleting}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
                 {isBulkDeleting ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
@@ -800,11 +857,15 @@ export default function DealsPage() {
             <DialogHeader>
               <DialogTitle>Delete deal</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this deal? This action cannot be undone.
+                Are you sure you want to delete this deal? This action cannot be
+                undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>

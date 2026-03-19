@@ -22,8 +22,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RefreshCw, Plus, Menu, LayoutGrid, Columns3, Edit, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  RefreshCw,
+  Plus,
+  Menu,
+  LayoutGrid,
+  Columns3,
+  Edit,
+  Trash2,
+  ChevronDown,
+  FileDown,
+} from "lucide-react";
 import { ContactFormSheet } from "@/components/contact-form-sheet";
+import { ContactImportSheet } from "@/components/contact-import-sheet";
 
 type ViewMode = "list" | "card" | "kanban";
 
@@ -105,6 +122,7 @@ export default function ContactsPage() {
     return "list";
   });
   const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
@@ -379,9 +397,34 @@ export default function ContactsPage() {
             <Button onClick={fetchContacts} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="default" size="sm" onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-1" /> New Contact
-            </Button>
+            <div className="inline-flex">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreate}
+                className="rounded-r-none"
+              >
+                <Plus className="h-4 w-4 mr-1" /> New Contact
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-1 rounded-l-none border-l-0"
+                    aria-label="Contact actions"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setImportSheetOpen(true)}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Import
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -407,6 +450,11 @@ export default function ContactsPage() {
           onOpenChange={setFormDialogOpen}
           onSuccess={handleFormSuccess}
           contact={editingContact}
+        />
+        <ContactImportSheet
+          open={importSheetOpen}
+          onOpenChange={setImportSheetOpen}
+          onSuccess={handleFormSuccess}
         />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
