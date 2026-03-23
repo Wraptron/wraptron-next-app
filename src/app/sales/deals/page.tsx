@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   dealsApi,
@@ -344,9 +344,18 @@ export default function DealsPage() {
     "project implementation",
     "maintenance - project delivered",
   ];
+
+  /** Pipeline order from Settings → Sales stages (API returns sort_order; we sort defensively). */
+  const stagesSorted = useMemo(() => {
+    return [...stages].sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id - b.id;
+    });
+  }, [stages]);
+
   const stageNames =
-    stages.length > 0
-      ? stages.map((s) => s.name.toLowerCase())
+    stagesSorted.length > 0
+      ? stagesSorted.map((s) => s.name.toLowerCase())
       : defaultStageNames;
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -449,6 +458,13 @@ export default function DealsPage() {
         grouped.other.push(deal);
       }
     });
+
+    const dealTime = (d: Deal) =>
+      new Date(d.updated_at ?? d.created_at).getTime();
+
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort((a, b) => dealTime(b) - dealTime(a));
+    }
 
     return grouped;
   };
@@ -609,8 +625,8 @@ export default function DealsPage() {
     if (viewMode === "kanban") {
       const grouped = getDealsByStage();
       const columns =
-        stages.length > 0
-          ? stages.map((s) => ({
+        stagesSorted.length > 0
+          ? stagesSorted.map((s) => ({
               key: s.name.toLowerCase(),
               label: s.name,
             }))
