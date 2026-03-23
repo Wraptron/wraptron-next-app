@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { dealsApi, type CreateDealInput } from "@/lib/api";
+import { dealsApi, salesStagesApi, type CreateDealInput } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
 
 const TEMPLATE_HEADERS = [
@@ -87,14 +87,18 @@ function parseCsvFile(text: string): Record<string, string>[] {
   return rows;
 }
 
-function rowToDealInput(row: Record<string, string>, defaultCurrency: string): CreateDealInput {
+function rowToDealInput(
+  row: Record<string, string>,
+  defaultCurrency: string,
+  defaultStage: string,
+): CreateDealInput {
   const num = (s: string) => {
     const n = parseFloat(String(s).replace(/[^0-9.-]/g, ""));
     return isNaN(n) ? undefined : n;
   };
   return {
     title: row.title || row["deal_title"] || "Imported deal",
-    stage: row.stage || "New Lead",
+    stage: row.stage?.trim() || defaultStage,
     value: num(row.value),
     currency: row.currency || defaultCurrency,
     probability: num(row.probability) ?? 0,
@@ -115,6 +119,7 @@ export function DealImportSheet({
   onSuccess,
 }: DealImportSheetProps) {
   const { currency: defaultCurrency } = useCurrency();
+  const [defaultStageName, setDefaultStageName] = useState("New Lead");
   const [uploading, setUploading] = useState(false);
   const [importResult, setImportResult] = useState<{
     created: number;
@@ -122,6 +127,20 @@ export function DealImportSheet({
     errors: string[];
   } | null>(null);
   const [fileKey, setFileKey] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    salesStagesApi
+      .getAll()
+      .then((res) => {
+        const rows = [...(res.data ?? [])].sort((a, b) => {
+          if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+          return a.id - b.id;
+        });
+        if (rows[0]?.name) setDefaultStageName(rows[0].name);
+      })
+      .catch(() => {});
+  }, [open]);
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +162,7 @@ export function DealImportSheet({
         }
         for (let i = 0; i < rows.length; i++) {
           try {
-            const input = rowToDealInput(rows[i], defaultCurrency);
+            const input = rowToDealInput(rows[i], defaultCurrency, defaultStageName);
             await dealsApi.create(input);
             created++;
           } catch (err) {
@@ -170,7 +189,7 @@ export function DealImportSheet({
         e.target.value = "";
       }
     },
-    [defaultCurrency, onSuccess]
+    [defaultCurrency, defaultStageName, onSuccess]
   );
 
   const handleOpenChange = (next: boolean) => {

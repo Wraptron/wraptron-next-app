@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,17 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { dealsApi, contactsApi, clientsApi, type Deal, type CreateDealInput, type Contact, type Client } from "@/lib/api";
+import {
+  dealsApi,
+  contactsApi,
+  clientsApi,
+  salesStagesApi,
+  type Deal,
+  type CreateDealInput,
+  type Contact,
+  type Client,
+  type SalesStage,
+} from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
 
 interface DealFormProps {
@@ -22,13 +32,16 @@ interface DealFormProps {
   onCancel: () => void;
 }
 
-const DEAL_STAGES = [
-  "lead",
-  "qualified",
-  "proposal",
-  "negotiation",
-  "won",
-  "lost",
+/** Fallback when /api/sales-stages is empty or fails (matches deal-form-sheet defaults). */
+const FALLBACK_STAGE_NAMES = [
+  "New Lead",
+  "Qualified",
+  "Requirement gathered",
+  "Solution proposed",
+  "Negotiation/Objection handling",
+  "Proposal Accepted",
+  "Project Implementation",
+  "Maintenance - Project Delivered",
 ];
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
@@ -38,9 +51,23 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Client[]>([]);
+  const [salesStages, setSalesStages] = useState<SalesStage[]>([]);
+
+  const stagesSorted = useMemo(() => {
+    return [...salesStages].sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id - b.id;
+    });
+  }, [salesStages]);
+
+  const stageNames =
+    stagesSorted.length > 0
+      ? stagesSorted.map((s) => s.name)
+      : FALLBACK_STAGE_NAMES;
+
   const [formData, setFormData] = useState<CreateDealInput>({
     title: deal?.title || "",
-    stage: deal?.stage || "lead",
+    stage: deal?.stage || FALLBACK_STAGE_NAMES[0],
     expected_close_date: deal?.expected_close_date || "",
     value: deal?.value || undefined,
     currency: deal?.currency || defaultCurrency,
@@ -48,11 +75,21 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     companies_associated: deal?.companies_associated || [],
   });
 
+  const defaultStage = stagesSorted[0]?.name ?? FALLBACK_STAGE_NAMES[0];
+
+  const stageSelectOptions = useMemo(() => {
+    const s = formData.stage;
+    if (s && !stageNames.includes(s)) {
+      return [...stageNames, s];
+    }
+    return stageNames;
+  }, [stageNames, formData.stage]);
+
   useEffect(() => {
     if (deal) {
       setFormData({
         title: deal.title || "",
-        stage: deal.stage || "lead",
+        stage: deal.stage || FALLBACK_STAGE_NAMES[0],
         expected_close_date: deal.expected_close_date || "",
         value: deal.value || undefined,
         currency: deal.currency || defaultCurrency,
@@ -63,14 +100,29 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   }, [deal, defaultCurrency]);
 
   useEffect(() => {
+    if (deal) return;
+    if (stagesSorted.length === 0) return;
+    const first = stagesSorted[0].name;
+    setFormData((prev) => {
+      const s = prev.stage ?? "";
+      const onlyGenericDefault =
+        s === "" || s === "lead" || s === FALLBACK_STAGE_NAMES[0];
+      if (!onlyGenericDefault) return prev;
+      return { ...prev, stage: first };
+    });
+  }, [deal, stagesSorted]);
+
+  useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [contactsRes, companiesRes] = await Promise.all([
+        const [contactsRes, companiesRes, stagesRes] = await Promise.all([
           contactsApi.getAll({ limit: 1000 }),
           clientsApi.getAll({ limit: 1000 }),
+          salesStagesApi.getAll(),
         ]);
         setContacts(contactsRes.data);
         setCompanies(companiesRes.data);
+        setSalesStages(stagesRes.data ?? []);
       } catch (error) {
         console.error("Error fetching options:", error);
       }
@@ -84,7 +136,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     try {
       const dataToSend: CreateDealInput = {
         title: formData.title,
-        stage: formData.stage || "lead",
+        stage: formData.stage || defaultStage,
         currency: formData.currency || defaultCurrency,
         expected_close_date: formData.expected_close_date || undefined,
         value: formData.value || undefined,
@@ -131,16 +183,16 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         <div>
           <Label htmlFor="stage">Deal Stage</Label>
           <Select
-            value={formData.stage || "lead"}
+            value={formData.stage || defaultStage}
             onValueChange={(value) => setFormData({ ...formData, stage: value })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DEAL_STAGES.map((stage) => (
+              {stageSelectOptions.map((stage) => (
                 <SelectItem key={stage} value={stage}>
-                  {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                  {stage}
                 </SelectItem>
               ))}
             </SelectContent>

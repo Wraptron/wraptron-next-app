@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSheetPush } from "@/contexts/sheet-push-context";
 import {
   Sheet,
@@ -100,7 +100,24 @@ export function DealFormSheet({
   const [stages, setStages] = useState<SalesStage[]>([]);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
 
-  const stageNames = stages.length > 0 ? stages.map((s) => s.name) : DEFAULT_DEAL_STAGES;
+  const stagesSorted = useMemo(() => {
+    return [...stages].sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id - b.id;
+    });
+  }, [stages]);
+
+  const stageNames =
+    stagesSorted.length > 0
+      ? stagesSorted.map((s) => s.name)
+      : DEFAULT_DEAL_STAGES;
+
+  const stageSelectOptions = useMemo(() => {
+    if (formData.stage && !stageNames.includes(formData.stage)) {
+      return [...stageNames, formData.stage];
+    }
+    return stageNames;
+  }, [stageNames, formData.stage]);
 
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
@@ -145,6 +162,19 @@ export function DealFormSheet({
       setStages(stagesRes.data ?? []);
     });
   }, [open]);
+
+  /** New deals: default stage = first configured sales stage (when API returns stages). */
+  useEffect(() => {
+    if (!open || deal) return;
+    if (stagesSorted.length === 0) return;
+    const first = stagesSorted[0].name;
+    setFormData((prev) => {
+      if (prev.stage !== "New Lead" && prev.stage !== DEFAULT_DEAL_STAGES[0]) {
+        return prev;
+      }
+      return { ...prev, stage: first };
+    });
+  }, [open, deal, stagesSorted]);
 
   useEffect(() => {
     if (open && deal) {
@@ -453,7 +483,7 @@ export function DealFormSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {stageNames.map((stage) => (
+                  {stageSelectOptions.map((stage) => (
                     <SelectItem key={stage} value={stage}>
                       {stage}
                     </SelectItem>
