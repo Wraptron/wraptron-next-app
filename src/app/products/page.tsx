@@ -41,7 +41,7 @@ const formatPrice = (value?: number | null) =>
 
 const ProductCard = ({ product }: { product: Product }) => (
   <Link href={`/products/${product.id}`} className="group block no-underline">
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow h-full">
       <CardHeader>
         <CardTitle className="text-lg">{product.part_name}</CardTitle>
         <Badge className={getStatusColor(product.status)}>
@@ -50,17 +50,24 @@ const ProductCard = ({ product }: { product: Product }) => (
       </CardHeader>
       <CardContent>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span>Part code:</span>
-            <span className="font-mono">{product.part_code}</span>
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground shrink-0">Part code</span>
+            <span className="font-mono text-right">{product.part_code}</span>
+          </div>
+          {product.product_description?.trim() ? (
+            <p className="text-muted-foreground text-sm line-clamp-3 leading-snug">
+              {product.product_description}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm italic">No description</p>
+          )}
+          <div className="flex justify-between pt-1 border-t border-border/60">
+            <span>Selling price</span>
+            <span className="font-medium">{formatPrice(product.selling_price)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Selling price:</span>
-            <span>{formatPrice(product.selling_price)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Buying price:</span>
-            <span>{formatPrice(product.total_cost)}</span>
+            <span>Buying price</span>
+            <span className="font-medium">{formatPrice(product.total_cost)}</span>
           </div>
         </div>
       </CardContent>
@@ -76,9 +83,27 @@ const ProductKanbanCard = ({ product }: { product: Product }) => (
         <Badge className={getStatusColor(product.status)}>
           {product.status || "No status"}
         </Badge>
-        <div className="mt-2 text-xs text-muted-foreground">
-          <div>{product.part_code}</div>
-          <div className="mt-1">Sell: {formatPrice(product.selling_price)}</div>
+        <div className="mt-2 text-xs text-muted-foreground space-y-1.5">
+          <div className="font-mono">{product.part_code}</div>
+          {product.product_description?.trim() ? (
+            <p className="line-clamp-2 text-[11px] leading-relaxed text-foreground/80">
+              {product.product_description}
+            </p>
+          ) : null}
+          <div className="pt-1 border-t border-border/50 space-y-0.5">
+            <div className="flex justify-between gap-2">
+              <span>Sell</span>
+              <span className="font-medium text-foreground">
+                {formatPrice(product.selling_price)}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>Buy</span>
+              <span className="font-medium text-foreground">
+                {formatPrice(product.total_cost)}
+              </span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -134,6 +159,21 @@ export default function ProductsPage() {
     }
   }, [viewMode]);
 
+  useEffect(() => {
+    const scrollToHash = () => {
+      const id = window.location.hash.replace(/^#/, "");
+      if (!id) return;
+      requestAnimationFrame(() => {
+        document
+          .getElementById(id)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    };
+    scrollToHash();
+    window.addEventListener("hashchange", scrollToHash);
+    return () => window.removeEventListener("hashchange", scrollToHash);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchProducts();
@@ -167,16 +207,19 @@ export default function ProductsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[120px]">Part code</TableHead>
-                <TableHead className="w-[300px]">Product name</TableHead>
+                <TableHead className="min-w-[140px]">Product name</TableHead>
+                <TableHead className="min-w-[200px] max-w-[320px]">
+                  Description
+                </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Selling price</TableHead>
-                <TableHead>Buying price</TableHead>
+                <TableHead className="text-right">Selling price</TableHead>
+                <TableHead className="text-right">Buying price</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No products found.
                   </TableCell>
                 </TableRow>
@@ -199,13 +242,22 @@ export default function ProductsPage() {
                         {product.part_name}
                       </Link>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[320px]">
+                      <span className="line-clamp-2 text-foreground/90">
+                        {product.product_description?.trim() || "—"}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(product.status)}>
                         {product.status || "—"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatPrice(product.selling_price)}</TableCell>
-                    <TableCell>{formatPrice(product.total_cost)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatPrice(product.selling_price)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatPrice(product.total_cost)}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -263,96 +315,98 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <p className="text-muted-foreground">
-              {products.length} product{products.length !== 1 ? "s" : ""}
-            </p>
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 h-9 w-40"
-                />
-              </div>
-              <Button type="submit" variant="secondary" size="sm">
-                Search
+        <section id="interface" className="scroll-mt-24 space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <p className="text-muted-foreground shrink-0">
+                {products.length} product{products.length !== 1 ? "s" : ""}
+              </p>
+              <form onSubmit={handleSearch} className="flex gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 h-9 w-40"
+                  />
+                </div>
+                <Button type="submit" variant="secondary" size="sm">
+                  Search
+                </Button>
+              </form>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ButtonGroup orientation="horizontal">
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  aria-label="List view"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "card" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("card")}
+                  aria-label="Card view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "kanban" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("kanban")}
+                  aria-label="Kanban view"
+                >
+                  <Columns3 className="h-4 w-4" />
+                </Button>
+              </ButtonGroup>
+              <Button onClick={fetchProducts} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4" />
               </Button>
-            </form>
-          </div>
-          <div className="flex items-center gap-2">
-            <ButtonGroup orientation="horizontal">
               <Button
-                variant={viewMode === "list" ? "default" : "outline"}
+                variant="outline"
                 size="sm"
-                onClick={() => setViewMode("list")}
-                aria-label="List view"
+                onClick={() => setProductSheetOpen(true)}
               >
-                <Menu className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-1" /> New product
               </Button>
-              <Button
-                variant={viewMode === "card" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("card")}
-                aria-label="Card view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "kanban" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("kanban")}
-                aria-label="Kanban view"
-              >
-                <Columns3 className="h-4 w-4" />
-              </Button>
-            </ButtonGroup>
-            <Button onClick={fetchProducts} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setProductSheetOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-1" /> New product
-            </Button>
+            </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive mb-4">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-        {loading && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
+          {loading && (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
 
-        {!loading && !error && products.length === 0 && (
-          <div className="text-center py-16">
-            <Store className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No products yet</h3>
-            <p className="text-muted-foreground mb-4">
-              {search.trim()
-                ? "No products match your search."
-                : "Create your first product above."}
-            </p>
-            {!search.trim() && (
-              <Button onClick={() => setProductSheetOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> New product
-              </Button>
-            )}
-          </div>
-        )}
+          {!loading && !error && products.length === 0 && (
+            <div className="text-center py-16">
+              <Store className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No products yet</h3>
+              <p className="text-muted-foreground mb-4">
+                {search.trim()
+                  ? "No products match your search."
+                  : "Create your first product above."}
+              </p>
+              {!search.trim() && (
+                <Button onClick={() => setProductSheetOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> New product
+                </Button>
+              )}
+            </div>
+          )}
 
-        {!loading && !error && products.length > 0 && renderContent()}
+          {!loading && !error && products.length > 0 && renderContent()}
+        </section>
 
         <ProductFormSheet
           open={productSheetOpen}

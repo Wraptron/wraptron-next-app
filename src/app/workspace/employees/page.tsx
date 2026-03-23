@@ -24,16 +24,19 @@ import {
   Menu,
   LayoutGrid,
   Columns3,
+  Trash2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { employeesApi, type Employee } from "@/lib/api";
 import { EmployeeFormSheet } from "@/components/employee-form-sheet";
+import { useAuth } from "@/contexts/auth-context";
 
 function displayName(e: Employee) {
   const parts = [e.first_name, e.middle_name, e.last_name].filter(Boolean);
@@ -86,6 +89,8 @@ function EmployeeKanbanCard({ employee }: { employee: Employee }) {
 
 export default function EmployeesPage() {
   const { setTitle } = usePageTitle();
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -135,6 +140,24 @@ export default function EmployeesPage() {
   const openEdit = (e: Employee) => {
     setEditingEmployee(e);
     setSheetOpen(true);
+  };
+
+  const handleDelete = async (employee: Employee) => {
+    if (
+      !confirm(
+        `Remove ${displayName(employee)} from the directory? They will be hidden from all employee lists.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await employeesApi.delete(employee.id);
+      await fetchEmployees();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete employee";
+      alert(message);
+    }
   };
 
   const statusClass = (status?: string) => {
@@ -198,12 +221,18 @@ export default function EmployeesPage() {
                 <TableHead>Department</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Contact</TableHead>
+                {isAdmin && (
+                  <TableHead className="w-[72px] text-right">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {employees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell
+                    colSpan={isAdmin ? 5 : 4}
+                    className="h-24 text-center"
+                  >
                     No employees found.
                   </TableCell>
                 </TableRow>
@@ -253,6 +282,47 @@ export default function EmployeesPage() {
                         {employee.email || employee.phone || "—"}
                       </div>
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="Employee actions"
+                            >
+                              <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link
+                                href={`/workspace/employees/${employee.id}`}
+                              >
+                                View
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEdit(employee)}
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(employee)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -294,13 +364,53 @@ export default function EmployeesPage() {
                     <div className="flex-1 p-2 min-h-0 overflow-y-auto">
                       <div className="space-y-2 min-h-[80px]">
                         {items.map((employee) => (
-                          <Link
-                            key={employee.id}
-                            href={`/workspace/employees/${employee.id}`}
-                            className="block no-underline text-inherit"
-                          >
-                            <EmployeeKanbanCard employee={employee} />
-                          </Link>
+                          <div key={employee.id} className="relative">
+                            <Link
+                              href={`/workspace/employees/${employee.id}`}
+                              className="block no-underline text-inherit"
+                            >
+                              <EmployeeKanbanCard employee={employee} />
+                            </Link>
+                            {isAdmin && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="icon"
+                                      className="h-8 w-8 shadow-sm bg-white/95"
+                                      aria-label="Employee actions"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <Link
+                                        href={`/workspace/employees/${employee.id}`}
+                                      >
+                                        View
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => openEdit(employee)}
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => handleDelete(employee)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            )}
+                          </div>
                         ))}
                         {items.length === 0 && (
                           <div className="text-sm text-gray-400 text-center py-6 italic border border-dashed border-gray-200">
@@ -376,6 +486,21 @@ export default function EmployeesPage() {
                       >
                         Edit
                       </DropdownMenuItem>
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDelete(employee);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

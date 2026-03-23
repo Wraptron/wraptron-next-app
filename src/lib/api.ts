@@ -92,13 +92,16 @@ async function fetchApi<T>(
     const errorData = (await response.json().catch(() => ({}))) as {
       error?: string;
       message?: string;
+      detail?: string;
       [key: string]: unknown;
     };
-    throw new ApiError(
-      errorData.error || errorData.message || "An error occurred",
-      response.status,
-      errorData
-    );
+    const base = errorData.error || errorData.message || "An error occurred";
+    const detail =
+      typeof errorData.detail === "string" && errorData.detail.trim()
+        ? errorData.detail.trim()
+        : "";
+    const combined = detail ? `${base}: ${detail}` : base;
+    throw new ApiError(combined, response.status, errorData);
   }
 
   if (response.status === 204) {
@@ -1426,6 +1429,166 @@ export const salesStagesApi = {
     return fetchApi<void>(`/api/sales-stages/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+// ============================================================================
+// Product catalog: interface / feature types & items
+// ============================================================================
+
+export interface InterfaceType {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureType {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CatalogInterface {
+  id: number;
+  name: string;
+  interface_type_id: number;
+  interface_type_name?: string;
+  cost: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CatalogFeature {
+  id: number;
+  name: string;
+  feature_type_id: number;
+  feature_type_name?: string;
+  cost: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const interfaceTypesApi = {
+  getAll: async (): Promise<{ data: InterfaceType[] }> => {
+    return fetchApi<{ data: InterfaceType[] }>("/api/interface-types");
+  },
+  create: async (data: { name: string; sort_order?: number }): Promise<InterfaceType> => {
+    return fetchApi<InterfaceType>("/api/interface-types", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number }
+  ): Promise<InterfaceType> => {
+    return fetchApi<InterfaceType>(`/api/interface-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/interface-types/${id}`, { method: "DELETE" });
+  },
+};
+
+export const featureTypesApi = {
+  getAll: async (): Promise<{ data: FeatureType[] }> => {
+    return fetchApi<{ data: FeatureType[] }>("/api/feature-types");
+  },
+  create: async (data: { name: string; sort_order?: number }): Promise<FeatureType> => {
+    return fetchApi<FeatureType>("/api/feature-types", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number }
+  ): Promise<FeatureType> => {
+    return fetchApi<FeatureType>(`/api/feature-types/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/feature-types/${id}`, { method: "DELETE" });
+  },
+};
+
+export const catalogInterfacesApi = {
+  getAll: async (params?: { search?: string }): Promise<{ data: CatalogInterface[] }> => {
+    const q = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
+    return fetchApi<{ data: CatalogInterface[] }>(`/api/catalog-interfaces${q}`);
+  },
+  getById: async (id: number): Promise<CatalogInterface> => {
+    return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`);
+  },
+  create: async (data: {
+    name: string;
+    interface_type_id: number;
+    cost?: number | null;
+  }): Promise<CatalogInterface> => {
+    return fetchApi<CatalogInterface>("/api/catalog-interfaces", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (
+    id: number,
+    data: {
+      name?: string;
+      interface_type_id?: number;
+      cost?: number | null;
+    }
+  ): Promise<CatalogInterface> => {
+    return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/catalog-interfaces/${id}`, { method: "DELETE" });
+  },
+};
+
+export const catalogFeaturesApi = {
+  getAll: async (params?: { search?: string }): Promise<{ data: CatalogFeature[] }> => {
+    const q = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
+    return fetchApi<{ data: CatalogFeature[] }>(`/api/catalog-features${q}`);
+  },
+  getById: async (id: number): Promise<CatalogFeature> => {
+    return fetchApi<CatalogFeature>(`/api/catalog-features/${id}`);
+  },
+  create: async (data: {
+    name: string;
+    feature_type_id: number;
+    cost?: number | null;
+  }): Promise<CatalogFeature> => {
+    return fetchApi<CatalogFeature>("/api/catalog-features", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (
+    id: number,
+    data: {
+      name?: string;
+      feature_type_id?: number;
+      cost?: number | null;
+    }
+  ): Promise<CatalogFeature> => {
+    return fetchApi<CatalogFeature>(`/api/catalog-features/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/catalog-features/${id}`, { method: "DELETE" });
   },
 };
 

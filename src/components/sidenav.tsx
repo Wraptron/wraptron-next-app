@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -29,6 +29,10 @@ import {
   Store,
   BookOpen,
   Book,
+  Monitor,
+  Sparkles,
+  Layers,
+  Flag,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -145,6 +149,21 @@ const PRODUCTS_MENU_ITEMS: MenuItem[] = [
     href: "/products",
   },
 ];
+
+/** Standalone pages under `/product/...` */
+const PRODUCT_PAGE_SECTION_ITEMS_TEMPLATE: Omit<MenuItem, "href">[] = [
+  { id: "product-interface", label: "Interface", icon: Monitor },
+  { id: "product-features", label: "Features", icon: Sparkles },
+  { id: "product-tech-stack", label: "Tech Stack", icon: Layers },
+  { id: "product-milestone", label: "Milestone", icon: Flag },
+];
+
+const PRODUCT_SECTION_HREF: Record<string, string> = {
+  "product-interface": "/product/interfaces",
+  "product-features": "/product/features",
+  "product-tech-stack": "/product/tech-stack",
+  "product-milestone": "/product/milestone",
+};
 
 const WORKSPACE_MENU_ITEMS: MenuItem[] = [
   {
@@ -284,8 +303,11 @@ export default function SideNav() {
 
   // When on /projects, show Projects and Tasks in sidebar
   const isProjectsPage = pathname?.startsWith("/projects");
-  // When on /products, show Products menu items
-  const isProductsPage = pathname?.startsWith("/products");
+  // When on /products or /product/..., show Products submenu (catalog + section pages)
+  const isProductNavContext =
+    pathname === "/product" ||
+    pathname?.startsWith("/products") ||
+    pathname?.startsWith("/product/");
   // When on /sales, show Sales menu items (Deals, Leads, Companies, Tasks)
   const isSalesPage = pathname?.startsWith("/sales");
   // When on /finances, show only finance menu items
@@ -293,11 +315,21 @@ export default function SideNav() {
   // When on /workspace, show workspace menu items
   const isWorkspacePage = pathname?.startsWith("/workspace");
 
+  const productsMenuItems = useMemo((): MenuItem[] => {
+    return [
+      ...PRODUCTS_MENU_ITEMS,
+      ...PRODUCT_PAGE_SECTION_ITEMS_TEMPLATE.map((item) => ({
+        ...item,
+        href: PRODUCT_SECTION_HREF[item.id],
+      })),
+    ];
+  }, []);
+
   let menuItems: MenuItem[];
   if (isProjectsPage) {
     menuItems = PROJECTS_MENU_ITEMS;
-  } else if (isProductsPage) {
-    menuItems = PRODUCTS_MENU_ITEMS;
+  } else if (isProductNavContext) {
+    menuItems = productsMenuItems;
   } else if (isSalesPage) {
     menuItems = SALES_MENU_ITEMS;
   } else if (isFinancePage) {
@@ -325,13 +357,16 @@ export default function SideNav() {
       return;
     }
 
-    // For products page
-    if (isProductsPage) {
-      const productsItem = PRODUCTS_MENU_ITEMS.find((item) =>
-        pathname.startsWith(item.href),
-      );
-      if (productsItem) {
-        setActiveItem(productsItem.id);
+    // Products catalog + /product/{interfaces|features|tech-stack|milestone}
+    if (isProductNavContext) {
+      const pathToSection: Record<string, string> = {
+        "/product/interfaces": "product-interface",
+        "/product/features": "product-features",
+        "/product/tech-stack": "product-tech-stack",
+        "/product/milestone": "product-milestone",
+      };
+      if (pathname && pathToSection[pathname]) {
+        setActiveItem(pathToSection[pathname]);
         return;
       }
       setActiveItem("products-list");
@@ -418,7 +453,14 @@ export default function SideNav() {
 
     const mainItem = menuItems.find((item) => pathname.startsWith(item.href));
     if (mainItem) setActiveItem(mainItem.id);
-  }, [pathname, menuItems, isSalesPage, isFinancePage, isProjectsPage]);
+  }, [
+    pathname,
+    menuItems,
+    isSalesPage,
+    isFinancePage,
+    isProjectsPage,
+    isProductNavContext,
+  ]);
 
   const handleItemClick = (
     itemId: string,
@@ -440,7 +482,10 @@ export default function SideNav() {
       setActiveItem(itemId);
       router.push(href);
       // Close sidebar on mobile after navigation
-      if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches
+      ) {
         toggleSidebar();
       }
     }
@@ -525,54 +570,60 @@ export default function SideNav() {
           isCollapsed ? "w-16" : "w-full md:w-64",
         )}
       >
-      {/* Header: when expanded show title + collapse; when collapsed show logo (web) */}
-      <div className={cn("border-b border-gray-200 flex-shrink-0", isCollapsed ? "px-0 py-3 flex justify-center" : "px-4 py-3")}>
-        <div className="flex items-center justify-between w-full">
-          {isCollapsed ? (
-            <button
-              type="button"
-              onClick={() => router.push("/")}
-              className="flex items-center justify-center w-full min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 rounded"
-              aria-label="Wraptron home"
-            >
-              <Image
-                src="/icon-192.png"
-                alt="Wraptron"
-                width={40}
-                height={40}
-                className="object-contain shrink-0"
-              />
-            </button>
-          ) : (
-            <>
-              <h2
-                className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => router.push("/")}
-              >
-                Wraptron
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSidebar}
-                className="h-8 w-8 p-0"
-                aria-label="Collapse sidebar"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </>
+        {/* Header: when expanded show title + collapse; when collapsed show logo (web) */}
+        <div
+          className={cn(
+            "border-b border-gray-200 flex-shrink-0",
+            isCollapsed ? "px-0 py-3 flex justify-center" : "px-4 py-3",
           )}
+        >
+          <div className="flex items-center justify-between w-full">
+            {isCollapsed ? (
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="flex items-center justify-center w-full min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 rounded"
+                aria-label="Wraptron home"
+              >
+                <Image
+                  src="/icon-192.png"
+                  alt="Wraptron"
+                  width={40}
+                  height={40}
+                  className="object-contain shrink-0"
+                />
+              </button>
+            ) : (
+              <>
+                <h2
+                  className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => router.push("/")}
+                >
+                  Wraptron
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSidebar}
+                  className="h-8 w-8 p-0"
+                  aria-label="Collapse sidebar"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Menu Items - Scrollable */}
-      <nav className="flex-1 overflow-y-auto p-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => renderMenuItem(item))}
-          {isAdmin &&
+        {/* Menu Items - Scrollable */}
+        <nav className="flex-1 overflow-y-auto p-4">
+          <ul className="space-y-2">
+            {menuItems.map((item) => renderMenuItem(item))}
+            {isAdmin &&
             !isProjectsPage &&
             !isSalesPage &&
-            !isFinancePage && (
+            !isFinancePage &&
+            !isProductNavContext && (
               <>
                 <li className="pt-4 pb-2">
                   {!isCollapsed && (
@@ -584,9 +635,9 @@ export default function SideNav() {
                 {ADMIN_MENU_ITEMS.map((item) => renderMenuItem(item))}
               </>
             )}
-        </ul>
-      </nav>
-    </div>
+          </ul>
+        </nav>
+      </div>
     </>
   );
 }

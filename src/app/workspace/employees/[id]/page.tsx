@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,11 @@ import {
   User,
   Briefcase,
   Edit,
+  Trash2,
 } from "lucide-react";
 import { employeesApi, type Employee } from "@/lib/api";
 import { EmployeeFormSheet } from "@/components/employee-form-sheet";
+import { useAuth } from "@/contexts/auth-context";
 
 function displayName(e: Employee) {
   const parts = [e.first_name, e.middle_name, e.last_name].filter(Boolean);
@@ -59,7 +61,10 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
 
 export default function EmployeeDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string | undefined;
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
   const { setTitle } = usePageTitle();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +107,25 @@ export default function EmployeeDetailPage() {
     employeesApi.getById(numId).then(setEmployee);
   };
 
+  const handleDelete = async () => {
+    if (!employee) return;
+    if (
+      !confirm(
+        `Remove ${displayName(employee)} from the directory? They will be hidden from all employee lists.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await employeesApi.delete(employee.id);
+      router.push("/workspace/employees");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete employee";
+      alert(message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
@@ -129,17 +153,29 @@ export default function EmployeeDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/workspace/employees">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Employees
             </Link>
           </Button>
-          <Button onClick={() => setSheetOpen(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/60 hover:bg-destructive/10"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <Button onClick={() => setSheetOpen(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </div>
         </div>
 
         <Card>

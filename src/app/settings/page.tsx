@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useCurrency } from "@/contexts/currency-context";
 import { githubApi, salesStagesApi, type GitHubConnection, type SalesStage } from "@/lib/api";
+import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -340,6 +341,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <SettingsProductCatalogTypes />
 
         {/* Sales Stages Section */}
         <Card className="mb-6">

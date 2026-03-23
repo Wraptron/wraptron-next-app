@@ -14,35 +14,65 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { productsApi, type CreateProductInput } from "@/lib/api";
+import {
+  productsApi,
+  type CreateProductInput,
+  type Product,
+} from "@/lib/api";
 
-const initialFormState = {
+const emptyFormState = {
+  part_code: "",
   part_name: "",
   product_description: "",
   selling_price: "",
   buying_price: "",
 };
 
+function productToFormState(p: Product) {
+  return {
+    part_code: p.part_code ?? "",
+    part_name: p.part_name ?? "",
+    product_description: p.product_description ?? "",
+    selling_price:
+      p.selling_price != null && !Number.isNaN(p.selling_price)
+        ? String(p.selling_price)
+        : "",
+    buying_price:
+      p.total_cost != null && !Number.isNaN(p.total_cost)
+        ? String(p.total_cost)
+        : "",
+  };
+}
+
 export interface ProductFormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** When set, updates this product instead of creating */
+  product?: Product | null;
 }
 
 export function ProductFormSheet({
   open,
   onOpenChange,
   onSuccess,
+  product,
 }: ProductFormSheetProps) {
+  const isEdit = Boolean(product?.id);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState(emptyFormState);
 
   useEffect(() => {
-    if (open) setFormData(initialFormState);
-  }, [open]);
+    if (!open) return;
+    if (product) {
+      setFormData(productToFormState(product));
+    } else {
+      setFormData(emptyFormState);
+    }
+  }, [open, product]);
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) setFormData(initialFormState);
+    if (!next) setFormData(emptyFormState);
     onOpenChange(next);
   };
 
@@ -54,27 +84,53 @@ export function ProductFormSheet({
     }
     setLoading(true);
     try {
-      const payload: CreateProductInput = {
-        part_code: `PRD-${Date.now()}`,
-        part_name: name,
-        product_description: formData.product_description.trim() || undefined,
-        selling_price: formData.selling_price
-          ? parseFloat(formData.selling_price)
-          : undefined,
-        total_cost: formData.buying_price
-          ? parseFloat(formData.buying_price)
-          : undefined,
-        status: "active",
-      };
-      await productsApi.create(payload);
+      if (isEdit && product) {
+        const code = formData.part_code.trim();
+        if (!code) {
+          alert("Part code is required.");
+          setLoading(false);
+          return;
+        }
+        const payload: Partial<CreateProductInput> = {
+          part_code: code,
+          part_name: name,
+          product_description: formData.product_description.trim() || undefined,
+          selling_price: formData.selling_price
+            ? parseFloat(formData.selling_price)
+            : undefined,
+          total_cost: formData.buying_price
+            ? parseFloat(formData.buying_price)
+            : undefined,
+        };
+        await productsApi.update(product.id, payload);
+      } else {
+        const payload: CreateProductInput = {
+          part_code: `PRD-${Date.now()}`,
+          part_name: name,
+          product_description: formData.product_description.trim() || undefined,
+          selling_price: formData.selling_price
+            ? parseFloat(formData.selling_price)
+            : undefined,
+          total_cost: formData.buying_price
+            ? parseFloat(formData.buying_price)
+            : undefined,
+          status: "active",
+        };
+        await productsApi.create(payload);
+      }
       handleOpenChange(false);
       onSuccess();
     } catch (err: unknown) {
-      console.error("Failed to create product:", err);
+      console.error(
+        isEdit ? "Failed to update product:" : "Failed to create product:",
+        err,
+      );
       const message =
         err && typeof err === "object" && "message" in err
           ? String((err as { message: string }).message)
-          : "Failed to create product. Please try again.";
+          : isEdit
+            ? "Failed to update product. Please try again."
+            : "Failed to create product. Please try again.";
       alert(message);
     } finally {
       setLoading(false);
@@ -88,9 +144,11 @@ export function ProductFormSheet({
         className="flex flex-col w-full sm:max-w-md overflow-hidden"
       >
         <SheetHeader>
-          <SheetTitle>Add product</SheetTitle>
+          <SheetTitle>{isEdit ? "Edit product" : "Add product"}</SheetTitle>
           <SheetDescription>
-            Add a new product with name, description, and pricing.
+            {isEdit
+              ? "Update part code, name, description, and pricing."
+              : "Add a new product with name, description, and pricing."}
           </SheetDescription>
         </SheetHeader>
 
@@ -99,6 +157,22 @@ export function ProductFormSheet({
           className="flex flex-col flex-1 min-h-0 overflow-y-auto"
         >
           <div className="space-y-4 p-4">
+            {isEdit && (
+              <div className="space-y-2">
+                <Label htmlFor="product-part-code">Part code *</Label>
+                <Input
+                  id="product-part-code"
+                  value={formData.part_code}
+                  onChange={(e) =>
+                    setFormData({ ...formData, part_code: e.target.value })
+                  }
+                  placeholder="e.g. PRD-001"
+                  required
+                  className="font-mono"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="product-name">Product name *</Label>
               <Input
@@ -118,7 +192,10 @@ export function ProductFormSheet({
                 id="product-description"
                 value={formData.product_description}
                 onChange={(e) =>
-                  setFormData({ ...formData, product_description: e.target.value })
+                  setFormData({
+                    ...formData,
+                    product_description: e.target.value,
+                  })
                 }
                 placeholder="Product description"
                 rows={3}
@@ -165,12 +242,21 @@ export function ProductFormSheet({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.part_name.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                loading ||
+                !formData.part_name.trim() ||
+                (isEdit && !formData.part_code.trim())
+              }
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating…
+                  {isEdit ? "Saving…" : "Creating…"}
                 </>
+              ) : isEdit ? (
+                "Save changes"
               ) : (
                 "Create product"
               )}
