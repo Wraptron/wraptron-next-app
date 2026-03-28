@@ -252,7 +252,26 @@ export interface Project {
   status: string;
   created_at: string;
   updated_at: string;
+  product_template_id?: number | null;
+  /** `users.id` of the manager when set (staff login). */
+  project_manager_id?: number | null;
+  product_template_name?: string | null;
+  product_template_part_code?: string | null;
+  manager_first_name?: string | null;
+  manager_last_name?: string | null;
+  manager_email?: string | null;
+  /** Same as project_manager_id when manager is a users row (staff login). */
+  project_manager_user_id?: number | null;
   tasks?: Task[];
+}
+
+/** Staff-role login user; used for project manager assignment (`project_manager_id` = `id`). */
+export interface StaffManagerUser {
+  id: number;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
 }
 
 export interface CreateProjectInput {
@@ -280,6 +299,8 @@ export interface CreateProjectInput {
   reports_required?: string[];
   incident_alerts?: string[];
   status?: string;
+  product_template_id?: number | null;
+  project_manager_id?: number | null;
   tasks?: Array<{
     title: string;
     description?: string;
@@ -348,6 +369,13 @@ export const projectsApi = {
   // Get available objectives
   getObjectives: async (): Promise<{ objectives: string[] }> => {
     return fetchApi<{ objectives: string[] }>("/api/projects/objectives");
+  },
+
+  /** Active users with role `staff` (auth required). */
+  getStaffManagers: async (): Promise<{ data: StaffManagerUser[] }> => {
+    return fetchApi<{ data: StaffManagerUser[] }>(
+      "/api/projects/staff-managers",
+    );
   },
 
   // Create task for project

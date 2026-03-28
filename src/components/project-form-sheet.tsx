@@ -24,16 +24,14 @@ import { Loader2 } from "lucide-react";
 import {
   projectsApi,
   projectStatusesApi,
+  productsApi,
   type CreateProjectInput,
   type ProjectStatus,
+  type Product,
+  type StaffManagerUser,
 } from "@/lib/api";
 
-const PROJECT_TYPES = [
-  { value: "AI", label: "AI" },
-  { value: "Website", label: "Website" },
-  { value: "Web & Mobile App", label: "Web & Mobile App" },
-  { value: "Support", label: "Support" },
-] as const;
+const NONE = "__none__";
 
 const FALLBACK_PROJECT_STATUSES = [
   "Draft",
@@ -57,8 +55,8 @@ export interface ProjectFormSheetProps {
 
 const initialFormState = {
   project_name: "",
-  project_type: "" as string,
-  project_manager: "",
+  product_template_id: null as number | null,
+  project_manager_id: null as number | null,
   status: "Draft",
   start_date: "",
   end_date: "",
@@ -76,6 +74,9 @@ export function ProjectFormSheet({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [staffManagers, setStaffManagers] = useState<StaffManagerUser[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
 
@@ -98,6 +99,12 @@ export function ProjectFormSheet({
     return statusNames;
   }, [statusNames, formData.status]);
 
+  const selectedStaffManager = useMemo(
+    () =>
+      staffManagers.find((s) => s.id === formData.project_manager_id) ?? null,
+    [staffManagers, formData.project_manager_id],
+  );
+
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
   }, []);
@@ -108,6 +115,35 @@ export function ProjectFormSheet({
       .getAll()
       .then((res) => setProjectStatuses(res.data ?? []))
       .catch(() => setProjectStatuses([]));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setCatalogLoading(true);
+    Promise.all([
+      productsApi.getAll({ limit: 500 }),
+      projectsApi.getStaffManagers(),
+    ])
+      .then(([pr, sm]) => {
+        if (cancelled) return;
+        const list = (pr.data ?? []).slice();
+        list.sort((a, b) => a.part_name.localeCompare(b.part_name));
+        setProducts(list);
+        setStaffManagers(sm.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProducts([]);
+          setStaffManagers([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -165,11 +201,11 @@ export function ProjectFormSheet({
     try {
       const payload: CreateProjectInput = {
         project_name: formData.project_name.trim(),
-        services_offered:
-          formData.project_type ? [formData.project_type] : undefined,
         status: formData.status || undefined,
         start_date: formData.start_date || undefined,
         target_date: formData.end_date || undefined,
+        product_template_id: formData.product_template_id,
+        project_manager_id: formData.project_manager_id,
       };
       await projectsApi.create(payload);
       handleOpenChange(false);
@@ -195,7 +231,7 @@ export function ProjectFormSheet({
         <SheetHeader>
           <SheetTitle>Create Project</SheetTitle>
           <SheetDescription>
-            Add a new project with name, type, manager, and dates.
+            Add a new project with name, product template, manager, and dates.
           </SheetDescription>
         </SheetHeader>
 
@@ -218,20 +254,33 @@ export function ProjectFormSheet({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project_type">Type of Project</Label>
+              <Label htmlFor="product_template_id">Product template</Label>
               <Select
-                value={formData.project_type}
+                disabled={catalogLoading}
+                value={
+                  formData.product_template_id == null
+                    ? NONE
+                    : String(formData.product_template_id)
+                }
                 onValueChange={(value) =>
-                  setFormData({ ...formData, project_type: value })
+                  setFormData({
+                    ...formData,
+                    product_template_id: value === NONE ? null : Number(value),
+                  })
                 }
               >
-                <SelectTrigger id="project_type">
-                  <SelectValue placeholder="Select type" />
+                <SelectTrigger id="product_template_id">
+                  <SelectValue
+                    placeholder={
+                      catalogLoading ? "Loading products…" : "Select a product"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROJECT_TYPES.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  <SelectItem value={NONE}>None</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.part_name} ({p.part_code})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -239,15 +288,53 @@ export function ProjectFormSheet({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project_manager">Project Manager</Label>
-              <Input
-                id="project_manager"
-                value={formData.project_manager}
-                onChange={(e) =>
-                  setFormData({ ...formData, project_manager: e.target.value })
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="project_manager_id">Project manager</Label>
+                {selectedStaffManager?.email ? (
+                  <a
+                    href={`mailto:${selectedStaffManager.email}`}
+                    className="text-sm text-primary underline-offset-4 hover:underline shrink-0"
+                  >
+                    Email
+                  </a>
+                ) : null}
+              </div>
+              <Select
+                disabled={catalogLoading}
+                value={
+                  formData.project_manager_id == null
+                    ? NONE
+                    : String(formData.project_manager_id)
                 }
-                placeholder="Name or email"
-              />
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    project_manager_id: value === NONE ? null : Number(value),
+                  })
+                }
+              >
+                <SelectTrigger id="project_manager_id">
+                  <SelectValue
+                    placeholder={
+                      catalogLoading ? "Loading staff…" : "Select staff user"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>None</SelectItem>
+                  {staffManagers.map((u) => {
+                    const name = [u.first_name, u.last_name]
+                      .filter(Boolean)
+                      .join(" ");
+                    return (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {name || u.email}
+                        {name ? ` · ${u.email}` : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -339,7 +426,7 @@ export function ProjectFormSheet({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || catalogLoading}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
