@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
-import { projectsApi, type Project } from "@/lib/api";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  projectsApi,
+  projectStatusesApi,
+  type Project,
+  type ProjectStatus,
+} from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -110,8 +115,13 @@ const ProjectCard = ({ project }: { project: Project }) => (
   </Link>
 );
 
-const sentenceCase = (s: string) =>
-  s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+/** When /api/project-statuses is empty */
+const FALLBACK_PROJECT_STATUS_COLUMNS: { key: string; label: string }[] = [
+  { key: "draft", label: "Draft" },
+  { key: "active", label: "Active" },
+  { key: "completed", label: "Completed" },
+  { key: "archived", label: "Archived" },
+];
 
 const ProjectKanbanCard = ({
   project,
@@ -286,6 +296,14 @@ const Projects = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [activeDragProject, setActiveDragProject] = useState<Project | null>(null);
+  const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
+
+  const statusesSorted = useMemo(() => {
+    return [...projectStatuses].sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id - b.id;
+    });
+  }, [projectStatuses]);
 
   const toggleProjectSelection = (projectId: number) => {
     setSelectedProjects((prev) =>
@@ -341,6 +359,13 @@ const Projects = () => {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    projectStatusesApi
+      .getAll()
+      .then((res) => setProjectStatuses(res.data ?? []))
+      .catch(() => setProjectStatuses([]));
+  }, []);
+
   // Set page title in header
   useEffect(() => {
     setTitle("Projects");
@@ -354,25 +379,33 @@ const Projects = () => {
     }
   }, [viewMode]);
 
-  const statusNames = ["pending", "active", "completed", "inactive"];
+  const statusColumnKeys = useMemo(() => {
+    if (statusesSorted.length > 0) {
+      return statusesSorted.map((s) => s.name.toLowerCase());
+    }
+    return FALLBACK_PROJECT_STATUS_COLUMNS.map((c) => c.key);
+  }, [statusesSorted]);
 
   const getProjectsByStatus = () => {
-    const grouped: Record<string, Project[]> = {
-      pending: [],
-      active: [],
-      completed: [],
-      inactive: [],
-      other: [],
-    };
+    const grouped: Record<string, Project[]> = { other: [] };
+    statusColumnKeys.forEach((k) => {
+      grouped[k] = [];
+    });
 
     projects.forEach((project) => {
       const status = project.status?.toLowerCase() || "other";
-      if (grouped[status]) {
+      if (grouped[status] !== undefined) {
         grouped[status].push(project);
       } else {
         grouped.other.push(project);
       }
     });
+
+    const dealTime = (p: Project) =>
+      new Date(p.updated_at ?? p.created_at).getTime();
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort((a, b) => dealTime(b) - dealTime(a));
+    }
 
     return grouped;
   };
@@ -405,28 +438,40 @@ const Projects = () => {
     const project = projects.find((p) => p.id === activeId);
     if (!project) return;
 
-    let newStatus = "";
-    if (statusNames.includes(String(overId)) || String(overId) === "other") {
-      newStatus = String(overId);
+    const overStr = String(overId);
+    if (overStr === "other") return;
+
+    let newStatusCanonical: string | undefined;
+    const col = statusesSorted.find((s) => s.name.toLowerCase() === overStr);
+    if (col) {
+      newStatusCanonical = col.name;
     } else {
       const overProject = projects.find((p) => p.id === overId);
       if (overProject) {
-        newStatus = overProject.status?.toLowerCase() || "other";
+        newStatusCanonical = overProject.status;
       } else {
         return;
       }
     }
 
-    if (newStatus === (project.status?.toLowerCase() || "other")) return;
+    if (!newStatusCanonical) return;
+    if (
+      newStatusCanonical.toLowerCase() ===
+      (project.status?.toLowerCase() ?? "")
+    ) {
+      return;
+    }
 
     const oldStatus = project.status;
     const updated = projects.map((p) =>
-      p.id === project.id ? { ...p, status: newStatus } : p,
+      p.id === project.id ? { ...p, status: newStatusCanonical } : p,
     );
     setProjects(updated);
 
     try {
-      await projectsApi.update(Number(project.id), { status: newStatus });
+      await projectsApi.update(Number(project.id), {
+        status: newStatusCanonical,
+      });
     } catch (err) {
       setProjects((prev) =>
         prev.map((p) =>
@@ -520,12 +565,13 @@ const Projects = () => {
 
     if (viewMode === "kanban") {
       const grouped = getProjectsByStatus();
-      const columns = [
-        { key: "pending", label: "Pending" },
-        { key: "active", label: "Active" },
-        { key: "completed", label: "Completed" },
-        { key: "inactive", label: "Inactive" },
-      ];
+      const columns =
+        statusesSorted.length > 0
+          ? statusesSorted.map((s) => ({
+              key: s.name.toLowerCase(),
+              label: s.name,
+            }))
+          : FALLBACK_PROJECT_STATUS_COLUMNS;
       if ((grouped.other?.length ?? 0) > 0) {
         columns.push({ key: "other", label: "Other" });
       }

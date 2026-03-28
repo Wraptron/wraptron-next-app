@@ -1433,6 +1433,50 @@ export const salesStagesApi = {
 };
 
 // ============================================================================
+// Project statuses (Settings → project pipeline / kanban)
+// ============================================================================
+
+export interface ProjectStatus {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const projectStatusesApi = {
+  getAll: async (): Promise<{ data: ProjectStatus[] }> => {
+    return fetchApi<{ data: ProjectStatus[] }>("/api/project-statuses");
+  },
+
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<ProjectStatus> => {
+    return fetchApi<ProjectStatus>("/api/project-statuses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number }
+  ): Promise<ProjectStatus> => {
+    return fetchApi<ProjectStatus>(`/api/project-statuses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/project-statuses/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ============================================================================
 // Product catalog: interface / feature types & items
 // ============================================================================
 

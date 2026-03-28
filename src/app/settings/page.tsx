@@ -3,7 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useCurrency } from "@/contexts/currency-context";
-import { githubApi, salesStagesApi, type GitHubConnection, type SalesStage } from "@/lib/api";
+import {
+  githubApi,
+  salesStagesApi,
+  projectStatusesApi,
+  type GitHubConnection,
+  type SalesStage,
+  type ProjectStatus,
+} from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +34,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, CheckCircle, XCircle, RefreshCw, Github, DollarSign, TrendingUp } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Github,
+  DollarSign,
+  TrendingUp,
+  FolderKanban,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
@@ -64,6 +81,16 @@ export default function Settings() {
   const [stageName, setStageName] = useState("");
   const [stageFormLoading, setStageFormLoading] = useState(false);
 
+  const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
+  const [projectStatusesLoading, setProjectStatusesLoading] = useState(true);
+  const [projStatusAddOpen, setProjStatusAddOpen] = useState(false);
+  const [projStatusEditOpen, setProjStatusEditOpen] = useState(false);
+  const [projStatusDeleteOpen, setProjStatusDeleteOpen] = useState(false);
+  const [selectedProjStatus, setSelectedProjStatus] =
+    useState<ProjectStatus | null>(null);
+  const [projStatusName, setProjStatusName] = useState("");
+  const [projStatusFormLoading, setProjStatusFormLoading] = useState(false);
+
   useEffect(() => {
     setTitle("Settings");
     return () => setTitle(null);
@@ -83,6 +110,21 @@ export default function Settings() {
         setStages([]);
       } finally {
         setStagesLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setProjectStatusesLoading(true);
+      try {
+        const res = await projectStatusesApi.getAll();
+        setProjectStatuses(res.data ?? []);
+      } catch {
+        setProjectStatuses([]);
+      } finally {
+        setProjectStatusesLoading(false);
       }
     };
     load();
@@ -277,6 +319,90 @@ export default function Settings() {
     setStageDeleteOpen(true);
   };
 
+  const fetchProjectStatuses = async () => {
+    try {
+      const res = await projectStatusesApi.getAll();
+      setProjectStatuses(res.data ?? []);
+    } catch {
+      setProjectStatuses([]);
+    }
+  };
+
+  const handleAddProjStatus = async () => {
+    if (!projStatusName.trim()) {
+      setError("Status name is required");
+      return;
+    }
+    setProjStatusFormLoading(true);
+    setError(null);
+    try {
+      await projectStatusesApi.create({
+        name: projStatusName.trim(),
+        sort_order: projectStatuses.length,
+      });
+      setSuccessMessage("Project status added.");
+      setProjStatusAddOpen(false);
+      setProjStatusName("");
+      fetchProjectStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add status");
+    } finally {
+      setProjStatusFormLoading(false);
+    }
+  };
+
+  const handleEditProjStatus = async () => {
+    if (!selectedProjStatus) return;
+    if (!projStatusName.trim()) {
+      setError("Status name is required");
+      return;
+    }
+    setProjStatusFormLoading(true);
+    setError(null);
+    try {
+      await projectStatusesApi.update(selectedProjStatus.id, {
+        name: projStatusName.trim(),
+      });
+      setSuccessMessage("Project status updated.");
+      setProjStatusEditOpen(false);
+      setProjStatusName("");
+      setSelectedProjStatus(null);
+      fetchProjectStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setProjStatusFormLoading(false);
+    }
+  };
+
+  const handleDeleteProjStatus = async () => {
+    if (!selectedProjStatus) return;
+    setProjStatusFormLoading(true);
+    setError(null);
+    try {
+      await projectStatusesApi.delete(selectedProjStatus.id);
+      setSuccessMessage("Project status deleted.");
+      setProjStatusDeleteOpen(false);
+      setSelectedProjStatus(null);
+      fetchProjectStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete status");
+    } finally {
+      setProjStatusFormLoading(false);
+    }
+  };
+
+  const openEditProjStatus = (s: ProjectStatus) => {
+    setSelectedProjStatus(s);
+    setProjStatusName(s.name);
+    setProjStatusEditOpen(true);
+  };
+
+  const openDeleteProjStatus = (s: ProjectStatus) => {
+    setSelectedProjStatus(s);
+    setProjStatusDeleteOpen(true);
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Never";
     try {
@@ -394,6 +520,80 @@ export default function Settings() {
                               variant="outline"
                               size="sm"
                               onClick={() => openDeleteStage(s)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Project statuses Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderKanban className="h-5 w-5" />
+                  Project statuses
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Manage project statuses for the projects list, kanban board, and create form
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => {
+                  setProjStatusName("");
+                  setProjStatusAddOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add status
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {projectStatusesLoading ? (
+              <div className="text-center py-8">Loading statuses...</div>
+            ) : projectStatuses.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                No statuses yet. Add one to customize your project pipeline.
+              </div>
+            ) : (
+              <div className="rounded-md border bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="w-[120px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectStatuses.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.sort_order}</TableCell>
+                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditProjStatus(s)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteProjStatus(s)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -775,6 +975,119 @@ export default function Settings() {
               </Button>
               <Button variant="destructive" onClick={handleDeleteStage} disabled={stageFormLoading}>
                 {stageFormLoading ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Project Status Dialog */}
+        <Dialog open={projStatusAddOpen} onOpenChange={setProjStatusAddOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add project status</DialogTitle>
+              <DialogDescription>
+                Add a status used on the projects board (e.g. Draft, Active, Completed).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="proj-status-name">Name</Label>
+                <Input
+                  id="proj-status-name"
+                  placeholder="e.g. In review"
+                  value={projStatusName}
+                  onChange={(e) => setProjStatusName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setProjStatusAddOpen(false);
+                  setProjStatusName("");
+                }}
+                disabled={projStatusFormLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddProjStatus}
+                disabled={projStatusFormLoading || !projStatusName.trim()}
+              >
+                {projStatusFormLoading ? "Adding..." : "Add status"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Project Status Dialog */}
+        <Dialog open={projStatusEditOpen} onOpenChange={setProjStatusEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit project status</DialogTitle>
+              <DialogDescription>
+                Changing the name updates how it appears in dropdowns; existing projects keep the new label when they match.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-proj-status-name">Name</Label>
+                <Input
+                  id="edit-proj-status-name"
+                  value={projStatusName}
+                  onChange={(e) => setProjStatusName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setProjStatusEditOpen(false);
+                  setProjStatusName("");
+                  setSelectedProjStatus(null);
+                }}
+                disabled={projStatusFormLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditProjStatus}
+                disabled={projStatusFormLoading || !projStatusName.trim()}
+              >
+                {projStatusFormLoading ? "Updating..." : "Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Project Status Dialog */}
+        <Dialog open={projStatusDeleteOpen} onOpenChange={setProjStatusDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete project status</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedProjStatus?.name}"? Projects using this value will show it under Other until you edit them.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setProjStatusDeleteOpen(false);
+                  setSelectedProjStatus(null);
+                }}
+                disabled={projStatusFormLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteProjStatus}
+                disabled={projStatusFormLoading}
+              >
+                {projStatusFormLoading ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

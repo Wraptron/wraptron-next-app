@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSheetPush } from "@/contexts/sheet-push-context";
 import {
   Sheet,
@@ -21,7 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { projectsApi, type CreateProjectInput } from "@/lib/api";
+import {
+  projectsApi,
+  projectStatusesApi,
+  type CreateProjectInput,
+  type ProjectStatus,
+} from "@/lib/api";
 
 const PROJECT_TYPES = [
   { value: "AI", label: "AI" },
@@ -30,12 +35,12 @@ const PROJECT_TYPES = [
   { value: "Support", label: "Support" },
 ] as const;
 
-const STATUS_OPTIONS = [
-  { value: "Draft", label: "Draft" },
-  { value: "Active", label: "Active" },
-  { value: "Completed", label: "Completed" },
-  { value: "Archived", label: "Archived" },
-] as const;
+const FALLBACK_PROJECT_STATUSES = [
+  "Draft",
+  "Active",
+  "Completed",
+  "Archived",
+];
 
 const PRIORITY_OPTIONS = [
   { value: "Low", label: "Low" },
@@ -70,12 +75,52 @@ export function ProjectFormSheet({
 }: ProjectFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
+  const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
+
+  const statusesSorted = useMemo(() => {
+    return [...projectStatuses].sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id - b.id;
+    });
+  }, [projectStatuses]);
+
+  const statusNames =
+    statusesSorted.length > 0
+      ? statusesSorted.map((s) => s.name)
+      : FALLBACK_PROJECT_STATUSES;
+
+  const statusSelectOptions = useMemo(() => {
+    if (formData.status && !statusNames.includes(formData.status)) {
+      return [...statusNames, formData.status];
+    }
+    return statusNames;
+  }, [statusNames, formData.status]);
 
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    projectStatusesApi
+      .getAll()
+      .then((res) => setProjectStatuses(res.data ?? []))
+      .catch(() => setProjectStatuses([]));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (statusesSorted.length === 0) return;
+    const first = statusesSorted[0].name;
+    setFormData((prev) => {
+      if (prev.status !== "Draft" && prev.status !== FALLBACK_PROJECT_STATUSES[0]) {
+        return prev;
+      }
+      return { ...prev, status: first };
+    });
+  }, [open, statusesSorted]);
 
   // Report actual sheet width so layout only pushes by required width
   useEffect(() => {
@@ -217,9 +262,9 @@ export function ProjectFormSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {statusSelectOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
                     </SelectItem>
                   ))}
                 </SelectContent>
