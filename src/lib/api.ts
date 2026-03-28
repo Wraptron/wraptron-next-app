@@ -1548,6 +1548,35 @@ export const projectStatusesApi = {
 };
 
 // ============================================================================
+// User app launcher (per-user external shortcuts)
+// ============================================================================
+
+export interface UserApp {
+  id: number;
+  user_id: number;
+  url: string;
+  title: string;
+  icon_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const userAppsApi = {
+  list: async (): Promise<{ data: UserApp[] }> => {
+    return fetchApi<{ data: UserApp[] }>("/api/user-apps");
+  },
+  create: async (data: { url: string }): Promise<UserApp> => {
+    return fetchApi<UserApp>("/api/user-apps", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/user-apps/${id}`, { method: "DELETE" });
+  },
+};
+
+// ============================================================================
 // Product catalog: interface / feature types & items
 // ============================================================================
 

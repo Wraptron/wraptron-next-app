@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, User, Settings, LogOut, Grip, ChevronRight } from "lucide-react";
+import {
+  Bell,
+  User,
+  Settings,
+  LogOut,
+  Grip,
+  ChevronRight,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,90 +21,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
-import {
-  Box,
-  Users,
-  CreditCard,
-  Shield,
-  Briefcase,
-  TrendingUp,
-  Store,
-  type LucideIcon,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface App {
-  id: string;
-  name: string;
-  icon: LucideIcon;
-  href: string;
-  color: string;
-}
-
-const ALL_APPS: App[] = [
-  {
-    id: "crm",
-    name: "Sales",
-    icon: TrendingUp,
-    href: "/sales",
-    color: "bg-green-500",
-  },
-  {
-    id: "projects",
-    name: "Projects",
-    icon: Box,
-    href: "/projects",
-    color: "bg-blue-500",
-  },
-  {
-    id: "products",
-    name: "Products",
-    icon: Store,
-    href: "/products",
-    color: "bg-teal-500",
-  },
-  {
-    id: "finances",
-    name: "Finances",
-    icon: CreditCard,
-    href: "/finances",
-    color: "bg-yellow-500",
-  },
-  {
-    id: "workspace",
-    name: "Workspace",
-    icon: Briefcase,
-    href: "/workspace",
-    color: "bg-purple-500",
-  },
-  {
-    id: "admin",
-    name: "Admin",
-    icon: Shield,
-    href: "/admin/users",
-    color: "bg-red-500",
-  },
-  {
-    id: "settings",
-    name: "Settings",
-    icon: Settings,
-    href: "/settings",
-    color: "bg-gray-500",
-  },
-];
+import { AppLauncherGrid } from "@/components/app-launcher-grid";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
   const { title, subtitle } = usePageTitle();
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const router = useRouter();
-  const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(3);
+  const [appsMenuOpen, setAppsMenuOpen] = useState(false);
 
   const handleNotificationClick = () => {
     setNotificationCount(0);
@@ -200,8 +135,8 @@ export default function TopNavbar() {
               </Button>
             </Link>
           </div>
-          {/* App Drawer */}
-          <DropdownMenu>
+          {/* App launcher */}
+          <DropdownMenu open={appsMenuOpen} onOpenChange={setAppsMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
                 <Grip className="h-5 w-5" />
@@ -212,37 +147,10 @@ export default function TopNavbar() {
                 Apps
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="my-2" />
-              <div className="grid grid-cols-3 gap-2">
-                {(user?.role === "admin" ? ALL_APPS : ALL_APPS.filter((app) => app.id !== "admin")).map((app) => {
-                  const Icon = app.icon;
-                  const isActive = pathname?.startsWith(app.href);
-                  return (
-                    <div
-                      key={app.id}
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors",
-                        "hover:bg-gray-100",
-                        isActive && "bg-gray-100",
-                      )}
-                      onClick={() => {
-                        router.push(app.href);
-                      }}
-                    >
-                      <div
-                        className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm",
-                          app.color,
-                        )}
-                      >
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <span className="text-xs font-medium text-gray-700 text-center">
-                        {app.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              <AppLauncherGrid
+                variant="compact"
+                onNavigate={() => setAppsMenuOpen(false)}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
           {/* Profile Dropdown */}
