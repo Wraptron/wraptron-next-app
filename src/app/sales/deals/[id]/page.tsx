@@ -91,7 +91,9 @@ export default function DealDetailPage() {
 
   useEffect(() => {
     if (deal) {
-      setTitle(deal.title || deal.client_name || deal.client_company_name || "Deal");
+      setTitle(
+        deal.title || deal.client_name || deal.client_company_name || "Deal",
+      );
     } else {
       setTitle(null);
     }
@@ -195,56 +197,76 @@ export default function DealDetailPage() {
           <TabsContent value="overview" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
+                <CardTitle>Deal information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Deal name</p>
-                    <p className="text-sm mt-1">{deal.title || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Stage</p>
-                    <p className="text-sm mt-1">{deal.stage || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Status</p>
-                    <p className="text-sm mt-1">{deal.status || "—"}</p>
-                  </div>
+                <div className="rounded-xl border border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-sky-50/40 px-4 py-3.5 shadow-sm ring-1 ring-violet-100/70">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-violet-800/85">
+                    Deal name
+                  </p>
+                  <p className="mt-1.5 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+                    {deal.title?.trim() || "Untitled deal"}
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Customer / Client</p>
+                    <p className="text-sm font-medium text-gray-500">Stage</p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
+                      {deal.stage || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
+                      {deal.status || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Customer / Client
+                    </p>
                     <p className="text-sm mt-1">
                       {deal.client_company_name || deal.client_name || "—"}
                     </p>
                   </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Contact</p>
                     <p className="text-sm mt-1">{deal.contact_name || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Probability</p>
-                    <p className="text-sm mt-1">{deal.probability != null ? `${deal.probability}%` : "—"}</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      Probability
+                    </p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
+                      {deal.probability != null ? `${deal.probability}%` : "—"}
+                    </p>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Deal value</p>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm font-medium text-gray-500">
+                      Deal value
+                    </p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
                       {deal.value != null
                         ? formatCurrency(deal.value, deal.currency)
                         : "—"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Expected close date</p>
-                    <p className="text-sm mt-1">{formatDate(deal.expected_close_date) || "—"}</p>
-                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Expected close date
+                  </p>
+                  <p className="text-sm mt-1">
+                    {formatDate(deal.expected_close_date) || "—"}
+                  </p>
                 </div>
                 {deal.description && (
                   <div className="pt-4 border-t">
-                    <p className="text-sm font-medium text-gray-500 mb-2">Description</p>
+                    <p className="text-sm font-medium text-gray-500 mb-2">
+                      Description
+                    </p>
                     <div className="prose prose-sm max-w-none">
                       <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
                         {deal.description}
@@ -274,7 +296,10 @@ export default function DealDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>

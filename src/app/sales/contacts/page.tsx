@@ -38,12 +38,26 @@ import {
   Trash2,
   ChevronDown,
   FileDown,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { ContactFormSheet } from "@/components/contact-form-sheet";
 import { ContactImportSheet } from "@/components/contact-import-sheet";
+import { cn } from "@/lib/utils";
 
 type ViewMode = "list" | "card" | "kanban";
 const CONTACTS_PAGE_SIZE = 200;
+
+const telHref = (phone: string) =>
+  `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
+
+/** Prefer mobile, then office phone, for click-to-call. */
+const contactDialNumber = (c: Contact) =>
+  (c.mobile?.trim() || c.phone?.trim()) || undefined;
+
+const contactDisplayName = (c: Contact) =>
+  [c.prefix, c.first_name, c.last_name].filter(Boolean).join(" ").trim() ||
+  "contact";
 
 const getStatusColor = (status?: string) => {
   const colors: Record<string, string> = {
@@ -53,6 +67,81 @@ const getStatusColor = (status?: string) => {
   };
   return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
 };
+
+function ContactQuickActions({
+  contact,
+  size = "card",
+  className,
+}: {
+  contact: Contact;
+  size?: "card" | "table" | "kanban";
+  className?: string;
+}) {
+  const tel = contactDialNumber(contact);
+  const mail = contact.email?.trim();
+  if (!tel && !mail) return null;
+
+  const name = contactDisplayName(contact);
+  const sizeCls =
+    size === "card"
+      ? "h-12 w-12 shadow-sm hover:shadow-md active:scale-[0.97] [&_svg]:size-6"
+      : size === "table"
+        ? "h-11 w-11 shadow-sm hover:shadow [&_svg]:size-5"
+        : "h-10 w-10 shadow-sm hover:shadow [&_svg]:size-[18px]";
+  const iconStroke = 2;
+  const iconClass =
+    size === "card" ? "size-6" : size === "table" ? "size-5" : "size-[18px]";
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-center gap-3",
+        className,
+      )}
+      onClick={stop}
+    >
+      {tel ? (
+        <Button
+          className={cn(
+            "shrink-0 rounded-full p-0 transition-all",
+            sizeCls,
+          )}
+          asChild
+        >
+          <a
+            href={telHref(tel)}
+            aria-label={`Call ${name}`}
+            title="Call"
+          >
+            <Phone className={iconClass} strokeWidth={iconStroke} />
+          </a>
+        </Button>
+      ) : null}
+      {mail ? (
+        <Button
+          variant="outline"
+          className={cn(
+            "shrink-0 rounded-full border-2 p-0 transition-all",
+            sizeCls,
+          )}
+          asChild
+        >
+          <a
+            href={`mailto:${mail}`}
+            aria-label={`Email ${name}`}
+            title="Email"
+          >
+            <Mail className={iconClass} strokeWidth={iconStroke} />
+          </a>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 const ContactCard = ({ contact, onClick, onEdit, onDelete }: { contact: Contact; onClick: () => void; onEdit: () => void; onDelete: () => void }) => (
   <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
@@ -102,6 +191,11 @@ const ContactCard = ({ contact, onClick, onEdit, onDelete }: { contact: Contact;
           </Badge>
         </div>
       </div>
+      {(contactDialNumber(contact) || contact.email?.trim()) && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <ContactQuickActions contact={contact} size="card" />
+        </div>
+      )}
     </CardContent>
   </Card>
 );
@@ -263,13 +357,23 @@ export default function ContactsPage() {
                 <TableHead>Job Title</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Primary</TableHead>
+                <TableHead className="w-[108px] text-right">
+                  <span className="sr-only">Call or email</span>
+                  <span
+                    className="inline-flex justify-end gap-1 text-muted-foreground"
+                    aria-hidden
+                  >
+                    <Phone className="size-3.5 opacity-70" />
+                    <Mail className="size-3.5 opacity-70" />
+                  </span>
+                </TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     No contacts found.
                   </TableCell>
                 </TableRow>
@@ -299,6 +403,14 @@ export default function ContactsPage() {
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-end">
+                        <ContactQuickActions contact={contact} size="table" />
+                      </div>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
@@ -377,6 +489,11 @@ export default function ContactsPage() {
                       </div>
                       <p className="text-xs text-gray-600">{contact.email || "No email"}</p>
                       {contact.phone && <p className="text-xs text-gray-600">{contact.phone}</p>}
+                      {(contactDialNumber(contact) || contact.email?.trim()) && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <ContactQuickActions contact={contact} size="kanban" />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

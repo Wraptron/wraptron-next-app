@@ -1,7 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 class ApiError extends Error {
-  constructor(message: string, public status: number, public data?: unknown) {
+  constructor(
+    message: string,
+    public status: number,
+    public data?: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -25,7 +29,7 @@ export function setAuthToken(token: string | null): void {
 
 async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
@@ -54,25 +58,28 @@ async function fetchApi<T>(
     clearTimeout(timeoutId);
   } catch (error: any) {
     clearTimeout(timeoutId);
-    
+
     // Handle abort (timeout)
     if (error.name === "AbortError") {
       throw new ApiError(
         "Request timeout. The server took too long to respond.",
         408,
-        { timeout: true }
+        { timeout: true },
       );
     }
-    
+
     // Handle network errors
-    if (error.message?.includes("Failed to fetch") || error.message?.includes("Broken pipe")) {
+    if (
+      error.message?.includes("Failed to fetch") ||
+      error.message?.includes("Broken pipe")
+    ) {
       throw new ApiError(
         `Network error: Cannot connect to server at ${API_BASE_URL}. Please ensure the backend is running (and set NEXT_PUBLIC_API_URL for dev/prod if needed).`,
         0,
-        { networkError: true, originalError: error.message }
+        { networkError: true, originalError: error.message },
       );
     }
-    
+
     throw error;
   }
 
@@ -331,7 +338,7 @@ export const projectsApi = {
 
     const query = searchParams.toString();
     return fetchApi<ProjectsResponse>(
-      `/api/projects${query ? `?${query}` : ""}`
+      `/api/projects${query ? `?${query}` : ""}`,
     );
   },
 
@@ -351,7 +358,7 @@ export const projectsApi = {
   // Update project
   update: async (
     id: number,
-    data: Partial<CreateProjectInput>
+    data: Partial<CreateProjectInput>,
   ): Promise<Project> => {
     return fetchApi<Project>(`/api/projects/${id}`, {
       method: "PUT",
@@ -379,16 +386,22 @@ export const projectsApi = {
   },
 
   // Create task for project
-  createTask: async (projectId: number, data: CreateTaskInput): Promise<Task> => {
+  createTask: async (
+    projectId: number,
+    data: CreateTaskInput,
+  ): Promise<Task> => {
     return fetchApi<Task>(`/api/projects/${projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-
   // Update task
-  updateTask: async (projectId: number, taskId: number, data: Partial<Task>): Promise<Task> => {
+  updateTask: async (
+    projectId: number,
+    taskId: number,
+    data: Partial<Task>,
+  ): Promise<Task> => {
     return fetchApi<Task>(`/api/projects/${projectId}/tasks/${taskId}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -463,16 +476,26 @@ export interface CommitsResponse {
 export const integrationsApi = {
   // Get all integrations for a project
   getAll: async (projectId: number): Promise<IntegrationsResponse> => {
-    return fetchApi<IntegrationsResponse>(`/api/projects/${projectId}/integrations`);
+    return fetchApi<IntegrationsResponse>(
+      `/api/projects/${projectId}/integrations`,
+    );
   },
 
   // Get specific integration
-  getById: async (projectId: number, integrationId: number): Promise<Integration> => {
-    return fetchApi<Integration>(`/api/projects/${projectId}/integrations/${integrationId}`);
+  getById: async (
+    projectId: number,
+    integrationId: number,
+  ): Promise<Integration> => {
+    return fetchApi<Integration>(
+      `/api/projects/${projectId}/integrations/${integrationId}`,
+    );
   },
 
   // Create or update integration
-  save: async (projectId: number, data: CreateIntegrationInput): Promise<Integration> => {
+  save: async (
+    projectId: number,
+    data: CreateIntegrationInput,
+  ): Promise<Integration> => {
     return fetchApi<Integration>(`/api/projects/${projectId}/integrations`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -481,13 +504,20 @@ export const integrationsApi = {
 
   // Delete integration
   delete: async (projectId: number, integrationId: number): Promise<void> => {
-    return fetchApi<void>(`/api/projects/${projectId}/integrations/${integrationId}`, {
-      method: "DELETE",
-    });
+    return fetchApi<void>(
+      `/api/projects/${projectId}/integrations/${integrationId}`,
+      {
+        method: "DELETE",
+      },
+    );
   },
 
   // Test GitHub connection
-  testGitHub: async (data: { repo_owner: string; repo_name: string; access_token?: string }): Promise<{
+  testGitHub: async (data: {
+    repo_owner: string;
+    repo_name: string;
+    access_token?: string;
+  }): Promise<{
     success: boolean;
     repository?: {
       name: string;
@@ -507,7 +537,9 @@ export const integrationsApi = {
 
   // Get GitHub commits
   getGitHubCommits: async (projectId: number): Promise<CommitsResponse> => {
-    return fetchApi<CommitsResponse>(`/api/projects/${projectId}/integrations/github/commits`);
+    return fetchApi<CommitsResponse>(
+      `/api/projects/${projectId}/integrations/github/commits`,
+    );
   },
 };
 
@@ -570,7 +602,7 @@ export const customersApi = {
 
     const query = searchParams.toString();
     return fetchApi<CustomersResponse>(
-      `/api/customers${query ? `?${query}` : ""}`
+      `/api/customers${query ? `?${query}` : ""}`,
     );
   },
 
@@ -587,7 +619,7 @@ export const customersApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateCustomerInput>
+    data: Partial<CreateCustomerInput>,
   ): Promise<Customer> => {
     return fetchApi<Customer>(`/api/customers/${id}`, {
       method: "PUT",
@@ -735,7 +767,7 @@ export const productsApi = {
 
     const query = searchParams.toString();
     return fetchApi<ProductsResponse>(
-      `/api/products${query ? `?${query}` : ""}`
+      `/api/products${query ? `?${query}` : ""}`,
     );
   },
 
@@ -752,7 +784,7 @@ export const productsApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateProductInput>
+    data: Partial<CreateProductInput>,
   ): Promise<Product> => {
     return fetchApi<Product>(`/api/products/${id}`, {
       method: "PUT",
@@ -916,7 +948,7 @@ export const employeesApi = {
 
     const query = searchParams.toString();
     return fetchApi<EmployeesResponse>(
-      `/api/employees${query ? `?${query}` : ""}`
+      `/api/employees${query ? `?${query}` : ""}`,
     );
   },
 
@@ -924,7 +956,9 @@ export const employeesApi = {
     return fetchApi<Employee>(`/api/employees/${id}`);
   },
 
-  create: async (data: CreateEmployeeInput & EmployeeLinkUserPayload): Promise<Employee> => {
+  create: async (
+    data: CreateEmployeeInput & EmployeeLinkUserPayload,
+  ): Promise<Employee> => {
     return fetchApi<Employee>("/api/employees", {
       method: "POST",
       body: JSON.stringify(data),
@@ -933,7 +967,7 @@ export const employeesApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateEmployeeInput> & EmployeeLinkUserPayload
+    data: Partial<CreateEmployeeInput> & EmployeeLinkUserPayload,
   ): Promise<Employee> => {
     return fetchApi<Employee>(`/api/employees/${id}`, {
       method: "PUT",
@@ -973,10 +1007,16 @@ export interface AttendanceSession {
 }
 
 export const attendanceApi = {
-  getMyToday: async (): Promise<{ session: AttendanceSession | null; today: string }> => {
+  getMyToday: async (): Promise<{
+    session: AttendanceSession | null;
+    today: string;
+  }> => {
     return fetchApi("/api/attendance/me/today");
   },
-  getMySessions: async (params?: { limit?: number; offset?: number }): Promise<{ sessions: AttendanceSession[] }> => {
+  getMySessions: async (params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<{ sessions: AttendanceSession[] }> => {
     const sp = new URLSearchParams();
     if (params?.limit != null) sp.set("limit", String(params.limit));
     if (params?.offset != null) sp.set("offset", String(params.offset));
@@ -1008,7 +1048,11 @@ export const attendanceApi = {
       work_mode: string | null;
       status: string | null;
     }>;
-    notCheckedIn: Array<{ employee_id: number; name: string; email: string | null }>;
+    notCheckedIn: Array<{
+      employee_id: number;
+      name: string;
+      email: string | null;
+    }>;
     utilizationPercent: number;
   }> => {
     return fetchApi("/api/attendance/team");
@@ -1117,7 +1161,7 @@ export const contactsApi = {
 
     const query = searchParams.toString();
     return fetchApi<ContactsResponse>(
-      `/api/contacts${query ? `?${query}` : ""}`
+      `/api/contacts${query ? `?${query}` : ""}`,
     );
   },
 
@@ -1134,7 +1178,7 @@ export const contactsApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateContactInput>
+    data: Partial<CreateContactInput>,
   ): Promise<Contact> => {
     return fetchApi<Contact>(`/api/contacts/${id}`, {
       method: "PUT",
@@ -1237,9 +1281,7 @@ export const clientsApi = {
     if (params?.offset) searchParams.append("offset", params.offset.toString());
 
     const query = searchParams.toString();
-    return fetchApi<ClientsResponse>(
-      `/api/clients${query ? `?${query}` : ""}`
-    );
+    return fetchApi<ClientsResponse>(`/api/clients${query ? `?${query}` : ""}`);
   },
 
   getById: async (id: number): Promise<Client> => {
@@ -1259,7 +1301,7 @@ export const clientsApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateClientInput>
+    data: Partial<CreateClientInput>,
   ): Promise<Client> => {
     return fetchApi<Client>(`/api/clients/${id}`, {
       method: "PUT",
@@ -1378,9 +1420,7 @@ export const dealsApi = {
     if (params?.offset) searchParams.append("offset", params.offset.toString());
 
     const query = searchParams.toString();
-    return fetchApi<DealsResponse>(
-      `/api/deals${query ? `?${query}` : ""}`
-    );
+    return fetchApi<DealsResponse>(`/api/deals${query ? `?${query}` : ""}`);
   },
 
   getById: async (id: number): Promise<Deal> => {
@@ -1404,7 +1444,7 @@ export const dealsApi = {
 
   update: async (
     id: number,
-    data: Partial<CreateDealInput & { lost_reason?: string }>
+    data: Partial<CreateDealInput & { lost_reason?: string }>,
   ): Promise<Deal> => {
     return fetchApi<Deal>(`/api/deals/${id}`, {
       method: "PUT",
@@ -1436,7 +1476,10 @@ export const salesStagesApi = {
     return fetchApi<{ data: SalesStage[] }>("/api/sales-stages");
   },
 
-  create: async (data: { name: string; sort_order?: number }): Promise<SalesStage> => {
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<SalesStage> => {
     return fetchApi<SalesStage>("/api/sales-stages", {
       method: "POST",
       body: JSON.stringify(data),
@@ -1445,7 +1488,7 @@ export const salesStagesApi = {
 
   update: async (
     id: number,
-    data: { name?: string; sort_order?: number }
+    data: { name?: string; sort_order?: number },
   ): Promise<SalesStage> => {
     return fetchApi<SalesStage>(`/api/sales-stages/${id}`, {
       method: "PUT",
@@ -1489,7 +1532,7 @@ export const projectStatusesApi = {
 
   update: async (
     id: number,
-    data: { name?: string; sort_order?: number }
+    data: { name?: string; sort_order?: number },
   ): Promise<ProjectStatus> => {
     return fetchApi<ProjectStatus>(`/api/project-statuses/${id}`, {
       method: "PUT",
@@ -1548,7 +1591,10 @@ export const interfaceTypesApi = {
   getAll: async (): Promise<{ data: InterfaceType[] }> => {
     return fetchApi<{ data: InterfaceType[] }>("/api/interface-types");
   },
-  create: async (data: { name: string; sort_order?: number }): Promise<InterfaceType> => {
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<InterfaceType> => {
     return fetchApi<InterfaceType>("/api/interface-types", {
       method: "POST",
       body: JSON.stringify(data),
@@ -1556,7 +1602,7 @@ export const interfaceTypesApi = {
   },
   update: async (
     id: number,
-    data: { name?: string; sort_order?: number }
+    data: { name?: string; sort_order?: number },
   ): Promise<InterfaceType> => {
     return fetchApi<InterfaceType>(`/api/interface-types/${id}`, {
       method: "PUT",
@@ -1572,7 +1618,10 @@ export const featureTypesApi = {
   getAll: async (): Promise<{ data: FeatureType[] }> => {
     return fetchApi<{ data: FeatureType[] }>("/api/feature-types");
   },
-  create: async (data: { name: string; sort_order?: number }): Promise<FeatureType> => {
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<FeatureType> => {
     return fetchApi<FeatureType>("/api/feature-types", {
       method: "POST",
       body: JSON.stringify(data),
@@ -1580,7 +1629,7 @@ export const featureTypesApi = {
   },
   update: async (
     id: number,
-    data: { name?: string; sort_order?: number }
+    data: { name?: string; sort_order?: number },
   ): Promise<FeatureType> => {
     return fetchApi<FeatureType>(`/api/feature-types/${id}`, {
       method: "PUT",
@@ -1593,9 +1642,15 @@ export const featureTypesApi = {
 };
 
 export const catalogInterfacesApi = {
-  getAll: async (params?: { search?: string }): Promise<{ data: CatalogInterface[] }> => {
-    const q = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
-    return fetchApi<{ data: CatalogInterface[] }>(`/api/catalog-interfaces${q}`);
+  getAll: async (params?: {
+    search?: string;
+  }): Promise<{ data: CatalogInterface[] }> => {
+    const q = params?.search
+      ? `?search=${encodeURIComponent(params.search)}`
+      : "";
+    return fetchApi<{ data: CatalogInterface[] }>(
+      `/api/catalog-interfaces${q}`,
+    );
   },
   getById: async (id: number): Promise<CatalogInterface> => {
     return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`);
@@ -1616,7 +1671,7 @@ export const catalogInterfacesApi = {
       name?: string;
       interface_type_id?: number;
       cost?: number | null;
-    }
+    },
   ): Promise<CatalogInterface> => {
     return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`, {
       method: "PUT",
@@ -1624,13 +1679,19 @@ export const catalogInterfacesApi = {
     });
   },
   delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/catalog-interfaces/${id}`, { method: "DELETE" });
+    return fetchApi<void>(`/api/catalog-interfaces/${id}`, {
+      method: "DELETE",
+    });
   },
 };
 
 export const catalogFeaturesApi = {
-  getAll: async (params?: { search?: string }): Promise<{ data: CatalogFeature[] }> => {
-    const q = params?.search ? `?search=${encodeURIComponent(params.search)}` : "";
+  getAll: async (params?: {
+    search?: string;
+  }): Promise<{ data: CatalogFeature[] }> => {
+    const q = params?.search
+      ? `?search=${encodeURIComponent(params.search)}`
+      : "";
     return fetchApi<{ data: CatalogFeature[] }>(`/api/catalog-features${q}`);
   },
   getById: async (id: number): Promise<CatalogFeature> => {
@@ -1652,7 +1713,7 @@ export const catalogFeaturesApi = {
       name?: string;
       feature_type_id?: number;
       cost?: number | null;
-    }
+    },
   ): Promise<CatalogFeature> => {
     return fetchApi<CatalogFeature>(`/api/catalog-features/${id}`, {
       method: "PUT",
@@ -1815,7 +1876,9 @@ export const githubApi = {
   },
 
   // Create new GitHub connection
-  createConnection: async (data: CreateGitHubConnectionInput): Promise<GitHubConnection> => {
+  createConnection: async (
+    data: CreateGitHubConnectionInput,
+  ): Promise<GitHubConnection> => {
     return fetchApi<GitHubConnection>("/api/github/connections", {
       method: "POST",
       body: JSON.stringify(data),
@@ -1825,7 +1888,7 @@ export const githubApi = {
   // Update GitHub connection
   updateConnection: async (
     id: number,
-    data: UpdateGitHubConnectionInput
+    data: UpdateGitHubConnectionInput,
   ): Promise<GitHubConnection> => {
     return fetchApi<GitHubConnection>(`/api/github/connections/${id}`, {
       method: "PUT",
@@ -1841,7 +1904,9 @@ export const githubApi = {
   },
 
   // Verify GitHub connection
-  verifyConnection: async (id: number): Promise<{
+  verifyConnection: async (
+    id: number,
+  ): Promise<{
     success: boolean;
     github_user?: string;
     github_email?: string;
@@ -1854,30 +1919,34 @@ export const githubApi = {
   },
 
   // List repositories for a connection
-  getConnectionRepositories: async (connectionId: number): Promise<GitHubReposResponse> => {
+  getConnectionRepositories: async (
+    connectionId: number,
+  ): Promise<GitHubReposResponse> => {
     return fetchApi<GitHubReposResponse>(
-      `/api/github/connections/${connectionId}/repositories`
+      `/api/github/connections/${connectionId}/repositories`,
     );
   },
 
   // Get repositories linked to a project
-  getProjectRepositories: async (projectId: number): Promise<ProjectGitHubRepositoriesResponse> => {
+  getProjectRepositories: async (
+    projectId: number,
+  ): Promise<ProjectGitHubRepositoriesResponse> => {
     return fetchApi<ProjectGitHubRepositoriesResponse>(
-      `/api/projects/${projectId}/github/repositories`
+      `/api/projects/${projectId}/github/repositories`,
     );
   },
 
   // Link repository to project
   linkRepository: async (
     projectId: number,
-    data: LinkRepositoryInput
+    data: LinkRepositoryInput,
   ): Promise<ProjectGitHubRepository> => {
     return fetchApi<ProjectGitHubRepository>(
       `/api/projects/${projectId}/github/repositories`,
       {
         method: "POST",
         body: JSON.stringify(data),
-      }
+      },
     );
   },
 
@@ -1885,36 +1954,45 @@ export const githubApi = {
   updateRepositoryLink: async (
     projectId: number,
     repoId: number,
-    data: Partial<LinkRepositoryInput>
+    data: Partial<LinkRepositoryInput>,
   ): Promise<ProjectGitHubRepository> => {
     return fetchApi<ProjectGitHubRepository>(
       `/api/projects/${projectId}/github/repositories/${repoId}`,
       {
         method: "PUT",
         body: JSON.stringify(data),
-      }
+      },
     );
   },
 
   // Remove repository link
-  removeRepositoryLink: async (projectId: number, repoId: number): Promise<void> => {
+  removeRepositoryLink: async (
+    projectId: number,
+    repoId: number,
+  ): Promise<void> => {
     return fetchApi<void>(
       `/api/projects/${projectId}/github/repositories/${repoId}`,
       {
         method: "DELETE",
-      }
+      },
     );
   },
 
   // Get commits from linked repository
-  getRepositoryCommits: async (projectId: number, repoId: number): Promise<CommitsResponse> => {
+  getRepositoryCommits: async (
+    projectId: number,
+    repoId: number,
+  ): Promise<CommitsResponse> => {
     return fetchApi<CommitsResponse>(
-      `/api/projects/${projectId}/github/repositories/${repoId}/commits`
+      `/api/projects/${projectId}/github/repositories/${repoId}/commits`,
     );
   },
 
   // Sync repository commits (2-way sync)
-  syncRepository: async (projectId: number, repoId: number): Promise<{
+  syncRepository: async (
+    projectId: number,
+    repoId: number,
+  ): Promise<{
     success: boolean;
     message: string;
     new_commits: number;
@@ -1929,7 +2007,7 @@ export const githubApi = {
       `/api/projects/${projectId}/github/repositories/${repoId}/sync`,
       {
         method: "POST",
-      }
+      },
     );
   },
 
@@ -1942,7 +2020,7 @@ export const githubApi = {
       title?: string;
       description?: string;
       labels?: string[];
-    }
+    },
   ): Promise<{
     success: boolean;
     message: string;
@@ -1957,7 +2035,7 @@ export const githubApi = {
       {
         method: "POST",
         body: JSON.stringify(data),
-      }
+      },
     );
   },
 
@@ -1966,7 +2044,9 @@ export const githubApi = {
   // ============================================================================
 
   // List available GitHub Projects from a connection
-  getConnectionProjects: async (connectionId: number): Promise<{
+  getConnectionProjects: async (
+    connectionId: number,
+  ): Promise<{
     data: Array<{
       id: string;
       number: number;
@@ -1996,31 +2076,33 @@ export const githubApi = {
   // Link GitHub Project to Wraptron project
   linkGitHubProject: async (
     projectId: number,
-    data: LinkGitHubProjectInput
+    data: LinkGitHubProjectInput,
   ): Promise<GitHubProject> => {
     return fetchApi<GitHubProject>(
       `/api/projects/${projectId}/github/projects`,
       {
         method: "POST",
         body: JSON.stringify(data),
-      }
+      },
     );
   },
 
   // Get linked GitHub Projects for a project
-  getProjectGitHubProjects: async (projectId: number): Promise<GitHubProjectsResponse> => {
+  getProjectGitHubProjects: async (
+    projectId: number,
+  ): Promise<GitHubProjectsResponse> => {
     return fetchApi<GitHubProjectsResponse>(
-      `/api/projects/${projectId}/github/projects`
+      `/api/projects/${projectId}/github/projects`,
     );
   },
 
   // Get items from a GitHub Project
   getGitHubProjectItems: async (
     projectId: number,
-    githubProjectId: number
+    githubProjectId: number,
   ): Promise<GitHubProjectItemsResponse> => {
     return fetchApi<GitHubProjectItemsResponse>(
-      `/api/projects/${projectId}/github/projects/${githubProjectId}/items`
+      `/api/projects/${projectId}/github/projects/${githubProjectId}/items`,
     );
   },
 
@@ -2029,7 +2111,7 @@ export const githubApi = {
     projectId: number,
     githubProjectId: number,
     itemId: string,
-    taskId: number
+    taskId: number,
   ): Promise<{
     id: number;
     project_id: number;
@@ -2042,7 +2124,7 @@ export const githubApi = {
       {
         method: "POST",
         body: JSON.stringify({ task_id: taskId }),
-      }
+      },
     );
   },
 
@@ -2050,20 +2132,20 @@ export const githubApi = {
   unmapProjectItemFromTask: async (
     projectId: number,
     githubProjectId: number,
-    itemId: string
+    itemId: string,
   ): Promise<{ success: boolean; message: string }> => {
     return fetchApi(
       `/api/projects/${projectId}/github/projects/${githubProjectId}/items/${itemId}/map-to-task`,
       {
         method: "DELETE",
-      }
+      },
     );
   },
 
   // Sync GitHub Project items
   syncGitHubProject: async (
     projectId: number,
-    githubProjectId: number
+    githubProjectId: number,
   ): Promise<{
     success: boolean;
     message: string;
@@ -2074,17 +2156,20 @@ export const githubApi = {
       `/api/projects/${projectId}/github/projects/${githubProjectId}/sync`,
       {
         method: "POST",
-      }
+      },
     );
   },
 
   // Unlink GitHub Project
-  unlinkGitHubProject: async (projectId: number, githubProjectId: number): Promise<void> => {
+  unlinkGitHubProject: async (
+    projectId: number,
+    githubProjectId: number,
+  ): Promise<void> => {
     return fetchApi<void>(
       `/api/projects/${projectId}/github/projects/${githubProjectId}`,
       {
         method: "DELETE",
-      }
+      },
     );
   },
 };
@@ -2176,7 +2261,7 @@ export const adminApi = {
 
     const query = searchParams.toString();
     return fetchApi<AdminUsersResponse>(
-      `/api/admin/users${query ? `?${query}` : ""}`
+      `/api/admin/users${query ? `?${query}` : ""}`,
     );
   },
 
@@ -2187,7 +2272,7 @@ export const adminApi = {
 
   // Create user
   createUser: async (
-    data: CreateAdminUserInput
+    data: CreateAdminUserInput,
   ): Promise<{ user: AdminUser }> => {
     return fetchApi<{ user: AdminUser }>("/api/admin/users", {
       method: "POST",
@@ -2198,7 +2283,7 @@ export const adminApi = {
   // Update user
   updateUser: async (
     id: number,
-    data: Partial<UpdateAdminUserInput>
+    data: Partial<UpdateAdminUserInput>,
   ): Promise<{ user: AdminUser }> => {
     return fetchApi<{ user: AdminUser }>(`/api/admin/users/${id}`, {
       method: "PUT",
@@ -2231,7 +2316,7 @@ export const adminApi = {
   // Assign permissions to role
   assignRolePermissions: async (
     role: string,
-    permissionIds: number[]
+    permissionIds: number[],
   ): Promise<{ message: string; role: string; permission_count: number }> => {
     return fetchApi<{
       message: string;
@@ -2243,4 +2328,3 @@ export const adminApi = {
     });
   },
 };
-
