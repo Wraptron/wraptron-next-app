@@ -12,6 +12,7 @@ import {
   type ProjectStatus,
 } from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
+import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -469,6 +470,8 @@ export default function Settings() {
         </Card>
 
         <SettingsProductCatalogTypes />
+
+        <SettingsWorkspaceSkills />
 
         {/* Sales Stages Section */}
         <Card className="mb-6">

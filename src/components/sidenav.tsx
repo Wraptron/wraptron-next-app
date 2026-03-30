@@ -33,6 +33,7 @@ import {
   Sparkles,
   Layers,
   Flag,
+  Grid3x3,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,12 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     label: "Employees",
     icon: Users,
     href: "/workspace/employees",
+  },
+  {
+    id: "skills-matrix",
+    label: "Skill matrix",
+    icon: Grid3x3,
+    href: "/workspace/skills",
   },
   {
     id: "attendance",

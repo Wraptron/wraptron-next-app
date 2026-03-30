@@ -1548,6 +1548,106 @@ export const projectStatusesApi = {
 };
 
 // ============================================================================
+// Workspace skills (Settings) + employee skill matrix (levels 1–4)
+// ============================================================================
+
+export interface WorkspaceSkill {
+  id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const workspaceSkillsApi = {
+  getAll: async (): Promise<{ data: WorkspaceSkill[] }> => {
+    return fetchApi<{ data: WorkspaceSkill[] }>("/api/workspace-skills");
+  },
+
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<WorkspaceSkill> => {
+    return fetchApi<WorkspaceSkill>("/api/workspace-skills", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number },
+  ): Promise<WorkspaceSkill> => {
+    return fetchApi<WorkspaceSkill>(`/api/workspace-skills/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/workspace-skills/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+export interface EmployeeSkillAssignment {
+  skill_id: number;
+  level: number;
+  skill_name?: string;
+}
+
+export interface SkillMatrixEmployee {
+  id: number;
+  emp_code: string;
+  first_name: string;
+  last_name: string;
+  department: string | null;
+  /** skill id (string key) → level 1–4 */
+  skill_levels: Record<string, number>;
+}
+
+export const employeeSkillsApi = {
+  getMatrix: async (): Promise<{
+    skills: WorkspaceSkill[];
+    employees: SkillMatrixEmployee[];
+  }> => {
+    return fetchApi<{
+      skills: WorkspaceSkill[];
+      employees: SkillMatrixEmployee[];
+    }>("/api/employee-skills/matrix");
+  },
+
+  getForEmployee: async (
+    employeeId: number,
+  ): Promise<{
+    employee_id: number;
+    assignments: EmployeeSkillAssignment[];
+  }> => {
+    return fetchApi<{
+      employee_id: number;
+      assignments: EmployeeSkillAssignment[];
+    }>(`/api/employee-skills/${employeeId}`);
+  },
+
+  updateEmployee: async (
+    employeeId: number,
+    data: { assignments: Pick<EmployeeSkillAssignment, "skill_id" | "level">[] },
+  ): Promise<{
+    employee_id: number;
+    assignments: EmployeeSkillAssignment[];
+  }> => {
+    return fetchApi<{
+      employee_id: number;
+      assignments: EmployeeSkillAssignment[];
+    }>(`/api/employee-skills/${employeeId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ============================================================================
 // User app launcher (per-user external shortcuts)
 // ============================================================================
 

@@ -9,15 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
-  Mail,
   Phone,
   Building2,
   User,
   Briefcase,
   Edit,
   Trash2,
+  GraduationCap,
 } from "lucide-react";
-import { employeesApi, type Employee } from "@/lib/api";
+import { employeesApi, employeeSkillsApi, type Employee, type EmployeeSkillAssignment } from "@/lib/api";
+import { workspaceSkillLevelDescription } from "@/lib/workspace-skill-levels";
 import { EmployeeFormSheet } from "@/components/employee-form-sheet";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -70,6 +71,8 @@ export default function EmployeeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [skillAssignments, setSkillAssignments] = useState<EmployeeSkillAssignment[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -96,6 +99,27 @@ export default function EmployeeDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!id) return;
+    const numId = parseInt(id, 10);
+    if (isNaN(numId)) return;
+    let cancelled = false;
+    setSkillsLoading(true);
+    (async () => {
+      try {
+        const res = await employeeSkillsApi.getForEmployee(numId);
+        if (!cancelled) setSkillAssignments(res.assignments ?? []);
+      } catch {
+        if (!cancelled) setSkillAssignments([]);
+      } finally {
+        if (!cancelled) setSkillsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
     if (employee) setTitle(displayName(employee));
     return () => setTitle(null);
   }, [employee, setTitle]);
@@ -105,6 +129,7 @@ export default function EmployeeDetailPage() {
     const numId = parseInt(id, 10);
     if (isNaN(numId)) return;
     employeesApi.getById(numId).then(setEmployee);
+    employeeSkillsApi.getForEmployee(numId).then((r) => setSkillAssignments(r.assignments ?? []));
   };
 
   const handleDelete = async () => {
@@ -216,6 +241,43 @@ export default function EmployeeDetailPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Skills
+            </CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/workspace/skills">Skill matrix</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {skillsLoading ? (
+              <p className="text-sm text-gray-500">Loading skills...</p>
+            ) : skillAssignments.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No skill levels recorded. Assign skills on the{" "}
+                <Link href="/workspace/skills" className="text-blue-600 underline">
+                  skill matrix
+                </Link>
+                .
+              </p>
+            ) : (
+              <ul className="divide-y rounded-md border bg-white">
+                {skillAssignments.map((a) => (
+                  <li
+                    key={a.skill_id}
+                    className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"
+                  >
+                    <span className="font-medium text-gray-900">{a.skill_name}</span>
+                    <span className="text-gray-600">{workspaceSkillLevelDescription(a.level)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
