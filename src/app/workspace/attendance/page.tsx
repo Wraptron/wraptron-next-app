@@ -13,7 +13,11 @@ import {
   Building2,
   LogIn,
   LogOut,
-  Calendar,
+  Calendar as CalendarIcon,
+  CalendarDays,
+  List,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { attendanceApi, type AttendanceSession, type WorkMode } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -43,6 +47,15 @@ function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
+function getMonthGrid(month: Date): { leadingEmptyDays: number; daysInMonth: number } {
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const leadingEmptyDays = firstDay.getDay();
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  return { leadingEmptyDays, daysInMonth };
+}
+
+type AttendanceView = "list" | "calendar";
+
 function getDeviceInfo(): Record<string, unknown> {
   if (typeof navigator === "undefined") return {};
   return {
@@ -63,6 +76,11 @@ export default function AttendancePage() {
   const [liveSeconds, setLiveSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
+  const [view, setView] = useState<AttendanceView>("list");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   const fetchToday = useCallback(async () => {
     try {
@@ -179,6 +197,14 @@ export default function AttendancePage() {
   const currentWorkModeLabel = session?.work_mode
     ? WORK_MODES.find((m) => m.value === session.work_mode)?.label ?? session.work_mode.replace("_", " ")
     : null;
+
+  const sessionsByDate = sessions.reduce<Record<string, AttendanceSession[]>>((acc, s) => {
+    acc[s.date] = [...(acc[s.date] ?? []), s];
+    return acc;
+  }, {});
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const { leadingEmptyDays, daysInMonth } = getMonthGrid(calendarMonth);
+  const calendarCells = Array.from({ length: leadingEmptyDays + daysInMonth }, (_, idx) => idx);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -306,15 +332,39 @@ export default function AttendancePage() {
         {/* List of attendances */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
               Attendance history
-            </CardTitle>
+              </CardTitle>
+              <div className="inline-flex items-center rounded-md border border-input bg-muted p-1">
+                <Button
+                  type="button"
+                  variant={view === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => setView("list")}
+                >
+                  <List className="h-3.5 w-3.5 mr-1.5" />
+                  List
+                </Button>
+                <Button
+                  type="button"
+                  variant={view === "calendar" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => setView("calendar")}
+                >
+                  <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+                  Calendar
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {sessions.length === 0 ? (
               <p className="text-sm text-gray-500">No attendance records yet.</p>
-            ) : (
+            ) : view === "list" ? (
               <ul className="space-y-3">
                 {sessions.map((s) => {
                   const dateLabel = new Date(s.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
@@ -340,6 +390,103 @@ export default function AttendancePage() {
                   );
                 })}
               </ul>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCalendarMonth(
+                        (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+                      )
+                    }
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Prev
+                  </Button>
+                  <p className="text-sm font-medium text-gray-900">
+                    {calendarMonth.toLocaleDateString("en-IN", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCalendarMonth(
+                        (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+                      )
+                    }
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-7 gap-2 text-xs">
+                  {weekDays.map((day) => (
+                    <div key={day} className="px-2 py-1 text-center font-medium text-gray-500">
+                      {day}
+                    </div>
+                  ))}
+                  {calendarCells.map((cell) => {
+                    if (cell < leadingEmptyDays) {
+                      return <div key={`empty-${cell}`} className="min-h-24 rounded-lg border border-transparent" />;
+                    }
+                    const day = cell - leadingEmptyDays + 1;
+                    const dateObj = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
+                    const dateKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const daySessions = sessionsByDate[dateKey] ?? [];
+                    return (
+                      <div
+                        key={dateKey}
+                        className={cn(
+                          "min-h-24 rounded-lg border p-2",
+                          daySessions.length > 0 ? "border-green-200 bg-green-50/60" : "border-gray-100 bg-white"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-900">{day}</span>
+                          {daySessions.length > 0 && (
+                            <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                              {daySessions.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 space-y-1">
+                          {daySessions.slice(0, 2).map((s) => {
+                            const duration = s.check_out_at
+                              ? Math.floor(
+                                  (new Date(s.check_out_at).getTime() -
+                                    new Date(s.check_in_at).getTime()) /
+                                    1000
+                                )
+                              : null;
+                            return (
+                              <div key={s.id} className="rounded bg-white/80 px-1.5 py-1 text-[10px]">
+                                <p className="truncate text-gray-700 capitalize">{s.work_mode.replace("_", " ")}</p>
+                                <p className="truncate text-gray-600">
+                                  {formatTime(s.check_in_at)} -{" "}
+                                  {s.check_out_at ? formatTime(s.check_out_at) : "—"}
+                                </p>
+                                {duration != null && duration >= 0 && (
+                                  <p className="text-green-700">{formatDuration(duration)}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {daySessions.length > 2 && (
+                            <p className="text-[10px] text-gray-500">+{daySessions.length - 2} more</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

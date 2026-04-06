@@ -87,6 +87,12 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/transactions",
   },
   {
+    id: "invoices",
+    label: "Invoices",
+    icon: Receipt,
+    href: "/invoices",
+  },
+  {
     id: "workspace",
     label: "Workspace",
     icon: Briefcase,

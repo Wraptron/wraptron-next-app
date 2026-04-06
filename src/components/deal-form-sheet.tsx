@@ -70,7 +70,7 @@ export interface DealFormSheetProps {
 const initialFormState = {
   title: "" as string,
   stage: "New Lead" as string,
-  contact_id: null as number | null,
+  contact_ids: [] as number[],
   client_id: null as number | null,
   value: "" as string,
   expected_close_date: "" as string,
@@ -181,7 +181,11 @@ export function DealFormSheet({
       setFormData({
         title: deal.title ?? "",
         stage: deal.stage || "New Lead",
-        contact_id: deal.contact_id ?? deal.contacts_associated?.[0] ?? null,
+        contact_ids: deal.contacts_associated?.length
+          ? deal.contacts_associated
+          : deal.contact_id
+            ? [deal.contact_id]
+            : [],
         client_id: deal.client_id ?? deal.companies_associated?.[0] ?? null,
         value: deal.value != null ? String(deal.value) : "",
         expected_close_date: deal.expected_close_date ?? "",
@@ -205,13 +209,14 @@ export function DealFormSheet({
     e.preventDefault();
     setLoading(true);
     try {
+      const primaryContactId = formData.contact_ids[0];
       const payload: CreateDealInput = {
         title: formData.title.trim() || "Deal",
         stage: formData.stage || "New Lead",
         currency: defaultCurrency,
-        contact_id: formData.contact_id ?? undefined,
+        contact_id: primaryContactId ?? undefined,
         client_id: formData.client_id ?? undefined,
-        contacts_associated: formData.contact_id ? [formData.contact_id] : [],
+        contacts_associated: formData.contact_ids,
         companies_associated: formData.client_id ? [formData.client_id] : [],
         value: formData.value ? Number(formData.value) : undefined,
         expected_close_date: formData.expected_close_date || undefined,
@@ -232,9 +237,16 @@ export function DealFormSheet({
     }
   };
 
-  const setContact = (contactId: number | null) => {
-    setFormData((prev) => ({ ...prev, contact_id: contactId }));
-    setContactOpen(false);
+  const toggleContact = (contactId: number) => {
+    setFormData((prev) => {
+      const exists = prev.contact_ids.includes(contactId);
+      return {
+        ...prev,
+        contact_ids: exists
+          ? prev.contact_ids.filter((id) => id !== contactId)
+          : [...prev.contact_ids, contactId],
+      };
+    });
   };
 
   const setCompany = (companyId: number | null) => {
@@ -257,7 +269,13 @@ export function DealFormSheet({
       };
       const created = await contactsApi.create(payload);
       setContacts((prev) => [created, ...prev]);
-      setContact(created.id);
+      setFormData((prev) => ({
+        ...prev,
+        contact_ids: prev.contact_ids.includes(created.id)
+          ? prev.contact_ids
+          : [...prev.contact_ids, created.id],
+      }));
+      setContactOpen(false);
       setNewContact({ first_name: "", last_name: "", email: "" });
       setCreateContactOpen(false);
     } catch (err) {
@@ -293,7 +311,9 @@ export function DealFormSheet({
     }
   };
 
-  const selectedContact = contacts.find((c) => c.id === formData.contact_id);
+  const selectedContacts = contacts.filter((c) =>
+    formData.contact_ids.includes(c.id),
+  );
   const selectedCompany = companies.find((c) => c.id === formData.client_id);
 
   return (
@@ -330,9 +350,9 @@ export function DealFormSheet({
                 <Popover open={contactOpen} onOpenChange={setContactOpen}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline" className="flex-1 justify-between font-normal text-left">
-                      {selectedContact
-                        ? [selectedContact.first_name, selectedContact.last_name].filter(Boolean).join(" ") || selectedContact.email || "Contact"
-                        : "Select contact"}
+                      {selectedContacts.length > 0
+                        ? `${selectedContacts.length} contact${selectedContacts.length === 1 ? "" : "s"} selected`
+                        : "Select contact(s)"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -348,8 +368,11 @@ export function DealFormSheet({
                               <CommandItem
                                 key={c.id}
                                 value={label}
-                                onSelect={() => setContact(c.id)}
+                                onSelect={() => toggleContact(c.id)}
                               >
+                                <span className="mr-2">
+                                  {formData.contact_ids.includes(c.id) ? "✓" : ""}
+                                </span>
                                 {[c.first_name, c.last_name].filter(Boolean).join(" ")}
                                 {c.email ? ` (${c.email})` : ""}
                               </CommandItem>
@@ -372,18 +395,48 @@ export function DealFormSheet({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                {formData.contact_id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Create contact"
+                  onClick={() => setCreateContactOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                {formData.contact_ids.length > 0 && (
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    aria-label="Clear contact"
-                    onClick={() => setContact(null)}
+                    aria-label="Clear contacts"
+                    onClick={() => setFormData((prev) => ({ ...prev, contact_ids: [] }))}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
+              {selectedContacts.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedContacts.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
+                    >
+                      <span>
+                        {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email || "Contact"}
+                      </span>
+                      <button
+                        type="button"
+                        className="ml-1 hover:text-blue-600"
+                        onClick={() => toggleContact(c.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -442,6 +495,17 @@ export function DealFormSheet({
             </div>
 
             <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Deal notes or description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Deal value</Label>
               <Input
                 type="number"
@@ -459,17 +523,6 @@ export function DealFormSheet({
                 type="date"
                 value={formData.expected_close_date}
                 onChange={(e) => setFormData((prev) => ({ ...prev, expected_close_date: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                placeholder="Deal notes or description"
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className="resize-none"
               />
             </div>
 

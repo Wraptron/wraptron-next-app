@@ -7,15 +7,18 @@ import {
   githubApi,
   salesStagesApi,
   projectStatusesApi,
+  invoiceSettingsApi,
   type GitHubConnection,
   type SalesStage,
   type ProjectStatus,
+  type InvoiceSettings,
 } from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -91,6 +94,14 @@ export default function Settings() {
     useState<ProjectStatus | null>(null);
   const [projStatusName, setProjStatusName] = useState("");
   const [projStatusFormLoading, setProjStatusFormLoading] = useState(false);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings | null>(null);
+  const [invoiceSettingsForm, setInvoiceSettingsForm] = useState({
+    company_name: "",
+    company_address: "",
+    company_gst: "",
+    company_logo_url: "",
+  });
+  const [invoiceSettingsSaving, setInvoiceSettingsSaving] = useState(false);
 
   useEffect(() => {
     setTitle("Settings");
@@ -114,6 +125,24 @@ export default function Settings() {
       }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const loadInvoiceSettings = async () => {
+      try {
+        const data = await invoiceSettingsApi.get();
+        setInvoiceSettings(data);
+        setInvoiceSettingsForm({
+          company_name: data?.company_name || "",
+          company_address: data?.company_address || "",
+          company_gst: data?.company_gst || "",
+          company_logo_url: data?.company_logo_url || "",
+        });
+      } catch {
+        // Best effort; keep form editable even if load fails.
+      }
+    };
+    loadInvoiceSettings();
   }, []);
 
   useEffect(() => {
@@ -413,6 +442,33 @@ export default function Settings() {
     }
   };
 
+  const handleSaveInvoiceSettings = async () => {
+    if (
+      !invoiceSettingsForm.company_name.trim() ||
+      !invoiceSettingsForm.company_address.trim() ||
+      !invoiceSettingsForm.company_gst.trim()
+    ) {
+      setError("Invoice company name, address and GST are required");
+      return;
+    }
+    setInvoiceSettingsSaving(true);
+    setError(null);
+    try {
+      const saved = await invoiceSettingsApi.update({
+        company_name: invoiceSettingsForm.company_name.trim(),
+        company_address: invoiceSettingsForm.company_address.trim(),
+        company_gst: invoiceSettingsForm.company_gst.trim(),
+        company_logo_url: invoiceSettingsForm.company_logo_url.trim() || undefined,
+      });
+      setInvoiceSettings(saved);
+      setSuccessMessage("Invoice company settings saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save invoice settings");
+    } finally {
+      setInvoiceSettingsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -465,6 +521,71 @@ export default function Settings() {
                   Example: {formatCurrency(1000)} (1,000 in your selected currency)
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Invoice Company Settings</CardTitle>
+            <CardDescription className="mt-2">
+              These details are used in invoice header and tax invoice output.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="invoice-company-name">Company name *</Label>
+                <Input
+                  id="invoice-company-name"
+                  value={invoiceSettingsForm.company_name}
+                  onChange={(e) =>
+                    setInvoiceSettingsForm((p) => ({ ...p, company_name: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-company-gst">GST *</Label>
+                <Input
+                  id="invoice-company-gst"
+                  value={invoiceSettingsForm.company_gst}
+                  onChange={(e) =>
+                    setInvoiceSettingsForm((p) => ({ ...p, company_gst: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="invoice-company-address">Address *</Label>
+                <Textarea
+                  id="invoice-company-address"
+                  rows={3}
+                  value={invoiceSettingsForm.company_address}
+                  onChange={(e) =>
+                    setInvoiceSettingsForm((p) => ({ ...p, company_address: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="invoice-company-logo-url">Logo URL</Label>
+                <Input
+                  id="invoice-company-logo-url"
+                  placeholder="https://... or data:image/png;base64,..."
+                  value={invoiceSettingsForm.company_logo_url}
+                  onChange={(e) =>
+                    setInvoiceSettingsForm((p) => ({ ...p, company_logo_url: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-3">
+              <Button onClick={handleSaveInvoiceSettings} disabled={invoiceSettingsSaving}>
+                {invoiceSettingsSaving ? "Saving..." : "Save invoice settings"}
+              </Button>
+              {invoiceSettings?.updated_at && (
+                <span className="text-sm text-gray-500">
+                  Last updated: {formatDate(invoiceSettings.updated_at)}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

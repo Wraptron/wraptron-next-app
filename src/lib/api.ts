@@ -1677,6 +1677,133 @@ export const userAppsApi = {
 };
 
 // ============================================================================
+// Invoices + invoice company settings
+// ============================================================================
+
+export interface InvoiceSettings {
+  id: number;
+  user_id: number;
+  company_name: string;
+  company_address: string;
+  company_gst: string;
+  company_logo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceItem {
+  id?: number;
+  invoice_id?: number;
+  item_description: string;
+  hsn: string;
+  quantity: number;
+  rate: number;
+  amount?: number;
+  gst_rate: number;
+  cgst_amount?: number;
+  sgst_amount?: number;
+  line_total?: number;
+}
+
+export interface Invoice {
+  id: number;
+  user_id: number;
+  invoice_number: string;
+  customer_name: string;
+  customer_address: string;
+  customer_gst: string;
+  payment_terms: string;
+  place_of_supply: string;
+  invoice_date: string;
+  due_date?: string;
+  subtotal: number;
+  cgst_total: number;
+  sgst_total: number;
+  total: number;
+  terms_and_conditions: string;
+  authorized_signature: string;
+  created_at: string;
+  updated_at: string;
+  items?: InvoiceItem[];
+}
+
+export interface CreateInvoiceInput {
+  customer_name: string;
+  customer_address: string;
+  customer_gst: string;
+  payment_terms?: string;
+  place_of_supply?: string;
+  invoice_date?: string;
+  due_date?: string;
+  terms_and_conditions?: string;
+  authorized_signature?: string;
+  items: Array<{
+    item_description: string;
+    hsn: string;
+    quantity: number;
+    rate: number;
+    gst_rate: number;
+  }>;
+}
+
+export interface InvoicesResponse {
+  data: Invoice[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const invoiceSettingsApi = {
+  get: async (): Promise<InvoiceSettings | null> => {
+    return fetchApi<InvoiceSettings | null>("/api/invoice-settings");
+  },
+  update: async (data: {
+    company_name: string;
+    company_address: string;
+    company_gst: string;
+    company_logo_url?: string;
+  }): Promise<InvoiceSettings> => {
+    return fetchApi<InvoiceSettings>("/api/invoice-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+export const invoicesApi = {
+  getAll: async (params?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<InvoicesResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    const query = searchParams.toString();
+    return fetchApi<InvoicesResponse>(`/api/invoices${query ? `?${query}` : ""}`);
+  },
+  getById: async (id: number): Promise<Invoice> => {
+    return fetchApi<Invoice>(`/api/invoices/${id}`);
+  },
+  create: async (data: CreateInvoiceInput): Promise<Invoice> => {
+    return fetchApi<Invoice>("/api/invoices", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id: number, data: CreateInvoiceInput): Promise<Invoice> => {
+    return fetchApi<Invoice>(`/api/invoices/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/invoices/${id}`, { method: "DELETE" });
+  },
+};
+
+// ============================================================================
 // Product catalog: interface / feature types & items
 // ============================================================================
 

@@ -192,6 +192,7 @@ export default function DealDetailPage() {
         >
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="qualification">Qualification</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -274,6 +275,70 @@ export default function DealDetailPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="qualification" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Qualification</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Current stage
+                    </p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
+                      {deal.stage || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Probability
+                    </p>
+                    <p className="text-sm mt-1 font-semibold text-slate-900">
+                      {deal.probability != null ? `${deal.probability}%` : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Primary contact
+                    </p>
+                    <p className="text-sm mt-1">{deal.contact_name || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Customer / client
+                    </p>
+                    <p className="text-sm mt-1">
+                      {deal.client_company_name || deal.client_name || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Target close date
+                  </p>
+                  <p className="text-sm mt-1">
+                    {formatDate(deal.expected_close_date)}
+                  </p>
+                </div>
+
+                <div className="rounded-md border bg-gray-50 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Notes for qualification
+                  </p>
+                  <p className="text-sm mt-2 text-slate-700">
+                    {deal.description?.trim() ||
+                      "No qualification notes added yet."}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

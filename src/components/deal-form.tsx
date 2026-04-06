@@ -11,8 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import {
   dealsApi,
   contactsApi,
@@ -20,6 +28,7 @@ import {
   salesStagesApi,
   type Deal,
   type CreateDealInput,
+  type CreateContactInput,
   type Contact,
   type Client,
   type SalesStage,
@@ -45,6 +54,7 @@ const FALLBACK_STAGE_NAMES = [
 ];
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
+const CREATE_NEW_CONTACT_VALUE = "__create_new_contact__";
 
 export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const { currency: defaultCurrency } = useCurrency();
@@ -52,6 +62,13 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Client[]>([]);
   const [salesStages, setSalesStages] = useState<SalesStage[]>([]);
+  const [createContactOpen, setCreateContactOpen] = useState(false);
+  const [createContactLoading, setCreateContactLoading] = useState(false);
+  const [newContact, setNewContact] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+  });
 
   const stagesSorted = useMemo(() => {
     return [...salesStages].sort((a, b) => {
@@ -167,6 +184,37 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     }
   };
 
+  const handleCreateContact = async () => {
+    const first = newContact.first_name.trim();
+    if (!first) {
+      alert("First name is required.");
+      return;
+    }
+    setCreateContactLoading(true);
+    try {
+      const payload: CreateContactInput = {
+        first_name: first,
+        last_name: newContact.last_name.trim() || undefined,
+        email: newContact.email.trim() || undefined,
+      };
+      const created = await contactsApi.create(payload);
+      setContacts((prev) => [created, ...prev]);
+      if (!formData.contacts_associated?.includes(created.id)) {
+        setFormData((prev) => ({
+          ...prev,
+          contacts_associated: [...(prev.contacts_associated || []), created.id],
+        }));
+      }
+      setNewContact({ first_name: "", last_name: "", email: "" });
+      setCreateContactOpen(false);
+    } catch (error) {
+      console.error("Error creating contact:", error);
+      alert("Failed to create contact. Please try again.");
+    } finally {
+      setCreateContactLoading(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto">
       <div>
@@ -247,7 +295,12 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         <Select
           value=""
           onValueChange={(value) => {
+            if (value === CREATE_NEW_CONTACT_VALUE) {
+              setCreateContactOpen(true);
+              return;
+            }
             const contactId = parseInt(value);
+            if (Number.isNaN(contactId)) return;
             if (!formData.contacts_associated?.includes(contactId)) {
               setFormData({
                 ...formData,
@@ -260,6 +313,12 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
             <SelectValue placeholder="Select contacts" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={CREATE_NEW_CONTACT_VALUE}>
+              <span className="flex items-center gap-2 text-primary">
+                <Plus className="h-4 w-4" />
+                Create new contact
+              </span>
+            </SelectItem>
             {contacts.map((contact) => (
               <SelectItem key={contact.id} value={contact.id.toString()}>
                 {contact.first_name} {contact.last_name || ""}
@@ -355,6 +414,58 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={createContactOpen} onOpenChange={setCreateContactOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>New contact</DialogTitle>
+            <DialogDescription>Add a contact. First name is required.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-contact-first">First name *</Label>
+              <Input
+                id="new-contact-first"
+                value={newContact.first_name}
+                onChange={(e) => setNewContact((prev) => ({ ...prev, first_name: e.target.value }))}
+                placeholder="First name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-contact-last">Last name</Label>
+              <Input
+                id="new-contact-last"
+                value={newContact.last_name}
+                onChange={(e) => setNewContact((prev) => ({ ...prev, last_name: e.target.value }))}
+                placeholder="Last name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-contact-email">Email</Label>
+              <Input
+                id="new-contact-email"
+                type="email"
+                value={newContact.email}
+                onChange={(e) => setNewContact((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder="email@example.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateContactOpen(false)}
+              disabled={createContactLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCreateContact} disabled={createContactLoading}>
+              {createContactLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
