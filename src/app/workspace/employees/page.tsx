@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { employeesApi, type Employee } from "@/lib/api";
-import { EmployeeFormSheet } from "@/components/employee-form-sheet";
 import { useAuth } from "@/contexts/auth-context";
 
 function displayName(e: Employee) {
@@ -88,13 +88,12 @@ function EmployeeKanbanCard({ employee }: { employee: Employee }) {
 }
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const { setTitle } = usePageTitle();
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === "admin";
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("employees_view_mode");
@@ -131,16 +130,6 @@ export default function EmployeesPage() {
       localStorage.setItem("employees_view_mode", viewMode);
     }
   }, [viewMode]);
-
-  const openAdd = () => {
-    setEditingEmployee(null);
-    setSheetOpen(true);
-  };
-
-  const openEdit = (e: Employee) => {
-    setEditingEmployee(e);
-    setSheetOpen(true);
-  };
 
   const handleDelete = async (employee: Employee) => {
     if (
@@ -306,10 +295,10 @@ export default function EmployeesPage() {
                                 View
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openEdit(employee)}
-                            >
+                            <DropdownMenuItem asChild>
+                              <Link href={`/workspace/employees/${employee.id}/edit`}>
                               Edit
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -393,10 +382,10 @@ export default function EmployeesPage() {
                                         View
                                       </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => openEdit(employee)}
-                                    >
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/workspace/employees/${employee.id}/edit`}>
                                       Edit
+                                      </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -478,13 +467,16 @@ export default function EmployeesPage() {
                           View
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openEdit(employee);
-                        }}
-                      >
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/workspace/employees/${employee.id}/edit`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            router.push(`/workspace/employees/${employee.id}/edit`);
+                          }}
+                        >
                         Edit
+                        </Link>
                       </DropdownMenuItem>
                       {isAdmin && (
                         <>
@@ -582,8 +574,10 @@ export default function EmployeesPage() {
             <Button onClick={fetchEmployees} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={openAdd}>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/workspace/employees/new">
               <Plus className="h-4 w-4 mr-1" /> Add Employee
+              </Link>
             </Button>
           </div>
         </div>
@@ -599,13 +593,6 @@ export default function EmployeesPage() {
           renderEmployees()
         )}
       </div>
-
-      <EmployeeFormSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onSuccess={fetchEmployees}
-        employee={editingEmployee ?? undefined}
-      />
     </div>
   );
 }

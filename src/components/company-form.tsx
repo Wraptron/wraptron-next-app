@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { clientsApi, contactsApi, dealsApi, type Client, type CreateClientInput, type Contact, type Deal } from "@/lib/api";
+import { companiesApi, contactsApi, dealsApi, type Company, type CreateCompanyInput, type Contact, type Deal } from "@/lib/api";
 
 interface CompanyFormProps {
-  company?: Client;
+  company?: Company;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -46,7 +46,7 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [formData, setFormData] = useState<CreateClientInput>({
+  const [formData, setFormData] = useState<CreateCompanyInput>({
     name: company?.name || "",
     company_name: company?.company_name || "",
     phone: company?.phone || "",
@@ -93,7 +93,7 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
     setLoading(true);
     try {
       // Ensure name is set (backend requires it, use company_name if name is empty)
-      const dataToSend: CreateClientInput = {
+      const dataToSend: CreateCompanyInput = {
         name: formData.name || formData.company_name || "Company",
         company_name: formData.company_name || undefined,
         phone: formData.phone || undefined,
@@ -107,16 +107,16 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
       // Remove undefined fields when creating (not updating)
       if (!company) {
         Object.keys(dataToSend).forEach(key => {
-          if (dataToSend[key as keyof CreateClientInput] === undefined) {
-            delete dataToSend[key as keyof CreateClientInput];
+          if (dataToSend[key as keyof CreateCompanyInput] === undefined) {
+            delete dataToSend[key as keyof CreateCompanyInput];
           }
         });
       }
 
       if (company) {
-        await clientsApi.update(company.id, dataToSend);
+        await companiesApi.update(company.company_id, dataToSend);
       } else {
-        await clientsApi.create(dataToSend);
+        await companiesApi.create(dataToSend);
       }
       onSuccess();
     } catch (error) {

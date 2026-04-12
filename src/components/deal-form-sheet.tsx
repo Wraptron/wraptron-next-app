@@ -43,7 +43,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, ChevronsUpDown, Plus, X } from "lucide-react";
-import { dealsApi, contactsApi, clientsApi, salesStagesApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateClientInput, type Contact, type Client, type SalesStage } from "@/lib/api";
+import { dealsApi, contactsApi, companiesApi, salesStagesApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateCompanyInput, type Contact, type Company, type SalesStage } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
 
 const DEFAULT_DEAL_STAGES = [
@@ -71,7 +71,7 @@ const initialFormState = {
   title: "" as string,
   stage: "New Lead" as string,
   contact_ids: [] as number[],
-  client_id: null as number | null,
+  company_id: null as number | null,
   value: "" as string,
   expected_close_date: "" as string,
   description: "" as string,
@@ -87,7 +87,7 @@ export function DealFormSheet({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<Client[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -154,7 +154,7 @@ export function DealFormSheet({
     if (!open) return;
     Promise.all([
       contactsApi.getAll({ limit: 1000 }),
-      clientsApi.getAll({ limit: 1000 }),
+      companiesApi.getAll({ limit: 1000 }),
       salesStagesApi.getAll(),
     ]).then(([contactsRes, companiesRes, stagesRes]) => {
       setContacts(contactsRes.data);
@@ -186,7 +186,7 @@ export function DealFormSheet({
           : deal.contact_id
             ? [deal.contact_id]
             : [],
-        client_id: deal.client_id ?? deal.companies_associated?.[0] ?? null,
+        company_id: deal.company_id ?? deal.companies_associated?.[0] ?? null,
         value: deal.value != null ? String(deal.value) : "",
         expected_close_date: deal.expected_close_date ?? "",
         description: deal.description ?? "",
@@ -215,9 +215,9 @@ export function DealFormSheet({
         stage: formData.stage || "New Lead",
         currency: defaultCurrency,
         contact_id: primaryContactId ?? undefined,
-        client_id: formData.client_id ?? undefined,
+        company_id: formData.company_id ?? undefined,
         contacts_associated: formData.contact_ids,
-        companies_associated: formData.client_id ? [formData.client_id] : [],
+        companies_associated: formData.company_id ? [formData.company_id] : [],
         value: formData.value ? Number(formData.value) : undefined,
         expected_close_date: formData.expected_close_date || undefined,
         description: formData.description.trim() || undefined,
@@ -250,7 +250,7 @@ export function DealFormSheet({
   };
 
   const setCompany = (companyId: number | null) => {
-    setFormData((prev) => ({ ...prev, client_id: companyId }));
+    setFormData((prev) => ({ ...prev, company_id: companyId }));
     setCompanyOpen(false);
   };
 
@@ -294,13 +294,13 @@ export function DealFormSheet({
     }
     setCreateCompanyLoading(true);
     try {
-      const payload: CreateClientInput = {
+      const payload: CreateCompanyInput = {
         name,
         company_name: newCompany.company_name.trim() || undefined,
       };
-      const created = await clientsApi.create(payload);
+      const created = await companiesApi.create(payload);
       setCompanies((prev) => [created, ...prev]);
-      setCompany(created.id);
+      setCompany(created.company_id);
       setNewCompany({ name: "", company_name: "" });
       setCreateCompanyOpen(false);
     } catch (err) {
@@ -314,7 +314,7 @@ export function DealFormSheet({
   const selectedContacts = contacts.filter((c) =>
     formData.contact_ids.includes(c.id),
   );
-  const selectedCompany = companies.find((c) => c.id === formData.client_id);
+  const selectedCompany = companies.find((c) => c.company_id === formData.company_id);
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange} container={container}>
@@ -458,7 +458,7 @@ export function DealFormSheet({
                           {companies.map((c) => {
                             const label = [c.company_name, c.name].filter(Boolean).join(" ");
                             return (
-                              <CommandItem key={c.id} value={label} onSelect={() => setCompany(c.id)}>
+                              <CommandItem key={c.company_id} value={label} onSelect={() => setCompany(c.company_id)}>
                                 {c.company_name || c.name}
                               </CommandItem>
                             );
@@ -480,7 +480,7 @@ export function DealFormSheet({
                     </Command>
                   </PopoverContent>
                 </Popover>
-                {formData.client_id && (
+                {formData.company_id && (
                   <Button
                     type="button"
                     variant="outline"

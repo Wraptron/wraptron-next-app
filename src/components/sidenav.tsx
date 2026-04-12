@@ -27,6 +27,7 @@ import {
   DollarSign,
   TrendingDown,
   Store,
+  ClipboardList,
   BookOpen,
   Book,
   Monitor,
@@ -126,6 +127,12 @@ const SALES_MENU_ITEMS: MenuItem[] = [
     href: "/sales/companies",
   },
   {
+    id: "customer-onboarding",
+    label: "KYC",
+    icon: ClipboardList,
+    href: "/sales/customers",
+  },
+  {
     id: "tasks",
     label: "Tasks",
     icon: CheckSquare,
@@ -202,12 +209,6 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     label: "Payslips",
     icon: FileText,
     href: "/workspace/payslips",
-  },
-  {
-    id: "departments",
-    label: "Departments",
-    icon: Building2,
-    href: "/workspace/departments",
   },
 ];
 
@@ -321,8 +322,10 @@ export default function SideNav() {
     pathname === "/product" ||
     pathname?.startsWith("/products") ||
     pathname?.startsWith("/product/");
-  // When on /sales, show Sales menu items (Deals, Leads, Companies, Tasks)
-  const isSalesPage = pathname?.startsWith("/sales");
+  // When on /sales or customer onboarding, show Sales submenu (includes onboarding form link)
+  const isSalesPage =
+    pathname?.startsWith("/sales") ||
+    pathname?.startsWith("/customer-onboarding");
   // When on /finances, show only finance menu items
   const isFinancePage = pathname?.startsWith("/finances");
   // When on /workspace, show workspace menu items
@@ -633,21 +636,21 @@ export default function SideNav() {
           <ul className="space-y-2">
             {menuItems.map((item) => renderMenuItem(item))}
             {isAdmin &&
-            !isProjectsPage &&
-            !isSalesPage &&
-            !isFinancePage &&
-            !isProductNavContext && (
-              <>
-                <li className="pt-4 pb-2">
-                  {!isCollapsed && (
-                    <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Administration
-                    </div>
-                  )}
-                </li>
-                {ADMIN_MENU_ITEMS.map((item) => renderMenuItem(item))}
-              </>
-            )}
+              !isProjectsPage &&
+              !isSalesPage &&
+              !isFinancePage &&
+              !isProductNavContext && (
+                <>
+                  <li className="pt-4 pb-2">
+                    {!isCollapsed && (
+                      <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Administration
+                      </div>
+                    )}
+                  </li>
+                  {ADMIN_MENU_ITEMS.map((item) => renderMenuItem(item))}
+                </>
+              )}
           </ul>
         </nav>
       </div>

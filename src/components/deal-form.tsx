@@ -24,13 +24,13 @@ import { Loader2, Plus } from "lucide-react";
 import {
   dealsApi,
   contactsApi,
-  clientsApi,
+  companiesApi,
   salesStagesApi,
   type Deal,
   type CreateDealInput,
   type CreateContactInput,
   type Contact,
-  type Client,
+  type Company,
   type SalesStage,
 } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
@@ -60,7 +60,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const { currency: defaultCurrency } = useCurrency();
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<Client[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [salesStages, setSalesStages] = useState<SalesStage[]>([]);
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createContactLoading, setCreateContactLoading] = useState(false);
@@ -134,7 +134,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
       try {
         const [contactsRes, companiesRes, stagesRes] = await Promise.all([
           contactsApi.getAll({ limit: 1000 }),
-          clientsApi.getAll({ limit: 1000 }),
+          companiesApi.getAll({ limit: 1000 }),
           salesStagesApi.getAll(),
         ]);
         setContacts(contactsRes.data);
@@ -378,7 +378,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           </SelectTrigger>
           <SelectContent>
             {companies.map((company) => (
-              <SelectItem key={company.id} value={company.id.toString()}>
+              <SelectItem key={company.company_id} value={company.company_id.toString()}>
                 {company.company_name || company.name}
               </SelectItem>
             ))}
@@ -387,7 +387,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         {formData.companies_associated && formData.companies_associated.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {formData.companies_associated.map((companyId) => {
-              const company = companies.find((c) => c.id === companyId);
+              const company = companies.find((c) => c.company_id === companyId);
               return (
                 <div
                   key={companyId}

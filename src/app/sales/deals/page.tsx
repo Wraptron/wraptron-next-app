@@ -94,7 +94,7 @@ const DealCard = ({
                   deal.client_company_name ||
                   "Deal"}
               </CardTitle>
-              {deal.client_id &&
+              {deal.company_id &&
                 (deal.client_company_name || deal.client_name) && (
                   <p className="text-sm text-gray-500 mt-0.5 truncate">
                     Customer:{" "}
@@ -174,7 +174,7 @@ const DealKanbanCard = ({
               deal.client_company_name ||
               "Deal"}
           </h4>
-          {deal.client_id && (deal.client_company_name || deal.client_name) && (
+          {deal.company_id && (deal.client_company_name || deal.client_name) && (
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
               Customer:{" "}
               {[deal.client_company_name, deal.client_name]

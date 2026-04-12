@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { clientsApi, type Client } from "@/lib/api";
+import { companiesApi, type Company } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ const getStatusColor = (status?: string) => {
   return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
 };
 
-const CompanyCard = ({ company, onEdit, onDelete }: { company: Client; onEdit: () => void; onDelete: () => void }) => (
+const CompanyCard = ({ company, onEdit, onDelete }: { company: Company; onEdit: () => void; onDelete: () => void }) => (
   <Card className="hover:shadow-md transition-shadow">
     <CardHeader>
       <div className="flex justify-between items-start">
@@ -89,7 +89,7 @@ const CompanyCard = ({ company, onEdit, onDelete }: { company: Client; onEdit: (
 
 export default function CompaniesPage() {
   const { setTitle } = usePageTitle();
-  const [companies, setCompanies] = useState<Client[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -102,15 +102,15 @@ export default function CompaniesPage() {
     return "list";
   });
   const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<Client | undefined>();
+  const [editingCompany, setEditingCompany] = useState<Company | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [companyToDelete, setCompanyToDelete] = useState<Client | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
   const fetchCompanies = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await clientsApi.getAll();
+      const response = await companiesApi.getAll();
       setCompanies(response.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch companies");
@@ -139,12 +139,12 @@ export default function CompaniesPage() {
     setFormDialogOpen(true);
   };
 
-  const handleEdit = (company: Client) => {
+  const handleEdit = (company: Company) => {
     setEditingCompany(company);
     setFormDialogOpen(true);
   };
 
-  const handleDelete = (company: Client) => {
+  const handleDelete = (company: Company) => {
     setCompanyToDelete(company);
     setDeleteDialogOpen(true);
   };
@@ -152,8 +152,8 @@ export default function CompaniesPage() {
   const confirmDelete = async () => {
     if (!companyToDelete) return;
     try {
-      await clientsApi.delete(companyToDelete.id);
-      setCompanies(companies.filter((c) => c.id !== companyToDelete.id));
+      await companiesApi.delete(companyToDelete.company_id);
+      setCompanies(companies.filter((c) => c.company_id !== companyToDelete.company_id));
       setDeleteDialogOpen(false);
       setCompanyToDelete(null);
     } catch (error) {
@@ -194,7 +194,7 @@ export default function CompaniesPage() {
                 </TableRow>
               ) : (
                 companies.map((company) => (
-                  <TableRow key={company.id} className="hover:bg-gray-50">
+                  <TableRow key={company.company_id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       {company.company_name || company.name}
                     </TableCell>
@@ -228,7 +228,7 @@ export default function CompaniesPage() {
     }
 
     if (viewMode === "kanban") {
-      const grouped: Record<string, Client[]> = {
+      const grouped: Record<string, Company[]> = {
         active: [],
         inactive: [],
         prospect: [],
@@ -265,7 +265,7 @@ export default function CompaniesPage() {
               </h3>
               <div className="space-y-2">
                 {grouped[column.key]?.map((company) => (
-                  <Card key={company.id} className="mb-2">
+                  <Card key={company.company_id} className="mb-2">
                     <CardContent className="p-3">
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-sm">
@@ -300,7 +300,7 @@ export default function CompaniesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {companies.map((company) => (
           <CompanyCard
-            key={company.id}
+            key={company.company_id}
             company={company}
             onEdit={() => handleEdit(company)}
             onDelete={() => handleDelete(company)}

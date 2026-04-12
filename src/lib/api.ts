@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
@@ -561,6 +561,27 @@ export interface Customer {
   contact_email?: string;
   contact_phone?: string;
   contact_person?: string;
+  /** FK → CRM `companies.company_id` */
+  company_id?: number;
+  /** FK → CRM `contacts.id` (primary contact) */
+  contact_id?: number;
+  signup_type?: string;
+  gst_registration_type?: string;
+  portal_access?: boolean;
+  website?: string;
+  country?: string;
+  onboarding_address?: string;
+  /** All contact ids (primary + `customer_contacts` junction). */
+  contacts_associated?: number[];
+  /** Resolved when `company_id` is set. */
+  company?: { company_id: number; name: string };
+  /** Resolved when `contact_id` is set. */
+  primary_contact?: {
+    id: number;
+    first_name: string;
+    last_name?: string;
+    email?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -578,6 +599,16 @@ export interface CreateCustomerInput {
   contact_email?: string;
   contact_phone?: string;
   contact_person?: string;
+  company_id?: number | null;
+  contact_id?: number | null;
+  /** Replaces junction rows; primary `contact_id` becomes the first id. */
+  contact_ids?: number[];
+  signup_type?: string;
+  gst_registration_type?: string;
+  portal_access?: boolean;
+  website?: string;
+  country?: string;
+  onboarding_address?: string;
 }
 
 export interface CustomersResponse {
@@ -631,6 +662,43 @@ export const customersApi = {
     return fetchApi<void>(`/api/customers/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+export interface CustomerOnboardingSubmitInput {
+  signupType: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  address: string;
+  country: string;
+  website?: string;
+  gstType: string;
+  portalAccess: "yes" | "no";
+  gstin?: string;
+}
+
+export interface CustomerOnboardingSubmitResponse {
+  success: boolean;
+  company_id: number;
+  contact_id: number;
+  customer_id: number;
+  customer_code: string;
+}
+
+/** Public KYC flow: creates CRM company + contact and finance customer in one request. */
+export const customerOnboardingApi = {
+  submit: async (
+    data: CustomerOnboardingSubmitInput,
+  ): Promise<CustomerOnboardingSubmitResponse> => {
+    return fetchApi<CustomerOnboardingSubmitResponse>(
+      "/api/customer-onboarding",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    );
   },
 };
 
@@ -814,6 +882,7 @@ export interface Employee {
   phone?: string;
   work_phone?: string;
   personal_email?: string;
+  github_username?: string;
   employment_type?:
     | "full_time"
     | "part_time"
@@ -873,6 +942,7 @@ export interface CreateEmployeeInput {
   phone?: string;
   work_phone?: string;
   personal_email?: string;
+  github_username?: string;
   employment_type?:
     | "full_time"
     | "part_time"
@@ -1023,6 +1093,21 @@ export const attendanceApi = {
     const q = sp.toString();
     return fetchApi(`/api/attendance/me/sessions${q ? `?${q}` : ""}`);
   },
+  getEmployeeSessions: async (
+    employeeId: number,
+    params?: {
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<{ sessions: AttendanceSession[] }> => {
+    const sp = new URLSearchParams();
+    if (params?.limit != null) sp.set("limit", String(params.limit));
+    if (params?.offset != null) sp.set("offset", String(params.offset));
+    const q = sp.toString();
+    return fetchApi(
+      `/api/attendance/employees/${employeeId}/sessions${q ? `?${q}` : ""}`,
+    );
+  },
   checkIn: async (data: {
     work_mode: WorkMode;
     location_lat?: number;
@@ -1083,7 +1168,7 @@ export interface Contact {
   postal_code?: string;
   notes?: string;
   tags?: string[];
-  client_id?: number;
+  company_id?: number;
   status: string;
   is_primary: boolean;
   preferred_contact_method?: string;
@@ -1120,7 +1205,7 @@ export interface CreateContactInput {
   postal_code?: string;
   notes?: string;
   tags?: string[];
-  client_id?: number;
+  company_id?: number;
   status?: string;
   is_primary?: boolean;
   preferred_contact_method?: string;
@@ -1143,7 +1228,7 @@ export interface ContactsResponse {
 export const contactsApi = {
   getAll: async (params?: {
     search?: string;
-    client_id?: number;
+    company_id?: number;
     status?: string;
     is_primary?: boolean;
     limit?: number;
@@ -1151,8 +1236,8 @@ export const contactsApi = {
   }): Promise<ContactsResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.append("search", params.search);
-    if (params?.client_id)
-      searchParams.append("client_id", params.client_id.toString());
+    if (params?.company_id)
+      searchParams.append("company_id", params.company_id.toString());
     if (params?.status) searchParams.append("status", params.status);
     if (params?.is_primary)
       searchParams.append("is_primary", params.is_primary.toString());
@@ -1193,9 +1278,9 @@ export const contactsApi = {
   },
 };
 
-// Clients
-export interface Client {
-  id: number;
+// Companies (CRM; table `companies`, primary key `company_id`)
+export interface Company {
+  company_id: number;
   name: string;
   company_name?: string;
   email?: string;
@@ -1225,7 +1310,7 @@ export interface Client {
   total_deal_value?: number;
 }
 
-export interface CreateClientInput {
+export interface CreateCompanyInput {
   name: string;
   company_name?: string;
   email?: string;
@@ -1248,21 +1333,21 @@ export interface CreateClientInput {
   employee_count?: number;
 }
 
-export interface ClientsResponse {
-  data: Client[];
+export interface CompaniesResponse {
+  data: Company[];
   total: number;
   limit: number;
   offset: number;
 }
 
-export interface ClientStats {
-  total_clients: number;
-  active_clients: number;
+export interface CompanyStats {
+  total_companies: number;
+  active_companies: number;
   total_deal_value: number;
   avg_rating: number;
 }
 
-export const clientsApi = {
+export const companiesApi = {
   getAll: async (params?: {
     search?: string;
     status?: string;
@@ -1270,7 +1355,7 @@ export const clientsApi = {
     company_size?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ClientsResponse> => {
+  }): Promise<CompaniesResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.append("search", params.search);
     if (params?.status) searchParams.append("status", params.status);
@@ -1281,36 +1366,38 @@ export const clientsApi = {
     if (params?.offset) searchParams.append("offset", params.offset.toString());
 
     const query = searchParams.toString();
-    return fetchApi<ClientsResponse>(`/api/clients${query ? `?${query}` : ""}`);
+    return fetchApi<CompaniesResponse>(
+      `/api/companies${query ? `?${query}` : ""}`,
+    );
   },
 
-  getById: async (id: number): Promise<Client> => {
-    return fetchApi<Client>(`/api/clients/${id}`);
+  getById: async (companyId: number): Promise<Company> => {
+    return fetchApi<Company>(`/api/companies/${companyId}`);
   },
 
-  getStats: async (): Promise<ClientStats> => {
-    return fetchApi<ClientStats>("/api/clients/stats");
+  getStats: async (): Promise<CompanyStats> => {
+    return fetchApi<CompanyStats>("/api/companies/stats");
   },
 
-  create: async (data: CreateClientInput): Promise<Client> => {
-    return fetchApi<Client>("/api/clients", {
+  create: async (data: CreateCompanyInput): Promise<Company> => {
+    return fetchApi<Company>("/api/companies", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
   update: async (
-    id: number,
-    data: Partial<CreateClientInput>,
-  ): Promise<Client> => {
-    return fetchApi<Client>(`/api/clients/${id}`, {
+    companyId: number,
+    data: Partial<CreateCompanyInput>,
+  ): Promise<Company> => {
+    return fetchApi<Company>(`/api/companies/${companyId}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
-  delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/clients/${id}`, {
+  delete: async (companyId: number): Promise<void> => {
+    return fetchApi<void>(`/api/companies/${companyId}`, {
       method: "DELETE",
     });
   },
@@ -1321,7 +1408,7 @@ export interface Deal {
   id: number;
   title: string;
   description?: string;
-  client_id?: number;
+  company_id?: number;
   contact_id?: number;
   value?: number;
   currency: string;
@@ -1351,7 +1438,7 @@ export interface Deal {
 export interface CreateDealInput {
   title: string;
   description?: string;
-  client_id?: number;
+  company_id?: number;
   contact_id?: number;
   value?: number;
   currency?: string;
@@ -1396,7 +1483,7 @@ export interface DealStats {
 export const dealsApi = {
   getAll: async (params?: {
     search?: string;
-    client_id?: number;
+    company_id?: number;
     contact_id?: number;
     stage?: string;
     status?: string;
@@ -1407,8 +1494,8 @@ export const dealsApi = {
   }): Promise<DealsResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.append("search", params.search);
-    if (params?.client_id)
-      searchParams.append("client_id", params.client_id.toString());
+    if (params?.company_id)
+      searchParams.append("company_id", params.company_id.toString());
     if (params?.contact_id)
       searchParams.append("contact_id", params.contact_id.toString());
     if (params?.stage) searchParams.append("stage", params.stage);
@@ -1632,7 +1719,9 @@ export const employeeSkillsApi = {
 
   updateEmployee: async (
     employeeId: number,
-    data: { assignments: Pick<EmployeeSkillAssignment, "skill_id" | "level">[] },
+    data: {
+      assignments: Pick<EmployeeSkillAssignment, "skill_id" | "level">[];
+    },
   ): Promise<{
     employee_id: number;
     assignments: EmployeeSkillAssignment[];
@@ -1781,7 +1870,9 @@ export const invoicesApi = {
     if (params?.limit) searchParams.append("limit", params.limit.toString());
     if (params?.offset) searchParams.append("offset", params.offset.toString());
     const query = searchParams.toString();
-    return fetchApi<InvoicesResponse>(`/api/invoices${query ? `?${query}` : ""}`);
+    return fetchApi<InvoicesResponse>(
+      `/api/invoices${query ? `?${query}` : ""}`,
+    );
   },
   getById: async (id: number): Promise<Invoice> => {
     return fetchApi<Invoice>(`/api/invoices/${id}`);

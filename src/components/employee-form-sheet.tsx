@@ -83,6 +83,7 @@ const getInitialFormState = (
   phone: employee?.phone ?? "",
   email: employee?.email ?? "",
   personal_email: employee?.personal_email ?? "",
+  github_username: employee?.github_username ?? "",
   link_user_email: employee?.linked_user_email ?? "",
   present_address: employee?.present_address ?? "",
   permanent_address: employee?.permanent_address ?? "",
@@ -233,6 +234,7 @@ export function EmployeeFormSheet({
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         personal_email: formData.personal_email || undefined,
+        github_username: formData.github_username || undefined,
         link_user_email:
           formData.link_user_email != null
             ? String(formData.link_user_email).trim()
@@ -455,6 +457,16 @@ export function EmployeeFormSheet({
                   onChange={(e) =>
                     setFormData({ ...formData, personal_email: e.target.value })
                   }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>GitHub Username</Label>
+                <Input
+                  value={formData.github_username ?? ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, github_username: e.target.value })
+                  }
+                  placeholder="e.g. octocat"
                 />
               </div>
               <div className="space-y-2">

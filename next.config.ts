@@ -72,6 +72,15 @@ import path from "path";
 const nextConfig: NextConfig = {
   // Set the output file tracing root to this directory to avoid lockfile warnings
   outputFileTracingRoot: path.join(__dirname),
+  async redirects() {
+    return [
+      {
+        source: "/onboarding",
+        destination: "/customer-onboarding",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/projects", destination: "/ppm/projects" },
