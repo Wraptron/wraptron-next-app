@@ -8,6 +8,9 @@ import {
   LogOut,
   Grip,
   ChevronRight,
+  Palette,
+  Languages,
+  Globe2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -63,7 +66,7 @@ export default function TopNavbar() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 pl-2 pr-4 md:px-4 py-3 sticky top-0 z-40">
+    <nav className="bg-background border-b border-border pl-2 pr-4 md:px-4 py-3 sticky top-0 z-40">
       <div className="flex items-center justify-between w-full">
         {/* Left side - Expand sidebar: top-left on mobile (always), when collapsed on desktop */}
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
@@ -91,11 +94,11 @@ export default function TopNavbar() {
           )}
           {title && (
             <div className="flex items-center space-x-3">
-              <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
               {subtitle && (
                 <>
-                  <span className="text-gray-300">/</span>
-                  <h2 className="text-lg font-medium text-gray-600">
+                  <span className="text-muted-foreground/50">/</span>
+                  <h2 className="text-lg font-medium text-muted-foreground">
                     {subtitle}
                   </h2>
                 </>
@@ -181,9 +184,27 @@ export default function TopNavbar() {
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link href="/settings#appearance">
+                  <Palette className="mr-2 h-4 w-4" />
+                  <span>Appearance</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link href="/settings#language">
+                  <Languages className="mr-2 h-4 w-4" />
+                  <span>Language</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link href="/settings#timezone">
+                  <Globe2 className="mr-2 h-4 w-4" />
+                  <span>Timezone</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />

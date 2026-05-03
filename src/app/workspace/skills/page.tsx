@@ -103,7 +103,7 @@ export default function WorkspaceSkillsMatrixPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-[100vw] mx-auto space-y-6">
         <div className="flex items-center gap-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>

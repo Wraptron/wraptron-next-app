@@ -523,7 +523,8 @@ export default function SideNav() {
           variant={isActive ? "secondary" : "ghost"}
           className={cn(
             "w-full justify-start h-10 px-3 relative",
-            isActive && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+            isActive &&
+              "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90",
             isCollapsed && "justify-center px-0 w-10",
             level > 0 && !isCollapsed && "pl-12",
           )}
@@ -533,7 +534,7 @@ export default function SideNav() {
             <Icon
               className={cn(
                 "h-5 w-5 flex-shrink-0 relative z-10",
-                isActive && "text-blue-700",
+                isActive && "text-sidebar-accent-foreground",
                 !isCollapsed && "mr-3",
               )}
             />
@@ -581,7 +582,7 @@ export default function SideNav() {
       )}
       <div
         className={cn(
-          "fixed top-0 left-0 bg-white border-r border-gray-200 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
+          "fixed top-0 left-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
           isCollapsed ? "hidden md:flex" : "flex",
           isCollapsed ? "w-16" : "w-full md:w-64",
         )}
@@ -589,7 +590,7 @@ export default function SideNav() {
         {/* Header: when expanded show title + collapse; when collapsed show logo (web) */}
         <div
           className={cn(
-            "border-b border-gray-200 flex-shrink-0",
+            "border-b border-sidebar-border flex-shrink-0",
             isCollapsed ? "px-0 py-3 flex justify-center" : "px-4 py-3",
           )}
         >
@@ -598,7 +599,7 @@ export default function SideNav() {
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className="flex items-center justify-center w-full min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 rounded"
+                className="flex items-center justify-center w-full min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring rounded"
                 aria-label="Wraptron home"
               >
                 <Image
@@ -612,7 +613,7 @@ export default function SideNav() {
             ) : (
               <>
                 <h2
-                  className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                  className="text-xl font-semibold text-sidebar-foreground cursor-pointer hover:text-primary transition-colors"
                   onClick={() => router.push("/")}
                 >
                   Wraptron
@@ -643,7 +644,7 @@ export default function SideNav() {
                 <>
                   <li className="pt-4 pb-2">
                     {!isCollapsed && (
-                      <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         Administration
                       </div>
                     )}

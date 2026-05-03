@@ -313,7 +313,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <section id="interface" className="scroll-mt-24 space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">

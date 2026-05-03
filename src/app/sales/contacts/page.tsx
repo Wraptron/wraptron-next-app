@@ -53,11 +53,14 @@ const telHref = (phone: string) =>
 
 /** Prefer mobile, then office phone, for click-to-call. */
 const contactDialNumber = (c: Contact) =>
-  (c.mobile?.trim() || c.phone?.trim()) || undefined;
+  c.mobile?.trim() || c.phone?.trim() || undefined;
 
 const contactDisplayName = (c: Contact) =>
   [c.prefix, c.first_name, c.last_name].filter(Boolean).join(" ").trim() ||
   "contact";
+
+const contactCompanyLine = (c: Contact) =>
+  (c.company || c.client_company_name)?.trim() || "";
 
 const getStatusColor = (status?: string) => {
   const colors: Record<string, string> = {
@@ -106,17 +109,10 @@ function ContactQuickActions({
     >
       {tel ? (
         <Button
-          className={cn(
-            "shrink-0 rounded-full p-0 transition-all",
-            sizeCls,
-          )}
+          className={cn("shrink-0 rounded-full p-0 transition-all", sizeCls)}
           asChild
         >
-          <a
-            href={telHref(tel)}
-            aria-label={`Call ${name}`}
-            title="Call"
-          >
+          <a href={telHref(tel)} aria-label={`Call ${name}`} title="Call">
             <Phone className={iconClass} strokeWidth={iconStroke} />
           </a>
         </Button>
@@ -130,11 +126,7 @@ function ContactQuickActions({
           )}
           asChild
         >
-          <a
-            href={`mailto:${mail}`}
-            aria-label={`Email ${name}`}
-            title="Email"
-          >
+          <a href={`mailto:${mail}`} aria-label={`Email ${name}`} title="Email">
             <Mail className={iconClass} strokeWidth={iconStroke} />
           </a>
         </Button>
@@ -143,8 +135,21 @@ function ContactQuickActions({
   );
 }
 
-const ContactCard = ({ contact, onClick, onEdit, onDelete }: { contact: Contact; onClick: () => void; onEdit: () => void; onDelete: () => void }) => (
-  <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+const ContactCard = ({
+  contact,
+  onClick,
+  onEdit,
+  onDelete,
+}: {
+  contact: Contact;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => (
+  <Card
+    className="hover:shadow-md transition-shadow cursor-pointer"
+    onClick={onClick}
+  >
     <CardHeader>
       <div className="flex justify-between items-start">
         <div>
@@ -152,13 +157,31 @@ const ContactCard = ({ contact, onClick, onEdit, onDelete }: { contact: Contact;
             {contact.prefix && `${contact.prefix} `}
             {contact.first_name} {contact.last_name || ""}
           </CardTitle>
-          {contact.title && <p className="text-sm text-gray-600 mt-1">{contact.title}</p>}
+          {contact.title && (
+            <p className="text-sm text-gray-600 mt-1">{contact.title}</p>
+          )}
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Edit">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            title="Edit"
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            title="Delete"
+          >
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
         </div>
@@ -242,7 +265,8 @@ export default function ContactsPage() {
   }, [searchParams, router]);
 
   const formatLoadError = (err: unknown) => {
-    const message = err instanceof Error ? err.message : "Failed to fetch contacts";
+    const message =
+      err instanceof Error ? err.message : "Failed to fetch contacts";
     const lower = message.toLowerCase();
     if (lower.includes("timeout") || lower.includes("timed out")) {
       return "Request timed out. Showing partial data where available. Please retry.";
@@ -259,7 +283,10 @@ export default function ContactsPage() {
 
     try {
       // Fast first paint: fetch first page, then progressively load the rest.
-      const first = await contactsApi.getAll({ limit: CONTACTS_PAGE_SIZE, offset: 0 });
+      const first = await contactsApi.getAll({
+        limit: CONTACTS_PAGE_SIZE,
+        offset: 0,
+      });
       if (requestId !== activeRequestRef.current) return;
 
       setContacts(first.data);
@@ -268,7 +295,11 @@ export default function ContactsPage() {
       const total = first.total ?? first.data.length;
       if (total > first.data.length) {
         setBackgroundLoading(true);
-        for (let offset = first.data.length; offset < total; offset += CONTACTS_PAGE_SIZE) {
+        for (
+          let offset = first.data.length;
+          offset < total;
+          offset += CONTACTS_PAGE_SIZE
+        ) {
           try {
             const next = await contactsApi.getAll({
               limit: CONTACTS_PAGE_SIZE,
@@ -389,8 +420,12 @@ export default function ContactsPage() {
                       {contact.first_name} {contact.last_name || ""}
                     </TableCell>
                     <TableCell>{contact.email || "N/A"}</TableCell>
-                    <TableCell>{contact.phone || contact.mobile || "N/A"}</TableCell>
-                    <TableCell>{contact.company || contact.client_company_name || "N/A"}</TableCell>
+                    <TableCell>
+                      {contact.phone || contact.mobile || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {contact.company || contact.client_company_name || "N/A"}
+                    </TableCell>
                     <TableCell>{contact.job_title || "N/A"}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(contact.status)}>
@@ -399,7 +434,9 @@ export default function ContactsPage() {
                     </TableCell>
                     <TableCell>
                       {contact.is_primary ? (
-                        <Badge className="bg-blue-100 text-blue-800">Primary</Badge>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          Primary
+                        </Badge>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
@@ -414,10 +451,20 @@ export default function ContactsPage() {
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)} title="Edit">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(contact)}
+                          title="Edit"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)} title="Delete">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(contact)}
+                          title="Delete"
+                        >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
@@ -478,27 +525,50 @@ export default function ContactsPage() {
                           {contact.prefix && `${contact.prefix} `}
                           {contact.first_name} {contact.last_name || ""}
                         </h4>
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(contact)} title="Edit">
+                        <div
+                          className="flex gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(contact)}
+                            title="Edit"
+                          >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(contact)} title="Delete">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(contact)}
+                            title="Delete"
+                          >
                             <Trash2 className="h-3 w-3 text-red-600" />
                           </Button>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-600">{contact.email || "No email"}</p>
-                      {contact.phone && <p className="text-xs text-gray-600">{contact.phone}</p>}
-                      {(contactDialNumber(contact) || contact.email?.trim()) && (
+                      <p className="text-xs text-gray-600">
+                        {contact.email || "No email"}
+                      </p>
+                      {contact.phone && (
+                        <p className="text-xs text-gray-600">{contact.phone}</p>
+                      )}
+                      {(contactDialNumber(contact) ||
+                        contact.email?.trim()) && (
                         <div onClick={(e) => e.stopPropagation()}>
-                          <ContactQuickActions contact={contact} size="kanban" />
+                          <ContactQuickActions
+                            contact={contact}
+                            size="kanban"
+                          />
                         </div>
                       )}
                     </CardContent>
                   </Card>
                 ))}
                 {(!grouped[column.key] || grouped[column.key].length === 0) && (
-                  <div className="text-sm text-gray-500 text-center py-4">No contacts</div>
+                  <div className="text-sm text-gray-500 text-center py-4">
+                    No contacts
+                  </div>
                 )}
               </div>
             </div>
@@ -524,21 +594,39 @@ export default function ContactsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-            <p className="text-gray-600 mt-1">{contacts.length} contacts</p>
+        <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center mb-6">
+          <div className="hidden md:block">
+            <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
+            <p className="text-muted-foreground mt-1">
+              {contacts.length} contacts
+            </p>
             {backgroundLoading && (
-              <p className="text-xs text-gray-500 mt-1">Loading more contacts...</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Loading more contacts...
+              </p>
             )}
             {backgroundError && (
-              <p className="text-xs text-amber-700 mt-1">{backgroundError}</p>
+              <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+                {backgroundError}
+              </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <ButtonGroup orientation="horizontal">
+
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <p className="text-sm text-muted-foreground md:hidden">
+              {contacts.length} contacts
+              {backgroundLoading && (
+                <span className="block text-xs mt-0.5">Loading more…</span>
+              )}
+              {backgroundError && (
+                <span className="block text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                  {backgroundError}
+                </span>
+              )}
+            </p>
+            <ButtonGroup orientation="horizontal" className="hidden md:flex">
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
@@ -561,17 +649,24 @@ export default function ContactsPage() {
                 <Columns3 className="h-4 w-4" />
               </Button>
             </ButtonGroup>
-            <Button onClick={fetchContacts} variant="outline" size="sm">
+            {/* <Button
+              onClick={fetchContacts}
+              variant="outline"
+              size="sm"
+              aria-label="Refresh contacts"
+            >
               <RefreshCw className="h-4 w-4" />
-            </Button>
+            </Button> */}
             <div className="inline-flex">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCreate}
-                className="rounded-r-none"
+                className="rounded-r-none px-2.5 md:px-3"
+                aria-label="New contact"
               >
-                <Plus className="h-4 w-4 mr-1" /> New Contact
+                <Plus className="h-4 w-4 md:mr-1" />
+                <span className="hidden md:inline">New Contact</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -579,7 +674,7 @@ export default function ContactsPage() {
                     variant="outline"
                     size="sm"
                     className="p-1 rounded-l-none border-l-0"
-                    aria-label="Contact actions"
+                    aria-label="More contact actions"
                   >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -598,19 +693,64 @@ export default function ContactsPage() {
         {loading && <div className="text-center py-8">Loading...</div>}
         {error && <div className="text-red-600 text-center py-8">{error}</div>}
 
-        {!loading && !error && (
-          contacts.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-lg border border-dashed">
+        {!loading &&
+          !error &&
+          (contacts.length === 0 ? (
+            <div className="text-center py-16 bg-card rounded-lg border border-dashed">
               <h3 className="text-xl font-medium mb-2">No contacts yet</h3>
-              <p className="text-gray-500 mb-6">Create your first contact to get started.</p>
-              <Button variant="default" onClick={handleCreate}>
+              <p className="text-muted-foreground mb-6">
+                Create your first contact to get started.
+              </p>
+              <Button
+                variant="default"
+                onClick={handleCreate}
+                aria-label="Create contact"
+              >
                 <Plus className="h-4 w-4 mr-2" /> Create Contact
               </Button>
             </div>
           ) : (
-            renderContacts()
-          )
-        )}
+            <>
+              <div className="md:hidden rounded-md border bg-card divide-y divide-border">
+                {contacts.map((contact) => {
+                  const name = contactDisplayName(contact);
+                  const company = contactCompanyLine(contact);
+                  return (
+                    <div
+                      key={contact.id}
+                      className="flex items-center gap-3 p-4"
+                    >
+                      <button
+                        type="button"
+                        className="flex-1 min-w-0 text-left"
+                        onClick={() => router.push(`/contacts/${contact.id}`)}
+                      >
+                        <div className="font-medium text-foreground truncate">
+                          {name}
+                        </div>
+                        {company ? (
+                          <div className="text-sm text-muted-foreground truncate mt-0.5">
+                            {company}
+                          </div>
+                        ) : null}
+                      </button>
+                      <div
+                        className="shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ContactQuickActions
+                          contact={contact}
+                          size="table"
+                          className="gap-2 justify-end"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden md:block">{renderContacts()}</div>
+            </>
+          ))}
 
         <ContactFormSheet
           open={formDialogOpen}
@@ -640,7 +780,10 @@ export default function ContactsPage() {
               ? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>

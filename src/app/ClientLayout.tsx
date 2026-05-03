@@ -9,6 +9,7 @@ import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 import { PageTitleProvider } from "@/contexts/page-title-context";
 import { CurrencyProvider } from "@/contexts/currency-context";
 import { SheetPushProvider } from "@/contexts/sheet-push-context";
+import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
 function MainContent({ children }: { children: React.ReactNode }) {
@@ -28,16 +29,16 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
   if (shouldHideSidebar) {
     return (
-      <main className="h-screen w-screen overflow-auto">
+      <main className="h-screen w-screen overflow-auto bg-background text-foreground">
         <div className="flex flex-row h-full w-full">
-          <div className="flex flex-col w-full h-full">{children}</div>
+          <div className="flex flex-col w-full h-full min-h-0">{children}</div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="h-screen w-screen overflow-hidden">
+    <main className="h-screen w-screen overflow-hidden bg-background text-foreground">
       <SideNav />
       <div
         className={cn(
@@ -50,7 +51,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
         </div>
         <div
           id="main-content-portal"
-          className="flex-1 overflow-y-auto pb-4 relative min-h-0"
+          className="flex-1 overflow-y-auto pb-4 relative min-h-0 bg-background text-foreground"
         >
           {children}
         </div>
@@ -63,18 +64,20 @@ export default function ClientLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <AuthProvider>
-      <ProtectedRoute>
-        <CurrencyProvider>
-          <PageTitleProvider>
-            <SidebarProvider>
-              <SheetPushProvider>
-                <MainContent>{children}</MainContent>
-              </SheetPushProvider>
-            </SidebarProvider>
-          </PageTitleProvider>
-        </CurrencyProvider>
-      </ProtectedRoute>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <AuthProvider>
+        <ProtectedRoute>
+          <CurrencyProvider>
+            <PageTitleProvider>
+              <SidebarProvider>
+                <SheetPushProvider>
+                  <MainContent>{children}</MainContent>
+                </SheetPushProvider>
+              </SidebarProvider>
+            </PageTitleProvider>
+          </CurrencyProvider>
+        </ProtectedRoute>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -82,7 +82,7 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -90,7 +90,7 @@ export default function ProductDetailPage() {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-background text-foreground p-8">
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardContent className="pt-6">
@@ -111,7 +111,7 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 sm:p-8">
       <div className="max-w-3xl mx-auto">
         <Link href="/products">
           <Button variant="ghost" size="sm" className="mb-4">

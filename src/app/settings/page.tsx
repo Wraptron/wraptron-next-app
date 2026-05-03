@@ -48,14 +48,23 @@ import {
   DollarSign,
   TrendingUp,
   FolderKanban,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useTheme } from "next-themes";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
+const UI_LOCALE_KEY = "wraptron-ui-locale";
 
 export default function Settings() {
   const { setTitle } = usePageTitle();
   const { currency, setCurrency, formatCurrency } = useCurrency();
+  const { theme, setTheme } = useTheme();
+  const [themeReady, setThemeReady] = useState(false);
+  const [uiLocale, setUiLocale] = useState("en");
   const [connections, setConnections] = useState<GitHubConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +116,28 @@ export default function Settings() {
     setTitle("Settings");
     return () => setTitle(null);
   }, [setTitle]);
+
+  useEffect(() => {
+    setThemeReady(true);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(UI_LOCALE_KEY);
+      if (stored) setUiLocale(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const handleUiLocaleChange = (value: string) => {
+    setUiLocale(value);
+    try {
+      localStorage.setItem(UI_LOCALE_KEY, value);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     fetchConnections();
@@ -470,7 +501,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Success Message */}
         {successMessage && (
@@ -489,6 +520,85 @@ export default function Settings() {
             <AlertDescription className="text-red-800">{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Profile menu: Appearance, Language, Timezone */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Preferences</CardTitle>
+            <CardDescription className="mt-2">
+              Display, language, and time settings for your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div id="appearance" className="scroll-mt-28 space-y-3">
+              <div>
+                <h3 className="text-sm font-medium text-foreground">Appearance</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose how Wraptron looks on this device.
+                </p>
+              </div>
+              {!themeReady ? (
+                <p className="text-sm text-muted-foreground">Loading theme…</p>
+              ) : (
+                <RadioGroup
+                  value={theme ?? "system"}
+                  onValueChange={setTheme}
+                  className="grid gap-3"
+                >
+                  <label
+                    htmlFor="theme-light"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                  >
+                    <RadioGroupItem value="light" id="theme-light" />
+                    <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">Light mode</span>
+                  </label>
+                  <label
+                    htmlFor="theme-dark"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                  >
+                    <RadioGroupItem value="dark" id="theme-dark" />
+                    <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">Dark mode</span>
+                  </label>
+                  <label
+                    htmlFor="theme-system"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                  >
+                    <RadioGroupItem value="system" id="theme-system" />
+                    <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">System</span>
+                  </label>
+                </RadioGroup>
+              )}
+            </div>
+            <div id="language" className="scroll-mt-28 space-y-3">
+              <div>
+                <h3 className="text-sm font-medium text-foreground">Language</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Interface language for menus and labels.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ui-language">Interface language</Label>
+                <Select value={uiLocale} onValueChange={handleUiLocaleChange}>
+                  <SelectTrigger id="ui-language" className="w-full max-w-xs">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div id="timezone" className="scroll-mt-28 space-y-2">
+              <h3 className="text-sm font-medium text-foreground">Timezone</h3>
+              <p className="text-sm text-muted-foreground">
+                Default timezone for dates and schedules will be available here.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Currency Settings Section */}
         <Card className="mb-6">

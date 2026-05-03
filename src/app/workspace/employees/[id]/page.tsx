@@ -222,7 +222,7 @@ export default function EmployeeDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground p-8 flex items-center justify-center">
         <div className="text-gray-500">Loading...</div>
       </div>
     );
@@ -230,7 +230,7 @@ export default function EmployeeDetailPage() {
 
   if (error || !employee) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-background text-foreground p-8">
         <div className="max-w-3xl mx-auto">
           <p className="text-red-600">{error ?? "Employee not found."}</p>
           <Button variant="outline" className="mt-4" asChild>
@@ -259,7 +259,7 @@ export default function EmployeeDetailPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-background text-foreground p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <Button variant="ghost" size="sm" asChild>

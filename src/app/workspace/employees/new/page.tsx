@@ -15,7 +15,7 @@ export default function NewEmployeePage() {
   }, [setTitle]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <EmployeeFormSheet
         open
         onOpenChange={(next) => {

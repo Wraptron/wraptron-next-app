@@ -519,7 +519,7 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-6xl mx-auto px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6">
           <Link href="/projects">

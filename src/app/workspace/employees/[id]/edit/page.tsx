@@ -39,11 +39,11 @@ export default function EditEmployeePage() {
   }, [id, router, setTitle]);
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen bg-background text-foreground" />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <EmployeeFormSheet
         open
         employee={employee ?? undefined}

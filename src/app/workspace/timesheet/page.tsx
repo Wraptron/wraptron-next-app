@@ -12,7 +12,7 @@ export default function TimesheetPage() {
   }, [setTitle]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900">Timesheet</h1>
         <p className="text-gray-600 mt-2">Log and manage your timesheet entries (coming soon).</p>

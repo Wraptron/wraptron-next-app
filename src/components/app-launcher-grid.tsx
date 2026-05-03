@@ -116,7 +116,7 @@ function UserFavicon({
         className={cn(
           sizeClass,
           roundedClass,
-          "bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200/80",
+          "bg-muted flex items-center justify-center text-muted-foreground border border-border",
         )}
       >
         <Globe className={iconClass} />
@@ -130,7 +130,7 @@ function UserFavicon({
       className={cn(
         sizeClass,
         roundedClass,
-        "object-contain bg-white border border-slate-200/80 p-1.5 shadow-sm",
+        "object-contain bg-card border border-border p-1.5 shadow-sm",
       )}
       onError={() => setBroken(true)}
     />
@@ -224,8 +224,8 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
 
   const builtinTilePadding = isCompact ? "p-3 gap-2" : "gap-3";
   const labelClass = isCompact
-    ? "text-xs font-medium text-gray-700 text-center line-clamp-2"
-    : "text-sm font-medium text-gray-700 group-hover:text-gray-900 text-center line-clamp-2 max-w-[5.5rem]";
+    ? "text-xs font-medium text-popover-foreground text-center line-clamp-2"
+    : "text-sm font-medium text-foreground/90 dark:text-foreground group-hover:text-foreground text-center line-clamp-2 max-w-[5.5rem]";
 
   return (
     <>
@@ -239,8 +239,8 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
               className={cn(
                 "group flex flex-col items-center cursor-pointer",
                 builtinTilePadding,
-                isCompact && "rounded-lg transition-colors hover:bg-gray-100",
-                isCompact && isActive && "bg-gray-100",
+                isCompact && "rounded-lg transition-colors hover:bg-accent",
+                isCompact && isActive && "bg-accent",
               )}
               onClick={() => {
                 router.push(app.href);
@@ -270,7 +270,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
               className={cn(
                 "group relative flex flex-col items-center cursor-pointer",
                 builtinTilePadding,
-                isCompact && "rounded-lg transition-colors hover:bg-gray-100",
+                isCompact && "rounded-lg transition-colors hover:bg-accent",
               )}
               onClick={() => {
                 window.open(app.url, "_blank", "noopener,noreferrer");
@@ -279,7 +279,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
             >
               <button
                 type="button"
-                className="absolute -top-0.5 -right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-gray-500 shadow-sm opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                className="absolute -top-0.5 -right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-popover text-muted-foreground shadow-sm border border-border opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                 aria-label={`Remove ${app.title}`}
                 onClick={(e) => void handleDeleteUserApp(e, app.id)}
               >
@@ -302,7 +302,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
             className={cn(
               "group flex flex-col items-center cursor-pointer",
               builtinTilePadding,
-              isCompact && "rounded-lg transition-colors hover:bg-gray-100",
+              isCompact && "rounded-lg transition-colors hover:bg-accent",
             )}
             onClick={openAddDialog}
           >
@@ -310,8 +310,8 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
               className={cn(
                 tileIconWrap,
                 tileRounded,
-                "flex items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 text-gray-500 transition-all",
-                "group-hover:border-gray-400 group-hover:bg-gray-100 group-hover:text-gray-700",
+                "flex items-center justify-center border-2 border-dashed border-border bg-muted/50 text-muted-foreground transition-all",
+                "group-hover:border-muted-foreground/50 group-hover:bg-accent group-hover:text-accent-foreground",
               )}
             >
               <Plus className={lucideIconClass} />
@@ -348,7 +348,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
               }}
             />
             {formError && (
-              <p className="text-sm text-red-600" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {formError}
               </p>
             )}

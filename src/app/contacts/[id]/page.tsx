@@ -62,7 +62,7 @@ export default function ContactDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     );
@@ -70,7 +70,7 @@ export default function ContactDetailPage() {
 
   if (error || !contact) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
         <div className="max-w-2xl mx-auto">
           <p className="text-red-600">{error || "Contact not found"}</p>
           <Button variant="outline" className="mt-4" asChild>
@@ -84,7 +84,7 @@ export default function ContactDetailPage() {
   const displayName = [contact.prefix, contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Unnamed";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Link href="/contacts">
