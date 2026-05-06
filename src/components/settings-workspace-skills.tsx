@@ -113,7 +113,7 @@ export function SettingsWorkspaceSkills() {
               <CardDescription className="mt-2 space-y-1">
                 <span className="block">
                   Define skill names (e.g. Frontend, UX, CMS) used in the employee skill matrix under
-                  Workspace.
+                  Human resources.
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   Levels (fixed):{" "}
@@ -137,7 +137,7 @@ export function SettingsWorkspaceSkills() {
             <div className="text-center py-8 text-gray-500">Loading skills...</div>
           ) : skills.length === 0 ? (
             <div className="text-center py-8 text-gray-600">
-              No skills yet. Add skills to build your team matrix under Workspace → Skill matrix.
+              No skills yet. Add skills to build your team matrix under Human resources → Skill matrix.
             </div>
           ) : (
             <div className="rounded-md border bg-white">

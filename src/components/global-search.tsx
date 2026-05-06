@@ -30,6 +30,7 @@ import {
   companiesApi,
   dealsApi,
 } from "@/lib/api";
+import { EMPLOYEES_BASE_PATH } from "@/lib/employee-routes";
 import { filterAppSearchRoutes } from "@/lib/app-search-routes";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -170,7 +171,7 @@ export function GlobalSearch() {
           kind: "employee",
           title: `${employee.first_name} ${employee.last_name}`,
           subtitle: employee.email || employee.emp_code,
-          url: `/workspace/employees/${employee.id}`,
+          url: `${EMPLOYEES_BASE_PATH}/${employee.id}`,
         });
       });
 

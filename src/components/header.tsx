@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Bell,
   User,
   Settings,
   LogOut,
@@ -21,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
@@ -34,12 +32,7 @@ export default function TopNavbar() {
   const { user, logout } = useAuth();
   const { title, subtitle } = usePageTitle();
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const [notificationCount, setNotificationCount] = useState(3);
   const [appsMenuOpen, setAppsMenuOpen] = useState(false);
-
-  const handleNotificationClick = () => {
-    setNotificationCount(0);
-  };
 
   const handleLogout = () => {
     logout();
@@ -66,7 +59,7 @@ export default function TopNavbar() {
   };
 
   return (
-    <nav className="bg-background border-b border-border pl-2 pr-4 md:px-4 py-3 sticky top-0 z-40">
+    <nav className="bg-background border-b border-border pl-2 pr-4 md:px-4 py-2.5 sticky top-0 z-40">
       <div className="flex items-center justify-between w-full">
         {/* Left side - Expand sidebar: top-left on mobile (always), when collapsed on desktop */}
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
@@ -109,28 +102,6 @@ export default function TopNavbar() {
 
         {/* Right side - Command, Notifications and Profile */}
         <div className="flex items-center space-x-4">
-          {/* Global Search */}
-          <GlobalSearch />
-
-          {/* Notifications */}
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="relative"
-              onClick={handleNotificationClick}
-            >
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
-                >
-                  {notificationCount}
-                </Badge>
-              )}
-            </Button>
-          </div>
           <div>
             <Link href="/settings">
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0">

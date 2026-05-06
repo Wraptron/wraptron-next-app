@@ -13,6 +13,7 @@ import {
   Store,
   Trash2,
   TrendingUp,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,14 @@ const BUILTIN_APPS: BuiltinApp[] = [
     icon: Briefcase,
     href: "/workspace",
     color: "bg-purple-500",
+  },
+  {
+    id: "human-resources",
+    name: "Human resources",
+    description: "Employees and people operations",
+    icon: Users,
+    href: "/hr",
+    color: "bg-indigo-500",
   },
   {
     id: "admin",

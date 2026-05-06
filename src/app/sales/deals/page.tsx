@@ -174,14 +174,15 @@ const DealKanbanCard = ({
               deal.client_company_name ||
               "Deal"}
           </h4>
-          {deal.company_id && (deal.client_company_name || deal.client_name) && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-              Customer:{" "}
-              {[deal.client_company_name, deal.client_name]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          )}
+          {deal.company_id &&
+            (deal.client_company_name || deal.client_name) && (
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                Customer:{" "}
+                {[deal.client_company_name, deal.client_name]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
         </div>
         <div className="flex gap-1 ml-2 shrink-0">
           {onEdit && (

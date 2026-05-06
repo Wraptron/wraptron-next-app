@@ -35,9 +35,23 @@ import {
   Layers,
   Flag,
   Grid3x3,
+  Info,
+  Bug,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { useAuth } from "@/contexts/auth-context";
@@ -98,6 +112,12 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     label: "Workspace",
     icon: Briefcase,
     href: "/workspace",
+  },
+  {
+    id: "human-resource",
+    label: "Human resources",
+    icon: Users,
+    href: "/hr",
   },
   {
     id: "settings",
@@ -181,18 +201,6 @@ const PRODUCT_SECTION_HREF: Record<string, string> = {
 
 const WORKSPACE_MENU_ITEMS: MenuItem[] = [
   {
-    id: "employees",
-    label: "Employees",
-    icon: Users,
-    href: "/workspace/employees",
-  },
-  {
-    id: "skills-matrix",
-    label: "Skill matrix",
-    icon: Grid3x3,
-    href: "/workspace/skills",
-  },
-  {
     id: "attendance",
     label: "Attendance",
     icon: ClipboardCheck,
@@ -209,6 +217,21 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     label: "Payslips",
     icon: FileText,
     href: "/workspace/payslips",
+  },
+];
+
+const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "employees",
+    label: "Employees",
+    icon: Users,
+    href: "/hr/employees",
+  },
+  {
+    id: "skills-matrix",
+    label: "Skill matrix",
+    icon: Grid3x3,
+    href: "/hr/skills",
   },
 ];
 
@@ -302,6 +325,8 @@ const FINANCE_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+const FEEDBACK_MAILTO = `mailto:dev@wraptron.com?subject=${encodeURIComponent("Wraptron feedback")}`;
+
 export default function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -309,6 +334,41 @@ export default function SideNav() {
   const { user } = useAuth();
   const [activeItem, setActiveItem] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [aboutVersion, setAboutVersion] = useState<string | null>(null);
+  const [aboutEntries, setAboutEntries] = useState<
+    { heading: string; items: string[] }[]
+  >([]);
+  const [aboutNotesLoading, setAboutNotesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!aboutOpen) return;
+    let cancelled = false;
+    setAboutNotesLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/changenotes?limit=3");
+        const data = (await res.json()) as {
+          appVersion?: string;
+          entries?: { heading: string; items: string[] }[];
+        };
+        if (!cancelled) {
+          setAboutVersion(data.appVersion ?? null);
+          setAboutEntries(Array.isArray(data.entries) ? data.entries : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setAboutVersion(null);
+          setAboutEntries([]);
+        }
+      } finally {
+        if (!cancelled) setAboutNotesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [aboutOpen]);
 
   const isAdmin = user?.role === "admin";
   const allMenuItems = isAdmin
@@ -328,8 +388,15 @@ export default function SideNav() {
     pathname?.startsWith("/customer-onboarding");
   // When on /finances, show only finance menu items
   const isFinancePage = pathname?.startsWith("/finances");
-  // When on /workspace, show workspace menu items
-  const isWorkspacePage = pathname?.startsWith("/workspace");
+  /** Employee CRUD under `/hr/employees`; `/workspace/employees/*` redirects here for old links. */
+  const isEmployeeManagementSection =
+    pathname?.startsWith("/hr") ||
+    pathname?.startsWith("/workspace/employees");
+  // When on /workspace (except employee pages), show workspace menu items
+  const isWorkspacePage =
+    pathname?.startsWith("/workspace") && !isEmployeeManagementSection;
+  // When on /hr only — used for layout tweaks (e.g. admin block), not employee pages
+  const isHumanResourcePage = pathname?.startsWith("/hr");
 
   const productsMenuItems = useMemo((): MenuItem[] => {
     return [
@@ -350,6 +417,8 @@ export default function SideNav() {
     menuItems = SALES_MENU_ITEMS;
   } else if (isFinancePage) {
     menuItems = FINANCE_MENU_ITEMS;
+  } else if (isEmployeeManagementSection) {
+    menuItems = HUMAN_RESOURCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
   } else {
@@ -420,6 +489,21 @@ export default function SideNav() {
       return;
     }
 
+    // For human resources / employee management (/hr/* or legacy /workspace/employees/*)
+    if (isEmployeeManagementSection) {
+      const hrItem = HUMAN_RESOURCE_MENU_ITEMS.find((item) =>
+        pathname.startsWith(item.href),
+      );
+      if (hrItem) {
+        setActiveItem(hrItem.id);
+        return;
+      }
+      if (pathname === "/hr" || pathname?.startsWith("/hr/")) {
+        setActiveItem(HUMAN_RESOURCE_MENU_ITEMS[0]?.id || "");
+      }
+      return;
+    }
+
     // For finance page, check finance menu items and their children
     if (isFinancePage) {
       for (const parentItem of FINANCE_MENU_ITEMS) {
@@ -476,6 +560,9 @@ export default function SideNav() {
     isFinancePage,
     isProjectsPage,
     isProductNavContext,
+    isHumanResourcePage,
+    isEmployeeManagementSection,
+    isWorkspacePage,
   ]);
 
   const handleItemClick = (
@@ -591,7 +678,7 @@ export default function SideNav() {
         <div
           className={cn(
             "border-b border-sidebar-border flex-shrink-0",
-            isCollapsed ? "px-0 py-3 flex justify-center" : "px-4 py-3",
+            isCollapsed ? "px-0 py-2 flex justify-center" : "px-4 py-3",
           )}
         >
           <div className="flex items-center justify-between w-full">
@@ -640,6 +727,7 @@ export default function SideNav() {
               !isProjectsPage &&
               !isSalesPage &&
               !isFinancePage &&
+              !isHumanResourcePage &&
               !isProductNavContext && (
                 <>
                   <li className="pt-4 pb-2">
@@ -654,6 +742,105 @@ export default function SideNav() {
               )}
           </ul>
         </nav>
+
+        <div
+          className={cn(
+            "border-t border-sidebar-border flex-shrink-0",
+            isCollapsed ? "py-2 px-0" : "py-2 px-2",
+          )}
+        >
+          <div
+            className={cn(
+              "flex gap-0.5",
+              isCollapsed
+                ? "flex-col items-center"
+                : "flex-row items-center justify-center",
+            )}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-sidebar-foreground"
+                  aria-label="About the app"
+                  onClick={() => setAboutOpen(true)}
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                About the app
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-sidebar-foreground"
+                  asChild
+                >
+                  <a href={FEEDBACK_MAILTO} aria-label="Submit feedback">
+                    <Bug className="h-4 w-4" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Submit feedback
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+
+        <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>About Wraptron</DialogTitle>
+              <DialogDescription className="text-pretty">
+                Wraptron helps you run day-to-day business operations—sales,
+                projects, products, workspace, and finances—in one place.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {aboutNotesLoading && !aboutVersion
+                ? "Loading version…"
+                : aboutVersion
+                  ? `Version ${aboutVersion}`
+                  : "Version —"}
+            </p>
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                Latest changes
+              </h3>
+              {aboutNotesLoading && aboutEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Loading notes…</p>
+              ) : aboutEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No change notes available.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {aboutEntries.map((entry, ei) => (
+                    <li key={`${entry.heading}-${ei}`}>
+                      <p className="text-xs font-medium text-foreground">
+                        {entry.heading}
+                      </p>
+                      {entry.items.length > 0 ? (
+                        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                          {entry.items.map((item, ii) => (
+                            <li key={`${ei}-${ii}`}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { Dashboard } from "@/components/dashboard";
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { setTitle } = usePageTitle();
 
   useEffect(() => {
@@ -11,5 +12,10 @@ export default function Dashboard() {
     return () => setTitle(null);
   }, [setTitle]);
 
-  return <div>Dashboard</div>;
+  return (
+    <Dashboard
+      title="Welcome back"
+      description="Jump into a module below or use the command palette to search."
+    />
+  );
 }
