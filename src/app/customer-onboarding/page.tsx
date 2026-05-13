@@ -87,8 +87,7 @@ const GST_TYPES_REQUIRING_GSTIN = [
 
 function gstTypeRequiresGstin(t: GstTypeId | ""): boolean {
   return (
-    t !== "" &&
-    (GST_TYPES_REQUIRING_GSTIN as readonly string[]).includes(t)
+    t !== "" && (GST_TYPES_REQUIRING_GSTIN as readonly string[]).includes(t)
   );
 }
 
@@ -120,7 +119,13 @@ const initialForm: FormState = {
   portalAccess: "",
 };
 
-function StepIndicator({ step, totalSteps }: { step: number; totalSteps: number }) {
+function StepIndicator({
+  step,
+  totalSteps,
+}: {
+  step: number;
+  totalSteps: number;
+}) {
   return (
     <div className="flex items-center justify-center gap-2 py-4">
       {Array.from({ length: totalSteps }, (_, i) => (
@@ -238,9 +243,7 @@ export default function CustomerOnboardingPage() {
         companyName: needsCo ? form.companyName.trim() : "",
         address: needsCo ? form.address.trim() : "",
         country: needsCo ? form.country.trim() : "",
-        website: needsCo
-          ? form.website.trim() || undefined
-          : undefined,
+        website: needsCo ? form.website.trim() || undefined : undefined,
         gstType: form.gstType,
         portalAccess: form.portalAccess as "yes" | "no",
         gstin: gstTypeRequiresGstin(form.gstType)
@@ -268,9 +271,7 @@ export default function CustomerOnboardingPage() {
           <Link href="/" className="inline-block mb-4">
             <Image width={200} height={32} src="/wordmark.svg" alt="Wraptron" />
           </Link>
-          <h1 className="text-2xl font-semibold text-neutral-900">
-            Thank you
-          </h1>
+          <h1 className="text-2xl font-semibold text-neutral-900">Thank you</h1>
           <p className="text-neutral-600 text-sm leading-relaxed">
             Your details have been saved to our systems. Our team will follow up
             if anything else is needed.
@@ -298,10 +299,7 @@ export default function CustomerOnboardingPage() {
               sizes="100vw"
               unoptimized
             />
-            <div
-              className="absolute inset-0 bg-neutral-950/60"
-              aria-hidden
-            />
+            <div className="absolute inset-0 bg-neutral-950/60" aria-hidden />
           </div>
           <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-12">
             <Link href="/" className="mb-8">
@@ -457,19 +455,17 @@ export default function CustomerOnboardingPage() {
 
                   <div className="grid gap-4 sm:grid-cols-1">
                     <div className="space-y-2">
-                      <Label htmlFor="contactName">Contact name</Label>
+                      <Label htmlFor="contactName">Your name</Label>
                       <Input
                         id="contactName"
                         value={form.contactName}
-                        onChange={(e) =>
-                          update("contactName", e.target.value)
-                        }
+                        onChange={(e) => update("contactName", e.target.value)}
                         placeholder="Full name"
                         autoComplete="name"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Your Email</Label>
                       <Input
                         id="email"
                         type="email"
@@ -480,7 +476,7 @@ export default function CustomerOnboardingPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone number</Label>
+                      <Label htmlFor="phone">Your Phone Number</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -511,9 +507,7 @@ export default function CustomerOnboardingPage() {
                       <Input
                         id="companyName"
                         value={form.companyName}
-                        onChange={(e) =>
-                          update("companyName", e.target.value)
-                        }
+                        onChange={(e) => update("companyName", e.target.value)}
                         placeholder="Legal entity name"
                       />
                     </div>
@@ -588,9 +582,9 @@ export default function CustomerOnboardingPage() {
                         setForm((f) => ({
                           ...f,
                           gstType: id,
-                          ...(!(GST_TYPES_REQUIRING_GSTIN as readonly string[]).includes(
-                            id,
-                          )
+                          ...(!(
+                            GST_TYPES_REQUIRING_GSTIN as readonly string[]
+                          ).includes(id)
                             ? { gstin: "" }
                             : {}),
                         }));
@@ -730,9 +724,7 @@ export default function CustomerOnboardingPage() {
                       </ul>
                     </div>
                     <div>
-                      <p className="font-medium text-neutral-800">
-                        Usage data
-                      </p>
+                      <p className="font-medium text-neutral-800">Usage data</p>
                       <p className="mt-1">
                         We collect information about how you use our website and
                         services, to enhance your experience on our website.
@@ -741,8 +733,8 @@ export default function CustomerOnboardingPage() {
                     <div>
                       <p className="font-medium text-neutral-800">Cookies</p>
                       <p className="mt-1">
-                        We use cookies. You can control the use of cookies at the
-                        individual browser level.
+                        We use cookies. You can control the use of cookies at
+                        the individual browser level.
                       </p>
                     </div>
                     <p>
@@ -761,11 +753,7 @@ export default function CustomerOnboardingPage() {
               )}
 
               <div className="mt-8 flex items-center justify-between gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={goBack}
-                >
+                <Button type="button" variant="outline" onClick={goBack}>
                   <ChevronLeft className="size-4" />
                   Back
                 </Button>
