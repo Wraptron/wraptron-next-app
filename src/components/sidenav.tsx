@@ -22,14 +22,11 @@ import {
   CheckSquare,
   FileText,
   FileSpreadsheet,
-  ShoppingCart,
   Receipt,
-  DollarSign,
-  TrendingDown,
-  Store,
-  ClipboardList,
   BookOpen,
   Book,
+  Store,
+  ClipboardList,
   Monitor,
   Sparkles,
   Layers,
@@ -246,62 +243,16 @@ const ADMIN_MENU_ITEMS: MenuItem[] = [
 
 const FINANCE_MENU_ITEMS: MenuItem[] = [
   {
-    id: "crm",
-    label: "Receive",
-    icon: TrendingUp,
-    href: "/finances/receive",
-    children: [
-      {
-        id: "sales-orders",
-        label: "Sales Orders",
-        icon: ShoppingCart,
-        href: "/finances/receive/orders",
-      },
-      {
-        id: "payments-received",
-        label: "Payments Received",
-        icon: DollarSign,
-        href: "/finances/receive/payments-received",
-      },
-      {
-        id: "customers",
-        label: "Customers",
-        icon: Users,
-        href: "/finances/receive/customers",
-      },
-    ],
+    id: "sales-invoices",
+    label: "Sales Invoices",
+    icon: FileText,
+    href: "/finances/invoices",
   },
   {
-    id: "purchases",
-    label: "Purchases",
-    icon: TrendingDown,
-    href: "/finances/purchases",
-    children: [
-      {
-        id: "expenses",
-        label: "Expenses",
-        icon: Receipt,
-        href: "/finances/purchases/expenses",
-      },
-      {
-        id: "purchase-orders",
-        label: "Purchase Orders",
-        icon: ShoppingCart,
-        href: "/finances/purchases/orders",
-      },
-      {
-        id: "payments-sent",
-        label: "Payments Sent",
-        icon: CreditCard,
-        href: "/finances/purchases/payments-sent",
-      },
-      {
-        id: "vendors",
-        label: "Vendors",
-        icon: Store,
-        href: "/finances/purchases/vendors",
-      },
-    ],
+    id: "expense-bills",
+    label: "Expense Bills",
+    icon: Receipt,
+    href: "/finances/bills",
   },
   {
     id: "accounts",
@@ -390,8 +341,7 @@ export default function SideNav() {
   const isFinancePage = pathname?.startsWith("/finances");
   /** Employee CRUD under `/hr/employees`; `/workspace/employees/*` redirects here for old links. */
   const isEmployeeManagementSection =
-    pathname?.startsWith("/hr") ||
-    pathname?.startsWith("/workspace/employees");
+    pathname?.startsWith("/hr") || pathname?.startsWith("/workspace/employees");
   // When on /workspace (except employee pages), show workspace menu items
   const isWorkspacePage =
     pathname?.startsWith("/workspace") && !isEmployeeManagementSection;

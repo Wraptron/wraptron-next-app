@@ -1,21 +1,26 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { contactsApi, type Contact } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
+import {
+  CollectionView,
+  type CollectionColumn,
+  type CollectionItem,
+} from "@/components/collection-view";
+import {
+  CollectionKanbanView,
+  type CollectionKanbanColumn,
+} from "@/components/collection-kanban-view";
+import {
+  CollectionPageToolbar,
+  useCollectionViewMode,
+  type CollectionViewMode,
+} from "@/components/collection-page-toolbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  RefreshCw,
   Plus,
-  Menu,
-  LayoutGrid,
-  Columns3,
   Edit,
   Trash2,
   ChevronDown,
@@ -45,8 +46,18 @@ import { ContactFormSheet } from "@/components/contact-form-sheet";
 import { ContactImportSheet } from "@/components/contact-import-sheet";
 import { cn } from "@/lib/utils";
 
-type ViewMode = "list" | "card" | "kanban";
 const CONTACTS_PAGE_SIZE = 200;
+
+const CONTACT_KANBAN_COLUMNS: CollectionKanbanColumn[] = [
+  { id: "active", label: "Active" },
+  { id: "inactive", label: "Inactive" },
+  { id: "archived", label: "Archived" },
+  { id: "other", label: "Other" },
+];
+
+const CONTACT_KANBAN_COLUMN_IDS = new Set(
+  CONTACT_KANBAN_COLUMNS.map((c) => c.id),
+);
 
 const telHref = (phone: string) =>
   `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
@@ -70,6 +81,138 @@ const getStatusColor = (status?: string) => {
   };
   return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
 };
+
+function contactKanbanColumnId(contact: Contact) {
+  const key = contact.status?.toLowerCase() ?? "other";
+  return CONTACT_KANBAN_COLUMN_IDS.has(key) ? key : "other";
+}
+
+function contactToCollectionItem(contact: Contact): CollectionItem {
+  return {
+    id: contact.id,
+    title: contactDisplayName(contact),
+    description: contact.email || contact.phone || contact.mobile || undefined,
+    meta: contactCompanyLine(contact) || undefined,
+    actions: contact.status ? (
+      <Badge variant="outline" className="text-[10px] px-1 py-0">
+        {contact.status}
+      </Badge>
+    ) : undefined,
+  };
+}
+
+function buildContactTableColumns(
+  contacts: Contact[],
+  onEdit: (contact: Contact) => void,
+  onDelete: (contact: Contact) => void,
+): CollectionColumn[] {
+  const byId = new Map(contacts.map((c) => [c.id, c]));
+
+  return [
+    {
+      id: "name",
+      header: "Name",
+      headerClassName: "w-[200px]",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return "—";
+        return (
+          <span>
+            {c.prefix && `${c.prefix} `}
+            {c.first_name} {c.last_name || ""}
+          </span>
+        );
+      },
+    },
+    {
+      id: "email",
+      header: "Email",
+      cell: (item) => byId.get(Number(item.id))?.email || "—",
+    },
+    {
+      id: "phone",
+      header: "Phone",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.phone || c?.mobile || "—";
+      },
+    },
+    {
+      id: "company",
+      header: "Company",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.company || c?.client_company_name || "—";
+      },
+    },
+    {
+      id: "job_title",
+      header: "Job Title",
+      cell: (item) => byId.get(Number(item.id))?.job_title || "—",
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c?.status) return "—";
+        return <Badge className={getStatusColor(c.status)}>{c.status}</Badge>;
+      },
+    },
+    {
+      id: "primary",
+      header: "Primary",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return "—";
+        return c.is_primary ? (
+          <Badge className="bg-blue-100 text-blue-800">Primary</Badge>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        );
+      },
+    },
+    {
+      id: "quick_actions",
+      header: (
+        <span className="inline-flex justify-end gap-1 text-muted-foreground">
+          <Phone className="size-3.5 opacity-70" aria-hidden />
+          <Mail className="size-3.5 opacity-70" aria-hidden />
+        </span>
+      ),
+      headerClassName: "w-[108px] text-right",
+      className: "text-right",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return null;
+        return (
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <ContactQuickActions contact={c} size="table" />
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      headerClassName: "w-[100px]",
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return null;
+        return (
+          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="sm" onClick={() => onEdit(c)} title="Edit">
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onDelete(c)} title="Delete">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+}
 
 function ContactQuickActions({
   contact,
@@ -232,20 +375,13 @@ export default function ContactsPage() {
   const [error, setError] = useState<string | null>(null);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("contacts_view_mode");
-      if (saved === "list" || saved === "card" || saved === "kanban") {
-        return saved as ViewMode;
-      }
-    }
-    return "list";
-  });
+  const [viewMode, setViewMode] = useCollectionViewMode("contacts_view_mode", "list");
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
   const activeRequestRef = useRef(0);
 
   // Open edit sheet when URL has ?edit=id (e.g. from contact detail page)
@@ -334,12 +470,6 @@ export default function ContactsPage() {
     return () => setTitle(null);
   }, [setTitle]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("contacts_view_mode", viewMode);
-    }
-  }, [viewMode]);
-
   const handleCreate = () => {
     setEditingContact(undefined);
     setFormDialogOpen(true);
@@ -374,212 +504,126 @@ export default function ContactsPage() {
     fetchContacts();
   };
 
-  const renderContacts = () => {
-    if (viewMode === "list") {
-      return (
-        <div className="rounded-md border bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Job Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Primary</TableHead>
-                <TableHead className="w-[108px] text-right">
-                  <span className="sr-only">Call or email</span>
-                  <span
-                    className="inline-flex justify-end gap-1 text-muted-foreground"
-                    aria-hidden
-                  >
-                    <Phone className="size-3.5 opacity-70" />
-                    <Mail className="size-3.5 opacity-70" />
-                  </span>
-                </TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contacts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    No contacts found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                contacts.map((contact) => (
-                  <TableRow
-                    key={contact.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => router.push(`/contacts/${contact.id}`)}
-                  >
-                    <TableCell className="font-medium">
-                      {contact.prefix && `${contact.prefix} `}
-                      {contact.first_name} {contact.last_name || ""}
-                    </TableCell>
-                    <TableCell>{contact.email || "N/A"}</TableCell>
-                    <TableCell>
-                      {contact.phone || contact.mobile || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {contact.company || contact.client_company_name || "N/A"}
-                    </TableCell>
-                    <TableCell>{contact.job_title || "N/A"}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(contact.status)}>
-                        {contact.status || "N/A"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {contact.is_primary ? (
-                        <Badge className="bg-blue-100 text-blue-800">
-                          Primary
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex justify-end">
-                        <ContactQuickActions contact={contact} size="table" />
-                      </div>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(contact)}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(contact)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+  const collectionItems = useMemo(
+    () => contacts.map(contactToCollectionItem),
+    [contacts],
+  );
+
+  const contactById = useMemo(
+    () => new Map(contacts.map((c) => [c.id, c])),
+    [contacts],
+  );
+
+  const contactTableColumns = useMemo(
+    () => buildContactTableColumns(contacts, handleEdit, handleDelete),
+    [contacts],
+  );
+
+  const handleContactKanbanMove = useCallback(
+    async (item: CollectionItem, toColumnId: string) => {
+      const id = Number(item.id);
+      const contact = contactById.get(id);
+      if (!contact) return;
+
+      const previousStatus = contact.status;
+      setContacts((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: toColumnId } : c)),
       );
-    }
 
-    if (viewMode === "kanban") {
-      const grouped: Record<string, Contact[]> = {
-        active: [],
-        inactive: [],
-        archived: [],
-        other: [],
-      };
+      try {
+        await contactsApi.update(id, { status: toColumnId });
+      } catch (err) {
+        setContacts((prev) =>
+          prev.map((c) =>
+            c.id === id ? { ...c, status: previousStatus } : c,
+          ),
+        );
+        console.error("Failed to update contact status:", err);
+      }
+    },
+    [contactById],
+  );
 
-      contacts.forEach((contact) => {
-        const status = contact.status?.toLowerCase() || "other";
-        if (grouped[status]) {
-          grouped[status].push(contact);
-        } else {
-          grouped.other.push(contact);
-        }
-      });
-
-      const columns = [
-        { key: "active", label: "Active", color: "bg-green-50" },
-        { key: "inactive", label: "Inactive", color: "bg-gray-50" },
-        { key: "archived", label: "Archived", color: "bg-red-50" },
-        { key: "other", label: "Other", color: "bg-blue-50" },
-      ];
-
+  const renderContactKanbanCard = useCallback(
+    (item: CollectionItem) => {
+      const contact = contactById.get(Number(item.id));
+      if (!contact) return null;
       return (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <div
-              key={column.key}
-              className={`flex-shrink-0 w-72 ${column.color} rounded-lg p-3`}
-            >
-              <h3 className="font-semibold mb-3 text-sm uppercase">
-                {column.label} ({grouped[column.key]?.length || 0})
-              </h3>
-              <div className="space-y-2">
-                {grouped[column.key]?.map((contact) => (
-                  <Card
-                    key={contact.id}
-                    className="mb-2 cursor-pointer hover:shadow-md"
-                    onClick={() => router.push(`/contacts/${contact.id}`)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-sm">
-                          {contact.prefix && `${contact.prefix} `}
-                          {contact.first_name} {contact.last_name || ""}
-                        </h4>
-                        <div
-                          className="flex gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(contact)}
-                            title="Edit"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(contact)}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        {contact.email || "No email"}
-                      </p>
-                      {contact.phone && (
-                        <p className="text-xs text-gray-600">{contact.phone}</p>
-                      )}
-                      {(contactDialNumber(contact) ||
-                        contact.email?.trim()) && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <ContactQuickActions
-                            contact={contact}
-                            size="kanban"
-                          />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-                {(!grouped[column.key] || grouped[column.key].length === 0) && (
-                  <div className="text-sm text-gray-500 text-center py-4">
-                    No contacts
-                  </div>
-                )}
+        <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
+          <CardContent className="p-3">
+            <div className="mb-2 flex items-start justify-between">
+              <h4 className="text-sm font-semibold">{contactDisplayName(contact)}</h4>
+              <div className="ml-2 flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEdit(contact)}>
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDelete(contact)}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
+            <p className="text-xs text-muted-foreground">{contact.email || "No email"}</p>
+            {contact.phone && (
+              <p className="text-xs text-muted-foreground">{contact.phone}</p>
+            )}
+            {(contactDialNumber(contact) || contact.email?.trim()) && (
+              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                <ContactQuickActions contact={contact} size="kanban" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    },
+    [contactById, handleEdit, handleDelete],
+  );
+
+  const renderContacts = (mode: CollectionViewMode) => {
+    if (mode === "list") {
+      return (
+        <CollectionView
+          loading={loading}
+          items={collectionItems}
+          columns={contactTableColumns}
+          primaryColumnId="name"
+          selectable
+          selectedIds={selectedContactIds}
+          onSelectedIdsChange={(ids) =>
+            setSelectedContactIds(ids.map((id) => Number(id)))
+          }
+          getRowHref={(item) => `/contacts/${item.id}`}
+          onRowClick={(item) => router.push(`/contacts/${item.id}`)}
+          emptyMessage="No contacts found."
+          loadingMessage="Loading contacts…"
+        />
       );
     }
 
-    // Card view
+    if (mode === "kanban") {
+      return (
+        <CollectionKanbanView
+          loading={loading}
+          items={collectionItems}
+          columns={CONTACT_KANBAN_COLUMNS}
+          groupBy={(item) => {
+            const contact = contactById.get(Number(item.id));
+            return contact ? contactKanbanColumnId(contact) : "other";
+          }}
+          getColumnSubtext={(_columnId, columnItems) => {
+            const count = columnItems.length;
+            return `${count} contact${count !== 1 ? "s" : ""}`;
+          }}
+          onItemMove={handleContactKanbanMove}
+          getRowHref={(item) => `/contacts/${item.id}`}
+          renderCard={renderContactKanbanCard}
+          emptyMessage="No contacts found."
+          loadingMessage="Loading contacts…"
+        />
+      );
+    }
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {contacts.map((contact) => (
           <ContactCard
             key={contact.id}
@@ -592,6 +636,9 @@ export default function ContactsPage() {
       </div>
     );
   };
+
+  const showEmpty = !loading && !error && contacts.length === 0;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -614,143 +661,95 @@ export default function ContactsPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 justify-end">
+          <CollectionPageToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            newAction={{
+              label: "New Contact",
+              onClick: handleCreate,
+              menuItems: [
+                {
+                  label: "Import",
+                  onClick: () => setImportSheetOpen(true),
+                  icon: <FileDown className="h-4 w-4" />,
+                },
+              ],
+            }}
+            className="w-full md:w-auto"
+          >
             <p className="text-sm text-muted-foreground md:hidden">
               {contacts.length} contacts
               {backgroundLoading && (
-                <span className="block text-xs mt-0.5">Loading more…</span>
+                <span className="mt-0.5 block text-xs">Loading more…</span>
               )}
               {backgroundError && (
-                <span className="block text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-500">
                   {backgroundError}
                 </span>
               )}
             </p>
-            <ButtonGroup orientation="horizontal" className="hidden md:flex">
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "card" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("card")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "kanban" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("kanban")}
-              >
-                <Columns3 className="h-4 w-4" />
-              </Button>
-            </ButtonGroup>
-            {/* <Button
-              onClick={fetchContacts}
-              variant="outline"
-              size="sm"
-              aria-label="Refresh contacts"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button> */}
-            <div className="inline-flex">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreate}
-                className="rounded-r-none px-2.5 md:px-3"
-                aria-label="New contact"
-              >
-                <Plus className="h-4 w-4 md:mr-1" />
-                <span className="hidden md:inline">New Contact</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="p-1 rounded-l-none border-l-0"
-                    aria-label="More contact actions"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setImportSheetOpen(true)}>
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Import
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+          </CollectionPageToolbar>
         </div>
 
-        {loading && <div className="text-center py-8">Loading...</div>}
-        {error && <div className="text-red-600 text-center py-8">{error}</div>}
+        {error && (
+          <div className="mb-4 py-8 text-center text-destructive">{error}</div>
+        )}
 
-        {!loading &&
-          !error &&
-          (contacts.length === 0 ? (
-            <div className="text-center py-16 bg-card rounded-lg border border-dashed">
-              <h3 className="text-xl font-medium mb-2">No contacts yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Create your first contact to get started.
-              </p>
-              <Button
-                variant="default"
-                onClick={handleCreate}
-                aria-label="Create contact"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Create Contact
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="md:hidden rounded-md border bg-card divide-y divide-border">
-                {contacts.map((contact) => {
-                  const name = contactDisplayName(contact);
-                  const company = contactCompanyLine(contact);
-                  return (
-                    <div
-                      key={contact.id}
-                      className="flex items-center gap-3 p-4"
+        {!showEmpty && !error && (
+          <>
+            <div className="md:hidden rounded-md border border-border bg-card divide-y divide-border">
+              {contacts.map((contact) => {
+                const name = contactDisplayName(contact);
+                const company = contactCompanyLine(contact);
+                return (
+                  <div
+                    key={contact.id}
+                    className="flex items-center gap-3 p-4"
+                  >
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => router.push(`/contacts/${contact.id}`)}
                     >
-                      <button
-                        type="button"
-                        className="flex-1 min-w-0 text-left"
-                        onClick={() => router.push(`/contacts/${contact.id}`)}
-                      >
-                        <div className="font-medium text-foreground truncate">
-                          {name}
-                        </div>
-                        {company ? (
-                          <div className="text-sm text-muted-foreground truncate mt-0.5">
-                            {company}
-                          </div>
-                        ) : null}
-                      </button>
-                      <div
-                        className="shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ContactQuickActions
-                          contact={contact}
-                          size="table"
-                          className="gap-2 justify-end"
-                        />
+                      <div className="truncate font-medium text-foreground">
+                        {name}
                       </div>
+                      {company ? (
+                        <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                          {company}
+                        </div>
+                      ) : null}
+                    </button>
+                    <div
+                      className="shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ContactQuickActions
+                        contact={contact}
+                        size="table"
+                        className="gap-2 justify-end"
+                      />
                     </div>
-                  );
-                })}
-              </div>
-              <div className="hidden md:block">{renderContacts()}</div>
-            </>
-          ))}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden md:block">{renderContacts(viewMode)}</div>
+          </>
+        )}
+
+        {showEmpty && (
+          <div className="rounded-lg border border-dashed py-16 text-center">
+            <h3 className="text-xl font-medium">No contacts yet</h3>
+            <p className="mt-2 text-muted-foreground">
+              Create your first contact to get started.
+            </p>
+            <Button variant="default" className="mt-6" onClick={handleCreate}>
+              <Plus className="mr-2 size-4" />
+              Create Contact
+            </Button>
+          </div>
+        )}
 
         <ContactFormSheet
           open={formDialogOpen}
