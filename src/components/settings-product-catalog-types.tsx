@@ -197,7 +197,7 @@ export function SettingsProductCatalogTypes() {
           ) : ifaceTypes.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">No types yet.</p>
           ) : (
-            <div className="rounded-md border bg-white">
+            <div className="rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -269,7 +269,7 @@ export function SettingsProductCatalogTypes() {
           ) : featTypes.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">No types yet.</p>
           ) : (
-            <div className="rounded-md border bg-white">
+            <div className="rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>

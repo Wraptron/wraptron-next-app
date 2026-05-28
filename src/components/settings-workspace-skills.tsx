@@ -134,13 +134,13 @@ export function SettingsWorkspaceSkills() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading skills...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading skills...</div>
           ) : skills.length === 0 ? (
-            <div className="text-center py-8 text-gray-600">
+            <div className="text-center py-8 text-muted-foreground">
               No skills yet. Add skills to build your team matrix under Human resources → Skill matrix.
             </div>
           ) : (
-            <div className="rounded-md border bg-white">
+            <div className="rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { projectsApi, type Task, type Project } from "@/lib/api";
+import {
+  employeesApi,
+  projectsApi,
+  type Employee,
+  type Task,
+  type Project,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,17 +47,21 @@ export default function EditTaskPage() {
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   // Form state
   const [title, setTitleValue] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("pending");
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState("unassigned");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [priority, setPriority] = useState("medium");
   const [complexity, setComplexity] = useState("medium");
   const [storyPoints, setStoryPoints] = useState<number>(0);
   const [notes, setNotes] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
 
   useEffect(() => {
     if (!projectId || !taskId || isNaN(projectId) || isNaN(taskId)) {
@@ -64,8 +74,15 @@ export default function EditTaskPage() {
       try {
         setLoading(true);
         // Fetch project to get tasks list - ideally we would have a getTaskById endpoint
-        const projectData = await projectsApi.getById(projectId);
+        const [projectData, projectsRes, employeesRes] = await Promise.all([
+          projectsApi.getById(projectId),
+          projectsApi.getAll({ limit: 500 }),
+          employeesApi.getAll({ employment_status: "active", limit: 500 }),
+        ]);
         setProject(projectData);
+        setProjects(projectsRes.data);
+        setEmployees(employeesRes.data);
+        setSelectedProjectId(String(projectData.id));
 
         const foundTask = projectData.tasks?.find((t) => t.id === taskId);
 
@@ -77,6 +94,11 @@ export default function EditTaskPage() {
           setTitleValue(foundTask.title);
           setDescription(foundTask.description || "");
           setStatus(foundTask.status || "pending");
+          setAssignedEmployeeId(
+            foundTask.assigned_employee_id != null
+              ? String(foundTask.assigned_employee_id)
+              : "unassigned",
+          );
 
           // Populate new fields if they exist in the task object
           // Since we are adding these fields now, they might be undefined initially
@@ -105,6 +127,8 @@ export default function EditTaskPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectId || !taskId || !task) return;
+    const targetProjectId = Number(selectedProjectId || projectId);
+    if (Number.isNaN(targetProjectId)) return;
 
     if (!title.trim()) {
       // You might want to show a specific error for title
@@ -135,6 +159,10 @@ export default function EditTaskPage() {
         ...task,
         title,
         description,
+        assigned_employee_id:
+          assignedEmployeeId === "unassigned"
+            ? null
+            : Number(assignedEmployeeId),
         status,
         start_date: startDate,
         end_date: endDate,
@@ -146,9 +174,9 @@ export default function EditTaskPage() {
       };
 
       // We will implement a `updateTask` method in api.ts next.
-      await projectsApi.updateTask(projectId, taskId, updatedTask);
+      await projectsApi.updateTask(targetProjectId, taskId, updatedTask);
 
-      router.push(`/projects/${projectId}`);
+      router.push(`/projects/${targetProjectId}`);
     } catch (err) {
       console.error("Error updating task:", err);
       // Show error toast or message
@@ -176,7 +204,7 @@ export default function EditTaskPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">{error || "Task not found"}</p>
+            <p className="text-muted-foreground mb-4">{error || "Task not found"}</p>
             <Link href={`/projects/${projectId}`}>
               <Button>Back to Project</Button>
             </Link>
@@ -200,7 +228,7 @@ export default function EditTaskPage() {
             </Button>
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Edit Task</h1>
+            <h1 className="text-2xl font-bold text-foreground">Edit Task</h1>
             <Badge
               variant={
                 status === "completed" || status === "done"
@@ -260,6 +288,26 @@ export default function EditTaskPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="assignedTo">Assign to</Label>
+                  <Select
+                    value={assignedEmployeeId}
+                    onValueChange={setAssignedEmployeeId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {employees.map((employee) => (
+                        <SelectItem key={employee.id} value={String(employee.id)}>
+                          {`${employee.first_name} ${employee.last_name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="priority">Priority</Label>
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger>
@@ -274,13 +322,32 @@ export default function EditTaskPage() {
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="project">Project</Label>
+                <Select
+                  value={selectedProjectId}
+                  onValueChange={setSelectedProjectId}
+                >
+                  <SelectTrigger id="project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.project_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-gray-500" />
+                <Calendar className="h-5 w-5 text-muted-foreground" />
                 Planning & Complexity
               </CardTitle>
             </CardHeader>
@@ -325,7 +392,7 @@ export default function EditTaskPage() {
                 <div className="space-y-2">
                   <Label htmlFor="storyPoints">Story Points</Label>
                   <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-gray-500" />
+                    <Hash className="h-4 w-4 text-muted-foreground" />
                     <Input
                       id="storyPoints"
                       type="number"
@@ -345,7 +412,7 @@ export default function EditTaskPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-gray-500" />
+                <FileText className="h-5 w-5 text-muted-foreground" />
                 Additional Notes
               </CardTitle>
             </CardHeader>
@@ -361,7 +428,7 @@ export default function EditTaskPage() {
           </Card>
 
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Link href={`/projects/${projectId}`}>
+            <Link href={`/projects/${selectedProjectId || projectId}`}>
               <Button type="button" variant="outline">
                 Cancel
               </Button>

@@ -10,7 +10,6 @@ import {
   Box,
   Headset,
   ChartPie,
-  Shield,
   Users,
   ClipboardCheck,
   Building2,
@@ -34,6 +33,7 @@ import {
   Grid3x3,
   Info,
   Bug,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,6 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
-import { useAuth } from "@/contexts/auth-context";
 
 interface MenuItem {
   id: string;
@@ -155,6 +154,12 @@ const SALES_MENU_ITEMS: MenuItem[] = [
     icon: CheckSquare,
     href: "/sales/tasks",
   },
+  {
+    id: "activities",
+    label: "Activities",
+    icon: Activity,
+    href: "/sales/activities",
+  },
 ];
 
 const PROJECTS_MENU_ITEMS: MenuItem[] = [
@@ -198,10 +203,22 @@ const PRODUCT_SECTION_HREF: Record<string, string> = {
 
 const WORKSPACE_MENU_ITEMS: MenuItem[] = [
   {
+    id: "workspace-dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/workspace/dashboard",
+  },
+  {
     id: "attendance",
     label: "Attendance",
     icon: ClipboardCheck,
     href: "/workspace/attendance",
+  },
+  {
+    id: "workspace-tasks",
+    label: "Tasks",
+    icon: CheckSquare,
+    href: "/workspace/tasks",
   },
   {
     id: "timesheet",
@@ -232,12 +249,42 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-const ADMIN_MENU_ITEMS: MenuItem[] = [
+const SETTINGS_MENU_ITEMS: MenuItem[] = [
   {
-    id: "admin-users",
+    id: "settings-general",
+    label: "General",
+    icon: Settings,
+    href: "/settings?section=general",
+  },
+  {
+    id: "settings-display-preferences",
+    label: "Display Preferences",
+    icon: Monitor,
+    href: "/settings?section=display-preferences",
+  },
+  {
+    id: "settings-user-management",
     label: "User Management",
-    icon: Shield,
-    href: "/admin/users",
+    icon: Users,
+    href: "/settings?section=user-management",
+  },
+  {
+    id: "settings-integrations",
+    label: "Integrations",
+    icon: Briefcase,
+    href: "/settings?section=integrations",
+  },
+  {
+    id: "settings-apps",
+    label: "Apps",
+    icon: Store,
+    href: "/settings?section=apps",
+  },
+  {
+    id: "settings-notifications",
+    label: "Notifications",
+    icon: Activity,
+    href: "/settings?section=notifications",
   },
 ];
 
@@ -282,7 +329,6 @@ export default function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { user } = useAuth();
   const [activeItem, setActiveItem] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -321,10 +367,7 @@ export default function SideNav() {
     };
   }, [aboutOpen]);
 
-  const isAdmin = user?.role === "admin";
-  const allMenuItems = isAdmin
-    ? [...MAIN_MENU_ITEMS, ...ADMIN_MENU_ITEMS]
-    : MAIN_MENU_ITEMS;
+  const allMenuItems = MAIN_MENU_ITEMS;
 
   // When on /projects, show Projects and Tasks in sidebar
   const isProjectsPage = pathname?.startsWith("/projects");
@@ -345,6 +388,7 @@ export default function SideNav() {
   // When on /workspace (except employee pages), show workspace menu items
   const isWorkspacePage =
     pathname?.startsWith("/workspace") && !isEmployeeManagementSection;
+  const isSettingsPage = pathname?.startsWith("/settings");
   // When on /hr only — used for layout tweaks (e.g. admin block), not employee pages
   const isHumanResourcePage = pathname?.startsWith("/hr");
 
@@ -371,6 +415,8 @@ export default function SideNav() {
     menuItems = HUMAN_RESOURCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
+  } else if (isSettingsPage) {
+    menuItems = SETTINGS_MENU_ITEMS;
   } else {
     menuItems = allMenuItems;
   }
@@ -501,6 +547,11 @@ export default function SideNav() {
       return;
     }
 
+    if (isSettingsPage) {
+      setActiveItem((prev) => prev || SETTINGS_MENU_ITEMS[0]?.id || "");
+      return;
+    }
+
     const mainItem = menuItems.find((item) => pathname.startsWith(item.href));
     if (mainItem) setActiveItem(mainItem.id);
   }, [
@@ -513,6 +564,7 @@ export default function SideNav() {
     isHumanResourcePage,
     isEmployeeManagementSection,
     isWorkspacePage,
+    isSettingsPage,
   ]);
 
   const handleItemClick = (
@@ -673,23 +725,6 @@ export default function SideNav() {
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
             {menuItems.map((item) => renderMenuItem(item))}
-            {isAdmin &&
-              !isProjectsPage &&
-              !isSalesPage &&
-              !isFinancePage &&
-              !isHumanResourcePage &&
-              !isProductNavContext && (
-                <>
-                  <li className="pt-4 pb-2">
-                    {!isCollapsed && (
-                      <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Administration
-                      </div>
-                    )}
-                  </li>
-                  {ADMIN_MENU_ITEMS.map((item) => renderMenuItem(item))}
-                </>
-              )}
           </ul>
         </nav>
 

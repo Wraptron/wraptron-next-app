@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProjectFormSheet } from "@/components/project-form-sheet";
+import { ProjectTaskCompletion } from "@/components/project-task-completion";
 import {
   DndContext,
   DragOverlay,
@@ -70,14 +71,14 @@ const formatDate = (dateString?: string) => {
 
 const getStatusColor = (status?: string) => {
   const colors = {
-    active: "bg-green-100 text-green-800",
-    completed: "bg-blue-100 text-blue-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    inactive: "bg-red-100 text-red-800",
+    active: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+    completed: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+    pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300",
+    inactive: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
   };
   return (
     colors[status?.toLowerCase() as keyof typeof colors] ||
-    "bg-gray-100 text-gray-800"
+    "bg-muted text-muted-foreground"
   );
 };
 
@@ -96,7 +97,9 @@ const ProjectCard = ({ project }: { project: Project }) => (
         </Badge>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 text-sm">
+        <div className="space-y-3 text-sm">
+          <ProjectTaskCompletion tasks={project.tasks} variant="compact" />
+          <div className="space-y-2">
           <div className="flex justify-between">
             <span>Tasks:</span>
             <span>{project.tasks?.length || 0}</span>
@@ -109,6 +112,7 @@ const ProjectCard = ({ project }: { project: Project }) => (
             <span>Target:</span>
             <span>{formatDate(project.target_date)}</span>
           </div>
+        </div>
         </div>
       </CardContent>
     </Card>
@@ -131,7 +135,7 @@ const ProjectKanbanCard = ({
   onEdit?: () => void;
   onDelete?: () => void;
 }) => (
-  <Card className="border-[0.5px] border-gray-200 shadow-none cursor-grab active:cursor-grabbing bg-white">
+  <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
     <CardContent className="p-3">
       <div className="flex justify-between items-start mb-2">
         <div className="min-w-0 flex-1">
@@ -173,9 +177,9 @@ const ProjectKanbanCard = ({
           {project.status || "No status"}
         </Badge>
       </div>
-      <div className="text-xs text-gray-500">
-        <div>Tasks: {project.tasks?.length || 0}</div>
-        <div className="mt-1">Target: {formatDate(project.target_date)}</div>
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <ProjectTaskCompletion tasks={project.tasks} variant="compact" />
+        <div>Target: {formatDate(project.target_date)}</div>
       </div>
     </CardContent>
   </Card>
@@ -241,11 +245,11 @@ const KanbanColumn = ({
   return (
     <div
       ref={setNodeRef}
-      className="flex-shrink-0 w-72 border-[0.5px] border-gray-200 bg-white rounded-none h-full overflow-y-auto flex flex-col"
+      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
     >
-      <div className="border-b border-gray-200 px-3 py-2 flex-shrink-0">
-        <h3 className="font-medium text-sm text-gray-900">{label}</h3>
-        <p className="text-xs text-gray-500 mt-0.5">{statusSubtext}</p>
+      <div className="shrink-0 border-b border-border px-3 py-2">
+        <h3 className="text-sm font-medium text-foreground">{label}</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">{statusSubtext}</p>
       </div>
       <div className="flex-1 p-2 min-h-0 overflow-y-auto">
         <SortableContext
@@ -263,7 +267,7 @@ const KanbanColumn = ({
               />
             ))}
             {projects.length === 0 && (
-              <div className="text-sm text-gray-400 text-center py-6 italic border border-dashed border-gray-200">
+              <div className="border border-dashed border-border py-6 text-center text-sm italic text-muted-foreground">
                 Drop here
               </div>
             )}
@@ -484,14 +488,14 @@ const Projects = () => {
   const renderProjects = () => {
     if (viewMode === "list") {
       return (
-        <div className="rounded-md border bg-white">
+        <div className="rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
                     checked={
                       projects.length > 0 &&
                       selectedProjects.length === projects.length
@@ -502,6 +506,7 @@ const Projects = () => {
                 </TableHead>
                 <TableHead className="w-[300px]">Project Name</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Progress</TableHead>
                 <TableHead>Tasks</TableHead>
                 <TableHead>Start Date</TableHead>
                 <TableHead>Target Date</TableHead>
@@ -510,7 +515,7 @@ const Projects = () => {
             <TableBody>
               {projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -518,8 +523,8 @@ const Projects = () => {
                 projects.map((project) => (
                   <TableRow
                     key={project.id}
-                    className={`cursor-pointer hover:bg-gray-50 ${
-                      selectedProjects.includes(project.id) ? "bg-blue-50" : ""
+                    className={`cursor-pointer hover:bg-muted/50 ${
+                      selectedProjects.includes(project.id) ? "bg-primary/10" : ""
                     }`}
                     onClick={() => router.push(`/projects/${project.id}`)}
                   >
@@ -531,7 +536,7 @@ const Projects = () => {
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
                         checked={selectedProjects.includes(project.id)}
                         onChange={() => {}} // Handle change in parent click for better hit area
                         onClick={(e) => e.stopPropagation()}
@@ -549,6 +554,12 @@ const Projects = () => {
                       <Badge className={getStatusColor(project.status)}>
                         {project.status || "No status"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <ProjectTaskCompletion
+                        tasks={project.tasks}
+                        variant="compact"
+                      />
                     </TableCell>
                     <TableCell>{project.tasks?.length || 0}</TableCell>
                     <TableCell>{formatDate(project.start_date)}</TableCell>
@@ -576,7 +587,7 @@ const Projects = () => {
       }
 
       return (
-        <div className="h-[calc(100vh-200px)] border-[0.5px] border-gray-200 bg-white overflow-hidden flex flex-col">
+        <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-card">
           <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
             <DndContext
               sensors={sensors}
@@ -630,7 +641,7 @@ const Projects = () => {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <p className="text-gray-600">{projects.length} projects</p>
+            <p className="text-muted-foreground">{projects.length} projects</p>
           </div>
           <div className="flex items-center gap-2">
             <ButtonGroup orientation="horizontal">
@@ -673,7 +684,7 @@ const Projects = () => {
         </div>
 
         {selectedProjects.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
+          <div className="mb-6 flex items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
             <span className="text-sm font-medium">
               {selectedProjects.length} item
               {selectedProjects.length === 1 ? "" : "s"} selected
@@ -683,7 +694,7 @@ const Projects = () => {
                 variant="outline"
                 size="sm"
                 disabled={isDeleting}
-                className="bg-white hover:bg-blue-50 text-red-600 border-red-200 hover:border-red-300"
+                className="border-destructive/30 bg-card text-destructive hover:border-destructive/50 hover:bg-destructive/10"
                 onClick={() => setDeleteDialogOpen(true)}
               >
                 Delete Selected
@@ -734,7 +745,7 @@ const Projects = () => {
           (projects.length === 0 ? (
             <div className="text-center py-16">
               <h3 className="text-xl mb-2">No projects yet</h3>
-              <p className="text-gray-600">Create your first project above.</p>
+              <p className="text-muted-foreground">Create your first project above.</p>
             </div>
           ) : (
             renderProjects()

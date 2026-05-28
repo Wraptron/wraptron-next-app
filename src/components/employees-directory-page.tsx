@@ -48,7 +48,7 @@ type ViewMode = "list" | "card" | "kanban";
 
 function EmployeeKanbanCard({ employee }: { employee: Employee }) {
   return (
-    <Card className="border-[0.5px] border-gray-200 shadow-none bg-white">
+    <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
       <CardContent className="p-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9 shrink-0">
@@ -61,12 +61,12 @@ function EmployeeKanbanCard({ employee }: { employee: Employee }) {
             <div className="font-semibold text-sm line-clamp-1">
               {displayName(employee)}
             </div>
-            <div className="text-xs text-gray-500 line-clamp-1 mt-0.5">
+            <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
               {employee.designation || employee.role || "—"}
               {employee.department ? ` · ${employee.department}` : ""}
             </div>
             {(employee.email || employee.phone) && (
-              <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <div className="text-xs text-muted-foreground mt-2 space-y-1">
                 {employee.email && (
                   <div className="flex items-center gap-1 truncate">
                     <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -157,7 +157,7 @@ export function EmployeesDirectoryPage() {
     if (s === "pre_onboarding") return "bg-indigo-100 text-indigo-800";
     if (s === "notice_period") return "bg-amber-100 text-amber-800";
     if (s === "exited") return "bg-red-100 text-red-800";
-    return "bg-gray-100 text-gray-800";
+    return "bg-muted text-muted-foreground";
   };
 
   const statusLabel = (status?: string) => {
@@ -203,7 +203,7 @@ export function EmployeesDirectoryPage() {
   const renderEmployees = () => {
     if (viewMode === "list") {
       return (
-        <div className="rounded-md border bg-white">
+        <div className="rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -230,7 +230,7 @@ export function EmployeesDirectoryPage() {
                 employees.map((employee) => (
                   <TableRow
                     key={employee.id}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-muted/50"
                     onClick={() =>
                       (window.location.href = `${EMPLOYEES_BASE_PATH}/${employee.id}`)
                     }
@@ -255,7 +255,7 @@ export function EmployeesDirectoryPage() {
                               {displayName(employee)}
                             </Link>
                           </div>
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="text-xs text-muted-foreground truncate">
                             {employee.designation || employee.role || "—"}
                           </div>
                         </div>
@@ -268,7 +268,7 @@ export function EmployeesDirectoryPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {employee.email || employee.phone || "—"}
                       </div>
                     </TableCell>
@@ -285,7 +285,7 @@ export function EmployeesDirectoryPage() {
                               className="h-8 w-8"
                               aria-label="Employee actions"
                             >
-                              <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -333,7 +333,7 @@ export function EmployeesDirectoryPage() {
       }
 
       return (
-        <div className="h-[calc(100vh-200px)] border-[0.5px] border-gray-200 bg-white overflow-hidden flex flex-col">
+        <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-card">
           <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
             <div className="flex h-full py-0">
               {columns.map((col) => {
@@ -341,13 +341,13 @@ export function EmployeesDirectoryPage() {
                 return (
                   <div
                     key={col.key}
-                    className="flex-shrink-0 w-72 border-[0.5px] border-gray-200 bg-white rounded-none h-full overflow-y-auto flex flex-col"
+                    className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
                   >
-                    <div className="border-b border-gray-200 px-3 py-2 flex-shrink-0">
-                      <h3 className="font-medium text-sm text-gray-900">
+                    <div className="shrink-0 border-b border-border px-3 py-2">
+                      <h3 className="font-medium text-sm text-foreground">
                         {col.label}
                       </h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {getStatusSubtext(items)}
                       </p>
                     </div>
@@ -369,7 +369,7 @@ export function EmployeesDirectoryPage() {
                                       type="button"
                                       variant="secondary"
                                       size="icon"
-                                      className="h-8 w-8 shadow-sm bg-white/95"
+                                      className="h-8 w-8 bg-card/95 shadow-sm"
                                       aria-label="Employee actions"
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
@@ -403,7 +403,7 @@ export function EmployeesDirectoryPage() {
                           </div>
                         ))}
                         {items.length === 0 && (
-                          <div className="text-sm text-gray-400 text-center py-6 italic border border-dashed border-gray-200">
+                          <div className="text-sm text-muted-foreground text-center py-6 italic border border-dashed border-border">
                             Drop here
                           </div>
                         )}
@@ -440,10 +440,10 @@ export function EmployeesDirectoryPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">
+                      <h3 className="font-semibold text-foreground truncate">
                         {displayName(employee)}
                       </h3>
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm text-muted-foreground truncate">
                         {employee.designation || employee.role || "—"}
                       </p>
                     </div>
@@ -459,7 +459,7 @@ export function EmployeesDirectoryPage() {
                           e.stopPropagation();
                         }}
                       >
-                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -500,7 +500,7 @@ export function EmployeesDirectoryPage() {
 
                 <div className="space-y-2 mt-4">
                   {(employee.email || employee.phone) && (
-                    <div className="flex items-center text-sm text-gray-600 gap-2 flex-wrap">
+                    <div className="flex items-center text-sm text-muted-foreground gap-2 flex-wrap">
                       {employee.email && (
                         <span className="flex items-center gap-1">
                           <Mail className="w-4 h-4" />
@@ -543,7 +543,7 @@ export function EmployeesDirectoryPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <p className="text-gray-600">{employees.length} employees</p>
+            <p className="text-muted-foreground">{employees.length} employees</p>
           </div>
           <div className="flex items-center gap-2">
             <ButtonGroup orientation="horizontal">
@@ -584,11 +584,11 @@ export function EmployeesDirectoryPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
         ) : employees.length === 0 ? (
           <div className="text-center py-16">
             <h3 className="text-xl mb-2">No employees yet</h3>
-            <p className="text-gray-600">Create your first employee above.</p>
+            <p className="text-muted-foreground">Create your first employee above.</p>
           </div>
         ) : (
           renderEmployees()

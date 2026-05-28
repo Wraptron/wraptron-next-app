@@ -195,6 +195,7 @@ export const authApi = {
 export interface Task {
   id: number;
   project_id: number;
+  assigned_employee_id?: number | null;
   title: string;
   description?: string;
   status: string;
@@ -218,6 +219,7 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   description?: string;
+  assigned_employee_id?: number;
   status?: string;
   end_date?: string;
   priority?: string;
@@ -262,6 +264,9 @@ export interface Project {
   product_template_id?: number | null;
   /** `users.id` of the manager when set (staff login). */
   project_manager_id?: number | null;
+  project_manager_employee_id?: number | null;
+  project_sponsor_contact_id?: number | null;
+  project_staff_employee_ids?: number[];
   product_template_name?: string | null;
   product_template_part_code?: string | null;
   manager_first_name?: string | null;
@@ -269,6 +274,12 @@ export interface Project {
   manager_email?: string | null;
   /** Same as project_manager_id when manager is a users row (staff login). */
   project_manager_user_id?: number | null;
+  manager_employee_first_name?: string | null;
+  manager_employee_last_name?: string | null;
+  manager_employee_email?: string | null;
+  sponsor_first_name?: string | null;
+  sponsor_last_name?: string | null;
+  sponsor_email?: string | null;
   tasks?: Task[];
 }
 
@@ -308,6 +319,9 @@ export interface CreateProjectInput {
   status?: string;
   product_template_id?: number | null;
   project_manager_id?: number | null;
+  project_manager_employee_id?: number | null;
+  project_sponsor_contact_id?: number | null;
+  project_staff_employee_ids?: number[];
   tasks?: Array<{
     title: string;
     description?: string;
@@ -1278,6 +1292,77 @@ export const contactsApi = {
   },
 };
 
+export type ContactActivityType = "task" | "call" | "whatsapp";
+
+export interface ContactActivity {
+  id: number;
+  type: ContactActivityType;
+  subject?: string;
+  description?: string;
+  contact_id?: number;
+  company_id?: number;
+  deal_id?: number;
+  user_id?: number;
+  activity_date: string;
+  due_date?: string;
+  status: string;
+  duration_minutes?: number;
+  outcome?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContactActivityInput {
+  type: ContactActivityType;
+  subject?: string;
+  description?: string;
+  activity_date?: string;
+  due_date?: string;
+  status?: string;
+  duration_minutes?: number;
+  outcome?: string;
+  deal_id?: number;
+}
+
+export const contactActivitiesApi = {
+  list: async (contactId: number): Promise<{ data: ContactActivity[] }> => {
+    return fetchApi<{ data: ContactActivity[] }>(
+      `/api/contacts/${contactId}/activities`,
+    );
+  },
+
+  create: async (
+    contactId: number,
+    data: CreateContactActivityInput,
+  ): Promise<ContactActivity> => {
+    return fetchApi<ContactActivity>(`/api/contacts/${contactId}/activities`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    contactId: number,
+    activityId: number,
+    data: Partial<CreateContactActivityInput>,
+  ): Promise<ContactActivity> => {
+    return fetchApi<ContactActivity>(
+      `/api/contacts/${contactId}/activities/${activityId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+    );
+  },
+
+  delete: async (contactId: number, activityId: number): Promise<void> => {
+    return fetchApi<void>(
+      `/api/contacts/${contactId}/activities/${activityId}`,
+      { method: "DELETE" },
+    );
+  },
+};
+
 // Companies (CRM; table `companies`, primary key `company_id`)
 export interface Company {
   company_id: number;
@@ -1480,6 +1565,66 @@ export interface DealStats {
   avg_deal_size: number;
 }
 
+export interface SalesActivity {
+  id: number;
+  type: string;
+  subject?: string;
+  description?: string;
+  company_id?: number;
+  contact_id?: number;
+  deal_id?: number;
+  user_id?: number;
+  activity_date: string;
+  due_date?: string;
+  status: string;
+  duration_minutes?: number;
+  outcome?: string;
+  created_at: string;
+  updated_at: string;
+  company_name?: string;
+  contact_name?: string;
+  deal_title?: string;
+}
+
+export interface SalesActivitiesResponse {
+  data: SalesActivity[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export type DealActivityType = "task" | "call" | "note" | "meeting" | "whatsapp";
+
+export interface DealActivity {
+  id: number;
+  type: DealActivityType;
+  subject?: string;
+  description?: string;
+  company_id?: number;
+  contact_id?: number;
+  deal_id?: number;
+  user_id?: number;
+  activity_date: string;
+  due_date?: string;
+  status: string;
+  duration_minutes?: number;
+  outcome?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDealActivityInput {
+  type: DealActivityType;
+  subject?: string;
+  description?: string;
+  activity_date?: string;
+  due_date?: string;
+  status?: string;
+  duration_minutes?: number;
+  outcome?: string;
+  contact_id?: number;
+}
+
 export const dealsApi = {
   getAll: async (params?: {
     search?: string;
@@ -1543,6 +1688,64 @@ export const dealsApi = {
     return fetchApi<void>(`/api/deals/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+export const dealActivitiesApi = {
+  list: async (dealId: number): Promise<{ data: DealActivity[] }> => {
+    return fetchApi<{ data: DealActivity[] }>(`/api/deals/${dealId}/activities`);
+  },
+
+  create: async (
+    dealId: number,
+    data: CreateDealActivityInput,
+  ): Promise<DealActivity> => {
+    return fetchApi<DealActivity>(`/api/deals/${dealId}/activities`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    dealId: number,
+    activityId: number,
+    data: Partial<CreateDealActivityInput>,
+  ): Promise<DealActivity> => {
+    return fetchApi<DealActivity>(
+      `/api/deals/${dealId}/activities/${activityId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+    );
+  },
+
+  delete: async (dealId: number, activityId: number): Promise<void> => {
+    return fetchApi<void>(`/api/deals/${dealId}/activities/${activityId}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+export const activitiesApi = {
+  getAll: async (params?: {
+    search?: string;
+    type?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<SalesActivitiesResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.type) searchParams.append("type", params.type);
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<SalesActivitiesResponse>(
+      `/api/activities${query ? `?${query}` : ""}`,
+    );
   },
 };
 

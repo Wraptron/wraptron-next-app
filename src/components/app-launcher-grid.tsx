@@ -9,7 +9,6 @@ import {
   Globe,
   Plus,
   Settings,
-  Shield,
   Store,
   Trash2,
   TrendingUp,
@@ -90,14 +89,6 @@ const BUILTIN_APPS: BuiltinApp[] = [
     color: "bg-indigo-500",
   },
   {
-    id: "admin",
-    name: "Admin",
-    description: "Administration and user management",
-    icon: Shield,
-    href: "/admin/users",
-    color: "bg-red-500",
-  },
-  {
     id: "settings",
     name: "Settings",
     description: "Configure your preferences",
@@ -168,13 +159,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
   const lucideIconClass = isCompact ? "w-6 h-6" : "w-8 h-8";
   const userFaviconIconClass = isCompact ? "w-6 h-6" : "w-7 h-7";
 
-  const builtinApps = useMemo(
-    () =>
-      user?.role === "admin"
-        ? BUILTIN_APPS
-        : BUILTIN_APPS.filter((app) => app.id !== "admin"),
-    [user?.role],
-  );
+  const builtinApps = useMemo(() => BUILTIN_APPS, []);
 
   const loadUserApps = useCallback(async () => {
     if (!user) {

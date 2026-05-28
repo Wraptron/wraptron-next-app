@@ -116,8 +116,8 @@ export default function HrSkillsMatrixPage() {
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Skill matrix</h1>
-          <p className="text-gray-600 mt-1 text-sm">
+          <h1 className="text-2xl font-bold text-foreground">Skill matrix</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             Map each employee to proficiency levels per skill. Configure skill names in{" "}
             <Link href="/settings" className="text-blue-600 underline hover:text-blue-800">
               Settings → Workspace skills
@@ -133,7 +133,7 @@ export default function HrSkillsMatrixPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-gray-500 py-12">
+          <div className="flex items-center gap-2 text-muted-foreground py-12">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading matrix...
           </div>
@@ -148,11 +148,11 @@ export default function HrSkillsMatrixPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="rounded-md border bg-white overflow-x-auto">
+          <div className="overflow-x-auto rounded-md border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 bg-white min-w-[200px] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                  <TableHead className="sticky left-0 z-10 min-w-[200px] bg-card shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                     Employee
                   </TableHead>
                   {skills.map((s) => (
@@ -167,7 +167,7 @@ export default function HrSkillsMatrixPage() {
                   <TableRow>
                     <TableCell
                       colSpan={skills.length + 1}
-                      className="text-center text-gray-500 py-10"
+                      className="text-center text-muted-foreground py-10"
                     >
                       No employees in the directory. Add employees under Human resources → Employees.
                     </TableCell>
@@ -175,7 +175,7 @@ export default function HrSkillsMatrixPage() {
                 ) : (
                   employees.map((emp) => (
                     <TableRow key={emp.id}>
-                      <TableCell className="sticky left-0 z-10 bg-white font-medium shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                      <TableCell className="sticky left-0 z-10 bg-card font-medium shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                         <div className="flex flex-col gap-0.5">
                           <Link
                             href={`${EMPLOYEES_BASE_PATH}/${emp.id}`}
@@ -183,7 +183,7 @@ export default function HrSkillsMatrixPage() {
                           >
                             {displayEmployeeName(emp)}
                           </Link>
-                          <span className="text-xs text-gray-500 font-normal">
+                          <span className="text-xs text-muted-foreground font-normal">
                             {emp.emp_code}
                             {emp.department ? ` · ${emp.department}` : ""}
                           </span>
@@ -230,7 +230,7 @@ export default function HrSkillsMatrixPage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-500 max-w-3xl">
+        <p className="text-xs text-muted-foreground max-w-3xl">
           <strong>Levels:</strong>{" "}
           {WORKSPACE_SKILL_LEVELS.map((l) => `${l.label} — ${l.description}`).join(" · ")}
         </p>

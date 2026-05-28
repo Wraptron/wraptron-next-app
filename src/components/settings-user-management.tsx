@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { adminApi, type AdminUser, type CreateAdminUserInput } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,6 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -54,13 +52,11 @@ const formatDate = (dateString?: string | null) => {
   if (!dateString || dateString === null || dateString === "null") {
     return "Never";
   }
-  // Handle empty string
   if (typeof dateString === "string" && dateString.trim() === "") {
     return "Never";
   }
   try {
     const date = new Date(dateString);
-    // Check if date is valid
     if (isNaN(date.getTime())) {
       return "Never";
     }
@@ -80,10 +76,10 @@ const getRoleColor = (role: string) => {
   return colors[role] || "bg-gray-100 text-gray-800";
 };
 
-const getRoleLabel = (value: string) => ROLES.find((r) => r.value === value)?.label ?? value;
+const getRoleLabel = (value: string) =>
+  ROLES.find((r) => r.value === value)?.label ?? value;
 
-export default function AdminUsersPage() {
-  const router = useRouter();
+export function SettingsUserManagement() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,14 +91,13 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const limit = 20;
 
-  // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Form states
-  const [formData, setFormData] = useState<CreateAdminUserInput & { is_active?: boolean }>({
+  const [formData, setFormData] = useState<
+    CreateAdminUserInput & { is_active?: boolean }
+  >({
     email: "",
     password: "",
     first_name: "",
@@ -127,19 +122,10 @@ export default function AdminUsersPage() {
       setTotal(response.total);
     } catch (err: any) {
       setError(err?.message || "Failed to fetch users");
-      console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
     }
   };
-
-  // Redirect non-admin users
-  useEffect(() => {
-    if (currentUser === null) return; // still loading
-    if (currentUser?.role !== "admin") {
-      router.replace("/");
-    }
-  }, [currentUser, router]);
 
   useEffect(() => {
     if (currentUser?.role !== "admin") return;
@@ -147,7 +133,6 @@ export default function AdminUsersPage() {
   }, [page, roleFilter, statusFilter, currentUser?.role]);
 
   useEffect(() => {
-    // Debounce search
     const timer = setTimeout(() => {
       if (page === 0) {
         fetchUsers();
@@ -240,21 +225,29 @@ export default function AdminUsersPage() {
 
   const totalPages = Math.ceil(total / limit);
 
-  // Only show admin app to admin users
-  if (currentUser != null && currentUser?.role !== "admin") {
+  if (currentUser != null && currentUser.role !== "admin") {
     return (
-      <div className="container mx-auto py-8 px-4 flex items-center justify-center min-h-[40vh]">
-        <p className="text-gray-500">Access denied. Redirecting...</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Only admins can manage users.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage users, roles, and permissions</p>
+          <h2 className="text-2xl font-bold">User Management</h2>
+          <p className="text-muted-foreground mt-1">
+            Manage users, roles, and permissions
+          </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -274,7 +267,9 @@ export default function AdminUsersPage() {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="user@example.com"
                   required
                 />
@@ -286,7 +281,9 @@ export default function AdminUsersPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     placeholder="Enter password"
                     required
                   />
@@ -297,7 +294,11 @@ export default function AdminUsersPage() {
                     className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -307,7 +308,9 @@ export default function AdminUsersPage() {
                   <Input
                     id="first_name"
                     value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, first_name: e.target.value })
+                    }
                     placeholder="John"
                   />
                 </div>
@@ -316,7 +319,9 @@ export default function AdminUsersPage() {
                   <Input
                     id="last_name"
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, last_name: e.target.value })
+                    }
                     placeholder="Doe"
                   />
                 </div>
@@ -326,7 +331,9 @@ export default function AdminUsersPage() {
                 <Input
                   id="phone_number"
                   value={formData.phone_number}
-                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone_number: e.target.value })
+                  }
                   placeholder="+1234567890"
                 />
               </div>
@@ -348,9 +355,7 @@ export default function AdminUsersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {error && (
-                <div className="text-red-600 text-sm">{error}</div>
-              )}
+              {error && <div className="text-red-600 text-sm">{error}</div>}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                   Cancel
@@ -364,7 +369,6 @@ export default function AdminUsersPage() {
         </Dialog>
       </div>
 
-      {/* Filters */}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -408,14 +412,12 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      {/* Error Message */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
           {error}
         </div>
       )}
 
-      {/* Users Table */}
       <Card>
         <CardHeader>
           <CardTitle>Users ({total})</CardTitle>
@@ -426,9 +428,7 @@ export default function AdminUsersPage() {
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No users found
-            </div>
+            <div className="text-center py-8 text-gray-500">No users found</div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -460,7 +460,11 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell>
                           <Badge
-                            className={user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                            className={
+                              user.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }
                           >
                             {user.is_active ? "Active" : "Inactive"}
                           </Badge>
@@ -498,11 +502,11 @@ export default function AdminUsersPage() {
                 </Table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-gray-600">
-                    Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} users
+                    Showing {page * limit + 1} to{" "}
+                    {Math.min((page + 1) * limit, total)} of {total} users
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -529,7 +533,6 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -548,7 +551,9 @@ export default function AdminUsersPage() {
               />
             </div>
             <div>
-              <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
+              <Label htmlFor="edit-password">
+                Password (leave blank to keep current)
+              </Label>
               <div className="relative">
                 <Input
                   id="edit-password"
@@ -564,7 +569,11 @@ export default function AdminUsersPage() {
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -619,7 +628,9 @@ export default function AdminUsersPage() {
               <Label htmlFor="edit-is_active">Status</Label>
               <Select
                 value={formData.is_active ? "active" : "inactive"}
-                onValueChange={(value) => setFormData({ ...formData, is_active: value === "active" })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, is_active: value === "active" })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -630,9 +641,7 @@ export default function AdminUsersPage() {
                 </SelectContent>
               </Select>
             </div>
-            {error && (
-              <div className="text-red-600 text-sm">{error}</div>
-            )}
+            {error && <div className="text-red-600 text-sm">{error}</div>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                 Cancel
@@ -647,4 +656,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

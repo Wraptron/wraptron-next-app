@@ -23,8 +23,8 @@ export default function TimesheetPage() {
             Back to Attendance
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Add timesheet</h1>
-        <p className="text-gray-600 mt-2">Timesheet entry form (coming soon).</p>
+        <h1 className="text-2xl font-bold text-foreground">Add timesheet</h1>
+        <p className="text-muted-foreground mt-2">Timesheet entry form (coming soon).</p>
       </div>
     </div>
   );

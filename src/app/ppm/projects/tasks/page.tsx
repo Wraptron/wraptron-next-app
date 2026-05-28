@@ -35,19 +35,19 @@ type TaskWithProject = Task & { project_name: string };
 type ViewMode = "list" | "card" | "kanban";
 
 const statusColors: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-800",
-  todo: "bg-gray-100 text-gray-800",
-  in_progress: "bg-blue-100 text-blue-800",
-  review: "bg-purple-100 text-purple-800",
-  done: "bg-green-100 text-green-800",
-  completed: "bg-green-100 text-green-800",
-  blocked: "bg-red-100 text-red-800",
+  pending: "bg-muted text-muted-foreground",
+  todo: "bg-muted text-muted-foreground",
+  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+  review: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
+  done: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  completed: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  blocked: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
 };
 
 function getStatusColor(status?: string): string {
-  if (!status) return "bg-gray-100 text-gray-800";
+  if (!status) return "bg-muted text-muted-foreground";
   const key = status.toLowerCase().replace(/\s/g, "_");
-  return statusColors[key] ?? "bg-gray-100 text-gray-800";
+  return statusColors[key] ?? "bg-muted text-muted-foreground";
 }
 
 const formatDate = (dateString?: string) => {
@@ -157,7 +157,7 @@ const TaskKanbanCard = ({
   onOpen: () => void;
 }) => (
   <Card
-    className="hover:shadow transition-shadow cursor-pointer mb-3"
+    className="mb-3 cursor-pointer border border-border bg-card shadow-none transition-shadow hover:shadow-md"
     onClick={onOpen}
   >
     <CardContent className="p-3">
@@ -240,7 +240,7 @@ export default function ProjectsTasksPage() {
   const renderContent = () => {
     if (viewMode === "list") {
       return (
-        <div className="rounded-md border bg-white">
+        <div className="rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -262,7 +262,7 @@ export default function ProjectsTasksPage() {
                 tasks.map((task) => (
                   <TableRow
                     key={`${task.project_id}-${task.id}`}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-muted/50"
                     onClick={() => openTask(task)}
                   >
                     <TableCell className="font-medium">
@@ -307,19 +307,19 @@ export default function ProjectsTasksPage() {
     if (viewMode === "kanban") {
       const grouped = getTasksByStatus();
       const columns = [
-        { key: "pending", label: "Pending", color: "bg-yellow-50" },
-        { key: "in_progress", label: "In Progress", color: "bg-blue-50" },
-        { key: "done", label: "Done", color: "bg-green-50" },
-        { key: "other", label: "Other", color: "bg-gray-50" },
+        { key: "pending", label: "Pending", color: "bg-yellow-500/10 dark:bg-yellow-500/20" },
+        { key: "in_progress", label: "In Progress", color: "bg-blue-500/10 dark:bg-blue-500/20" },
+        { key: "done", label: "Done", color: "bg-green-500/10 dark:bg-green-500/20" },
+        { key: "other", label: "Other", color: "bg-muted/50" },
       ];
       return (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {columns.map((col) => (
             <div
               key={col.key}
-              className={`flex-shrink-0 w-72 ${col.color} rounded-lg p-3`}
+              className={`w-72 shrink-0 rounded-lg border border-border p-3 ${col.color}`}
             >
-              <h3 className="font-semibold mb-3 text-sm uppercase">
+              <h3 className="mb-3 text-sm font-semibold uppercase text-foreground">
                 {col.label} ({grouped[col.key]?.length ?? 0})
               </h3>
               <div>

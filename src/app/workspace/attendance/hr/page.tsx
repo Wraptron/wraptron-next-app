@@ -26,8 +26,8 @@ export default function AttendanceHRPage() {
             </Button>
           </Link>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">HR Attendance</h1>
-        <p className="text-gray-600">Reports and exports (coming soon)</p>
+        <h1 className="text-2xl font-bold text-foreground">HR Attendance</h1>
+        <p className="text-muted-foreground">Reports and exports (coming soon)</p>
 
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
@@ -38,7 +38,7 @@ export default function AttendanceHRPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-3">Export attendance for a month as CSV.</p>
+              <p className="text-sm text-muted-foreground mb-3">Export attendance for a month as CSV.</p>
               <Button variant="outline" size="sm" disabled>
                 Export CSV (coming soon)
               </Button>
@@ -52,7 +52,7 @@ export default function AttendanceHRPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-3">View employees who logged in after the configured time.</p>
+              <p className="text-sm text-muted-foreground mb-3">View employees who logged in after the configured time.</p>
               <Button variant="outline" size="sm" disabled>
                 View report (coming soon)
               </Button>
@@ -66,7 +66,7 @@ export default function AttendanceHRPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-3">View days with no check-in.</p>
+              <p className="text-sm text-muted-foreground mb-3">View days with no check-in.</p>
               <Button variant="outline" size="sm" disabled>
                 View report (coming soon)
               </Button>
@@ -80,7 +80,7 @@ export default function AttendanceHRPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-3">View sessions over configured hours.</p>
+              <p className="text-sm text-muted-foreground mb-3">View sessions over configured hours.</p>
               <Button variant="outline" size="sm" disabled>
                 View report (coming soon)
               </Button>
@@ -96,7 +96,7 @@ export default function AttendanceHRPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600">Integrate with leave records to mark days on leave (planned).</p>
+            <p className="text-sm text-muted-foreground">Integrate with leave records to mark days on leave (planned).</p>
           </CardContent>
         </Card>
       </div>

@@ -60,6 +60,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { TaskFormSheet } from "@/components/task-form-sheet";
+import { ProjectTaskCompletion } from "@/components/project-task-completion";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
@@ -595,6 +596,15 @@ export default function ProjectPage() {
           <TabsContent value="overview" className="space-y-4">
             <Card>
               <CardHeader>
+                <CardTitle>Completion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProjectTaskCompletion tasks={project.tasks} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -976,7 +986,7 @@ const STATUS_TO_COLUMN: Record<string, string> = {
 
 function TaskKanbanCard({ task }: { task: Task }) {
   return (
-    <Card className="border-[0.5px] border-gray-200 shadow-none cursor-grab active:cursor-grabbing bg-white">
+    <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
       <CardContent className="p-3">
         <div className="flex justify-between items-start mb-2">
           <div className="min-w-0 flex-1">
@@ -992,7 +1002,7 @@ function TaskKanbanCard({ task }: { task: Task }) {
           </div>
         </div>
         {task.description && (
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
             {task.description}
           </p>
         )}
@@ -1061,11 +1071,11 @@ function TaskKanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="flex-shrink-0 w-72 border-[0.5px] border-gray-200 bg-white rounded-none h-full overflow-y-auto flex flex-col"
+      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
     >
-      <div className="border-b border-gray-200 px-3 py-2 flex-shrink-0">
-        <h3 className="font-medium text-sm text-gray-900">{label}</h3>
-        <p className="text-xs text-gray-500 mt-0.5">{statusSubtext}</p>
+      <div className="shrink-0 border-b border-border px-3 py-2">
+        <h3 className="text-sm font-medium text-foreground">{label}</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">{statusSubtext}</p>
       </div>
       <div className="flex-1 p-2 min-h-0 overflow-y-auto">
         <SortableContext
@@ -1082,7 +1092,7 @@ function TaskKanbanColumn({
               />
             ))}
             {columnTasks.length === 0 && (
-              <div className="text-sm text-gray-400 text-center py-6 italic border border-dashed border-gray-200">
+              <div className="border border-dashed border-border py-6 text-center text-sm italic text-muted-foreground">
                 Drop here
               </div>
             )}
@@ -1166,7 +1176,7 @@ function TaskBoard({
   };
 
   return (
-    <div className="min-h-[260px] h-[calc(100vh-260px)] sm:h-[calc(100vh-280px)] border-[0.5px] border-gray-200 bg-white overflow-hidden flex flex-col">
+    <div className="flex min-h-[260px] h-[calc(100vh-260px)] flex-col overflow-hidden rounded-md border border-border bg-card sm:h-[calc(100vh-280px)]">
       <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
         <DndContext
           sensors={sensors}
@@ -1380,7 +1390,7 @@ function TaskListView({
           <div className="font-medium">
             {task.title}
             {task.description && (
-              <div className="text-xs text-gray-500 line-clamp-1 mt-0.5">
+              <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                 {task.description}
               </div>
             )}
@@ -1403,13 +1413,13 @@ function TaskListView({
         ) : null;
       case "complexity":
         return task.complexity ? (
-          <span className="text-sm text-gray-600 capitalize">
+          <span className="text-sm text-muted-foreground capitalize">
             {task.complexity}
           </span>
         ) : null;
       case "start_date":
         return (
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             {task.start_date
               ? new Date(task.start_date).toLocaleDateString()
               : "-"}
@@ -1417,13 +1427,13 @@ function TaskListView({
         );
       case "end_date":
         return (
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             {task.end_date ? new Date(task.end_date).toLocaleDateString() : "-"}
           </span>
         );
       case "created_at":
         return (
-          <div className="text-right text-sm text-gray-500">
+          <div className="text-right text-sm text-muted-foreground">
             {new Date(task.created_at).toLocaleDateString()}
           </div>
         );
@@ -1436,7 +1446,7 @@ function TaskListView({
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-gray-500 text-center">No tasks yet.</p>
+          <p className="text-muted-foreground text-center">No tasks yet.</p>
         </CardContent>
       </Card>
     );
@@ -1445,7 +1455,7 @@ function TaskListView({
   return (
     <Card>
       <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-        <div className="text-sm font-medium text-gray-500">
+        <div className="text-sm font-medium text-muted-foreground">
           {processedTasks.length} task{processedTasks.length !== 1 && "s"}
         </div>
         <Button
@@ -1471,7 +1481,7 @@ function TaskListView({
                     selectedTasks.size === processedTasks.length
                   }
                   onChange={toggleSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                 />
               </TableHead>
               {/* Dynamic Columns */}
@@ -1481,7 +1491,7 @@ function TaskListView({
                   className={`
                     ${column.width || ""} 
                     ${column.align === "right" ? "text-right" : ""}
-                    cursor-pointer hover:bg-gray-100 transition-colors select-none group
+                    cursor-pointer hover:bg-muted/50 transition-colors select-none group
                   `}
                   draggable
                   onDragStart={(e) => handleDragStart(e, column.id)}
@@ -1493,7 +1503,7 @@ function TaskListView({
                     className={`flex items-center gap-1 ${column.align === "right" ? "justify-end" : ""}`}
                   >
                     <GripVertical
-                      className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+                      className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
                       onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -1513,7 +1523,7 @@ function TaskListView({
             </TableRow>
             {/* Filter Row */}
             {showFilters && (
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-[40px]"></TableHead>
                 {columns.map((column) => (
                   <TableHead key={`${column.id}-filter`} className="p-2">
@@ -1523,7 +1533,7 @@ function TaskListView({
                       onChange={(e) =>
                         handleFilterChange(column.id, e.target.value)
                       }
-                      className="h-7 text-xs bg-white"
+                      className="h-7 text-xs"
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableHead>
@@ -1545,8 +1555,8 @@ function TaskListView({
               processedTasks.map((task) => (
                 <TableRow
                   key={task.id}
-                  className={`hover:bg-gray-50 ${
-                    selectedTasks.has(task.id) ? "bg-blue-50/50" : ""
+                  className={`hover:bg-muted/50 ${
+                    selectedTasks.has(task.id) ? "bg-primary/10" : ""
                   }`}
                 >
                   {/* Checkbox Cell */}
@@ -1555,7 +1565,7 @@ function TaskListView({
                       type="checkbox"
                       checked={selectedTasks.has(task.id)}
                       onChange={() => toggleSelect(task.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                     />
                   </TableCell>
                   {/* Dynamic Cells */}
@@ -1596,7 +1606,7 @@ function TaskCardView({
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-gray-500 text-center">No tasks yet.</p>
+          <p className="text-muted-foreground text-center">No tasks yet.</p>
         </CardContent>
       </Card>
     );
@@ -1623,7 +1633,7 @@ function TaskCardView({
                 </div>
               </div>
               {task.description && (
-                <p className="text-xs text-gray-600 mt-2 line-clamp-3">
+                <p className="text-xs text-muted-foreground mt-2 line-clamp-3">
                   {task.description}
                 </p>
               )}
@@ -1640,7 +1650,7 @@ function TaskCardView({
                 >
                   {task.status}
                 </Badge>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   {new Date(task.created_at).toLocaleDateString()}
                 </span>
               </div>

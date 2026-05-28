@@ -76,8 +76,8 @@ export default function AttendanceManagerPage() {
             </Button>
           </Link>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Team Attendance</h1>
-        <p className="text-gray-600">{today}</p>
+        <h1 className="text-2xl font-bold text-foreground">Team Attendance</h1>
+        <p className="text-muted-foreground">{today}</p>
 
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
@@ -88,7 +88,7 @@ export default function AttendanceManagerPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-gray-600 mb-1">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Users className="h-5 w-5" />
                 <span className="text-sm">Team size</span>
               </div>
@@ -126,9 +126,9 @@ export default function AttendanceManagerPage() {
             <CardContent>
               <ul className="space-y-2">
                 {notCheckedIn.map((e) => (
-                  <li key={e.employee_id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                  <li key={e.employee_id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
                     <span className="font-medium">{e.name}</span>
-                    <span className="text-sm text-gray-500">{e.email ?? "—"}</span>
+                    <span className="text-sm text-muted-foreground">{e.email ?? "—"}</span>
                   </li>
                 ))}
               </ul>
@@ -142,24 +142,24 @@ export default function AttendanceManagerPage() {
           </CardHeader>
           <CardContent>
             {summary.length === 0 ? (
-              <p className="text-gray-500 text-sm">No direct reports. Team summary is for employees who report to you.</p>
+              <p className="text-muted-foreground text-sm">No direct reports. Team summary is for employees who report to you.</p>
             ) : (
               <ul className="space-y-2">
                 {summary.map((s) => (
                   <li
                     key={s.employee_id}
-                    className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-gray-100 last:border-0"
+                    className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-border last:border-0"
                   >
                     <div>
                       <span className="font-medium">{s.name}</span>
-                      {s.email && <span className="text-sm text-gray-500 ml-2">({s.email})</span>}
+                      {s.email && <span className="text-sm text-muted-foreground ml-2">({s.email})</span>}
                     </div>
                     <div className="flex items-center gap-2">
                       {s.checked_in ? (
                         <>
                           <Badge className="bg-green-100 text-green-800">{s.status ?? "In"}</Badge>
-                          <span className="text-sm text-gray-600">{formatTimeShort(s.check_in_at)}</span>
-                          {s.work_mode && <span className="text-xs text-gray-500 capitalize">{formatWorkMode(s.work_mode)}</span>}
+                          <span className="text-sm text-muted-foreground">{formatTimeShort(s.check_in_at)}</span>
+                          {s.work_mode && <span className="text-xs text-muted-foreground capitalize">{formatWorkMode(s.work_mode)}</span>}
                         </>
                       ) : (
                         <Badge variant="secondary">Not in</Badge>

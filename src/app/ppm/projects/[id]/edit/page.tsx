@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { projectsApi } from "@/lib/api";
+import {
+  projectsApi,
+  employeesApi,
+  contactsApi,
+  type Employee,
+  type Contact,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,6 +115,9 @@ type ObjectiveOption = (typeof OBJECTIVE_OPTIONS)[number];
 interface ProjectFormData {
   project_name: string;
   services_offered: ServiceOption | null;
+  project_manager_employee_id: number | null;
+  project_sponsor_contact_id: number | null;
+  project_staff_employee_ids: number[];
   other_service_description: string;
   planned_date: string;
   target_date: string;
@@ -149,6 +158,8 @@ export default function EditProjectPage({
   ]);
   const [pageViewSearch, setPageViewSearch] = useState("");
   const [showPageViewDropdown, setShowPageViewDropdown] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   // Fetch objectives from API on component mount
   useEffect(() => {
@@ -163,14 +174,22 @@ export default function EditProjectPage({
         }
         setProjectId(id);
 
-        // Fetch project details
-        const project = await projectsApi.getById(id);
+        const [project, objResponse, employeesResponse, contactsResponse] =
+          await Promise.all([
+            projectsApi.getById(id),
+            projectsApi.getObjectives(),
+            employeesApi.getAll({ limit: 500 }),
+            contactsApi.getAll({ limit: 500 }),
+          ]);
 
         // Populate form data
         setFormData({
           project_name: project.project_name,
           services_offered:
             (project.services_offered?.[0] as ServiceOption) || null,
+          project_manager_employee_id: project.project_manager_employee_id ?? null,
+          project_sponsor_contact_id: project.project_sponsor_contact_id ?? null,
+          project_staff_employee_ids: project.project_staff_employee_ids || [],
           other_service_description: project.other_service_description || "",
           planned_date: project.start_date
             ? project.start_date.split("T")[0]
@@ -203,11 +222,11 @@ export default function EditProjectPage({
           incident_alerts: project.incident_alerts || [],
         });
 
-        // Fetch objectives
-        const objResponse = await projectsApi.getObjectives();
         if (objResponse.objectives && objResponse.objectives.length > 0) {
           setAvailableObjectives(objResponse.objectives);
         }
+        setEmployees(employeesResponse.data || []);
+        setContacts(contactsResponse.data || []);
       } catch (err) {
         console.error("Error initializing edit page:", err);
         setError("Failed to load project details");
@@ -220,6 +239,9 @@ export default function EditProjectPage({
   const [formData, setFormData] = useState<ProjectFormData>({
     project_name: "",
     services_offered: null,
+    project_manager_employee_id: null,
+    project_sponsor_contact_id: null,
+    project_staff_employee_ids: [],
     other_service_description: "",
     planned_date: new Date().toISOString().split("T")[0],
     target_date: "",
@@ -264,6 +286,9 @@ export default function EditProjectPage({
         services_offered: formData.services_offered
           ? [formData.services_offered]
           : [],
+        project_manager_employee_id: formData.project_manager_employee_id,
+        project_sponsor_contact_id: formData.project_sponsor_contact_id,
+        project_staff_employee_ids: formData.project_staff_employee_ids,
         other_service_description:
           formData.other_service_description || undefined,
         start_date: formData.planned_date,
@@ -375,8 +400,8 @@ export default function EditProjectPage({
                               text-left cursor-pointer
                               ${
                                 isSelected
-                                  ? "border-blue-600 bg-blue-50 shadow-md"
-                                  : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                                  ? "border-blue-600 bg-blue-50 text-blue-950 shadow-md dark:border-blue-500 dark:bg-blue-950/40 dark:text-blue-100"
+                                  : "border-border bg-card text-card-foreground hover:border-muted-foreground/40 hover:bg-muted/30"
                               }
                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                             `}
@@ -386,7 +411,7 @@ export default function EditProjectPage({
                             <div className="flex items-center justify-between mb-1">
                               <span
                                 className={`text-sm font-medium capitalize ${
-                                  isSelected ? "text-blue-900" : "text-gray-700"
+                                  isSelected ? "text-blue-900 dark:text-blue-100" : "text-foreground"
                                 }`}
                               >
                                 {service}
@@ -409,7 +434,9 @@ export default function EditProjectPage({
                             </div>
                             <p
                               className={`text-xs mt-1 ${
-                                isSelected ? "text-blue-700" : "text-gray-500"
+                                isSelected
+                                  ? "text-blue-700 dark:text-blue-200"
+                                  : "text-muted-foreground"
                               }`}
                             >
                               {SERVICE_DESCRIPTIONS[service]}
@@ -421,7 +448,9 @@ export default function EditProjectPage({
                   })}
                 </div>
                 {!formData.services_offered && (
-                  <p className="text-sm text-gray-500 mt-2">Select a service</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Select a service
+                  </p>
                 )}
                 {formData.services_offered === "Other" && (
                   <div className="mt-4">
@@ -442,11 +471,125 @@ export default function EditProjectPage({
                       className="mt-2"
                       required
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Provide details about the custom service you need
                     </p>
                   </div>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="project_manager_employee_id">
+                    Project Manager
+                  </Label>
+                  <Select
+                    value={
+                      formData.project_manager_employee_id == null
+                        ? "__none__"
+                        : String(formData.project_manager_employee_id)
+                    }
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        project_manager_employee_id:
+                          value === "__none__" ? null : Number(value),
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {employees.map((employee) => (
+                        <SelectItem key={employee.id} value={String(employee.id)}>
+                          {employee.first_name} {employee.last_name}
+                          {employee.email ? ` · ${employee.email}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="project_sponsor_contact_id">
+                    Project Sponsor
+                  </Label>
+                  <Select
+                    value={
+                      formData.project_sponsor_contact_id == null
+                        ? "__none__"
+                        : String(formData.project_sponsor_contact_id)
+                    }
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        project_sponsor_contact_id:
+                          value === "__none__" ? null : Number(value),
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select contact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {contacts.map((contact) => (
+                        <SelectItem key={contact.id} value={String(contact.id)}>
+                          {contact.first_name} {contact.last_name || ""}
+                          {contact.email ? ` · ${contact.email}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Project Staff</Label>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-md border p-3 space-y-2">
+                  {employees.map((employee) => {
+                    const checked = formData.project_staff_employee_ids.includes(
+                      employee.id,
+                    );
+                    return (
+                      <label
+                        key={employee.id}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                project_staff_employee_ids: [
+                                  ...formData.project_staff_employee_ids,
+                                  employee.id,
+                                ],
+                              });
+                              return;
+                            }
+                            setFormData({
+                              ...formData,
+                              project_staff_employee_ids:
+                                formData.project_staff_employee_ids.filter(
+                                  (id) => id !== employee.id,
+                                ),
+                            });
+                          }}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-foreground">
+                          {employee.first_name} {employee.last_name}
+                          {employee.email ? ` · ${employee.email}` : ""}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

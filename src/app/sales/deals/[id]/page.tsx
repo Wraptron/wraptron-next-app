@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DealFormSheet } from "@/components/deal-form-sheet";
+import { DealActivities } from "@/components/deal-activities";
 import { useCurrency } from "@/contexts/currency-context";
 import { dealsApi, type Deal } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -193,6 +194,7 @@ export default function DealDetailPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="qualification">Qualification</TabsTrigger>
+            <TabsTrigger value="activities">Activities</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -341,6 +343,10 @@ export default function DealDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="activities" className="space-y-4">
+            <DealActivities deal={deal} />
           </TabsContent>
         </Tabs>
       </div>

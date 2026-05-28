@@ -15,13 +15,26 @@ import {
 } from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsUserManagement } from "@/components/settings-user-management";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +68,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTheme } from "next-themes";
+import { useSearchParams } from "next/navigation";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
 const UI_LOCALE_KEY = "wraptron-ui-locale";
@@ -63,6 +77,7 @@ export default function Settings() {
   const { setTitle } = usePageTitle();
   const { currency, setCurrency, formatCurrency } = useCurrency();
   const { theme, setTheme } = useTheme();
+  const searchParams = useSearchParams();
   const [themeReady, setThemeReady] = useState(false);
   const [uiLocale, setUiLocale] = useState("en");
   const [connections, setConnections] = useState<GitHubConnection[]>([]);
@@ -74,7 +89,8 @@ export default function Settings() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedConnection, setSelectedConnection] = useState<GitHubConnection | null>(null);
+  const [selectedConnection, setSelectedConnection] =
+    useState<GitHubConnection | null>(null);
 
   // Form states
   const [connectionName, setConnectionName] = useState("");
@@ -103,7 +119,8 @@ export default function Settings() {
     useState<ProjectStatus | null>(null);
   const [projStatusName, setProjStatusName] = useState("");
   const [projStatusFormLoading, setProjStatusFormLoading] = useState(false);
-  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings | null>(null);
+  const [invoiceSettings, setInvoiceSettings] =
+    useState<InvoiceSettings | null>(null);
   const [invoiceSettingsForm, setInvoiceSettingsForm] = useState({
     company_name: "",
     company_address: "",
@@ -198,7 +215,9 @@ export default function Settings() {
       const response = await githubApi.getConnections();
       setConnections(response.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch connections");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch connections",
+      );
     } finally {
       setLoading(false);
     }
@@ -235,7 +254,8 @@ export default function Settings() {
     setFormLoading(true);
     setError(null);
     try {
-      const updateData: { connection_name?: string; access_token?: string } = {};
+      const updateData: { connection_name?: string; access_token?: string } =
+        {};
       if (connectionName.trim()) updateData.connection_name = connectionName;
       if (accessToken.trim()) updateData.access_token = accessToken;
 
@@ -247,7 +267,9 @@ export default function Settings() {
       setSelectedConnection(null);
       fetchConnections();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update connection");
+      setError(
+        err instanceof Error ? err.message : "Failed to update connection",
+      );
     } finally {
       setFormLoading(false);
     }
@@ -265,7 +287,9 @@ export default function Settings() {
       setSelectedConnection(null);
       fetchConnections();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete connection");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete connection",
+      );
     } finally {
       setFormLoading(false);
     }
@@ -277,13 +301,17 @@ export default function Settings() {
     try {
       const result = await githubApi.verifyConnection(connection.id);
       if (result.success) {
-        setSuccessMessage(`Connection verified! Connected as ${result.github_user}`);
+        setSuccessMessage(
+          `Connection verified! Connected as ${result.github_user}`,
+        );
         fetchConnections();
       } else {
         setError(result.error || "Verification failed");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to verify connection");
+      setError(
+        err instanceof Error ? err.message : "Failed to verify connection",
+      );
     } finally {
       setVerifying(null);
     }
@@ -318,7 +346,10 @@ export default function Settings() {
     setStageFormLoading(true);
     setError(null);
     try {
-      await salesStagesApi.create({ name: stageName.trim(), sort_order: stages.length });
+      await salesStagesApi.create({
+        name: stageName.trim(),
+        sort_order: stages.length,
+      });
       setSuccessMessage("Sales stage added.");
       setStageAddOpen(false);
       setStageName("");
@@ -489,25 +520,45 @@ export default function Settings() {
         company_name: invoiceSettingsForm.company_name.trim(),
         company_address: invoiceSettingsForm.company_address.trim(),
         company_gst: invoiceSettingsForm.company_gst.trim(),
-        company_logo_url: invoiceSettingsForm.company_logo_url.trim() || undefined,
+        company_logo_url:
+          invoiceSettingsForm.company_logo_url.trim() || undefined,
       });
       setInvoiceSettings(saved);
       setSuccessMessage("Invoice company settings saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save invoice settings");
+      setError(
+        err instanceof Error ? err.message : "Failed to save invoice settings",
+      );
     } finally {
       setInvoiceSettingsSaving(false);
     }
   };
+
+  const requestedSection = searchParams.get("section");
+  const activeSettingsSection =
+    requestedSection === "general" ||
+    requestedSection === "display-preferences" ||
+    requestedSection === "user-management" ||
+    requestedSection === "integrations" ||
+    requestedSection === "apps" ||
+    requestedSection === "notifications"
+      ? requestedSection
+      : "general";
+
+  const showGeneral = activeSettingsSection === "general";
+  const showDisplayPreferences = activeSettingsSection === "display-preferences";
+  const showIntegrations = activeSettingsSection === "integrations";
+  const showApps = activeSettingsSection === "apps";
+  const showEmptySection = activeSettingsSection === "notifications";
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Success Message */}
         {successMessage && (
-          <Alert className="mb-6 bg-green-50 border-green-200">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/50">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="text-green-800 dark:text-green-200">
               {successMessage}
             </AlertDescription>
           </Alert>
@@ -515,70 +566,72 @@ export default function Settings() {
 
         {/* Error Message */}
         {error && (
-          <Alert className="mb-6 bg-red-50 border-red-200">
-            <XCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          <Alert className="mb-6 border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/50">
+            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <AlertDescription className="text-red-800 dark:text-red-200">
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 
-        {/* Profile menu: Appearance, Language, Timezone */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Preferences</CardTitle>
-            <CardDescription className="mt-2">
-              Display, language, and time settings for your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div id="appearance" className="scroll-mt-28 space-y-3">
-              <div>
-                <h3 className="text-sm font-medium text-foreground">Appearance</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how Wraptron looks on this device.
-                </p>
+        {showDisplayPreferences && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Preferences</CardTitle>
+              <CardDescription className="mt-2">
+                Choose how Wraptron looks on this device.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div id="appearance" className="scroll-mt-28 space-y-3">
+                {!themeReady ? (
+                  <p className="text-sm text-muted-foreground">Loading theme…</p>
+                ) : (
+                  <RadioGroup
+                    value={theme ?? "system"}
+                    onValueChange={setTheme}
+                    className="grid gap-3"
+                  >
+                    <label
+                      htmlFor="theme-light"
+                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                      <RadioGroupItem value="light" id="theme-light" />
+                      <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium">Light mode</span>
+                    </label>
+                    <label
+                      htmlFor="theme-dark"
+                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                      <RadioGroupItem value="dark" id="theme-dark" />
+                      <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium">Dark mode</span>
+                    </label>
+                    <label
+                      htmlFor="theme-system"
+                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                    >
+                      <RadioGroupItem value="system" id="theme-system" />
+                      <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium">System</span>
+                    </label>
+                  </RadioGroup>
+                )}
               </div>
-              {!themeReady ? (
-                <p className="text-sm text-muted-foreground">Loading theme…</p>
-              ) : (
-                <RadioGroup
-                  value={theme ?? "system"}
-                  onValueChange={setTheme}
-                  className="grid gap-3"
-                >
-                  <label
-                    htmlFor="theme-light"
-                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                  >
-                    <RadioGroupItem value="light" id="theme-light" />
-                    <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium">Light mode</span>
-                  </label>
-                  <label
-                    htmlFor="theme-dark"
-                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                  >
-                    <RadioGroupItem value="dark" id="theme-dark" />
-                    <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium">Dark mode</span>
-                  </label>
-                  <label
-                    htmlFor="theme-system"
-                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                  >
-                    <RadioGroupItem value="system" id="theme-system" />
-                    <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium">System</span>
-                  </label>
-                </RadioGroup>
-              )}
-            </div>
-            <div id="language" className="scroll-mt-28 space-y-3">
-              <div>
-                <h3 className="text-sm font-medium text-foreground">Language</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Interface language for menus and labels.
-                </p>
-              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showGeneral && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Language</CardTitle>
+              <CardDescription className="mt-2">
+                Interface language for menus and labels.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="ui-language">Interface language</Label>
                 <Select value={uiLocale} onValueChange={handleUiLocaleChange}>
@@ -590,25 +643,20 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div id="timezone" className="scroll-mt-28 space-y-2">
-              <h3 className="text-sm font-medium text-foreground">Timezone</h3>
-              <p className="text-sm text-muted-foreground">
-                Default timezone for dates and schedules will be available here.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Currency Settings Section */}
-        <Card className="mb-6">
+        {showGeneral && <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               <CardTitle>Currency Settings</CardTitle>
             </div>
             <CardDescription className="mt-2">
-              Set your preferred currency for displaying monetary values throughout the application
+              Set your preferred currency for displaying monetary values
+              throughout the application
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -627,17 +675,18 @@ export default function Settings() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-gray-500">
-                  Example: {formatCurrency(1000)} (1,000 in your selected currency)
+                <p className="text-sm text-muted-foreground">
+                  Example: {formatCurrency(1000)} (1,000 in your selected
+                  currency)
                 </p>
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card className="mb-6">
+        {showGeneral && <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Invoice Company Settings</CardTitle>
+            <CardTitle>Company Information</CardTitle>
             <CardDescription className="mt-2">
               These details are used in invoice header and tax invoice output.
             </CardDescription>
@@ -650,7 +699,10 @@ export default function Settings() {
                   id="invoice-company-name"
                   value={invoiceSettingsForm.company_name}
                   onChange={(e) =>
-                    setInvoiceSettingsForm((p) => ({ ...p, company_name: e.target.value }))
+                    setInvoiceSettingsForm((p) => ({
+                      ...p,
+                      company_name: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -660,7 +712,10 @@ export default function Settings() {
                   id="invoice-company-gst"
                   value={invoiceSettingsForm.company_gst}
                   onChange={(e) =>
-                    setInvoiceSettingsForm((p) => ({ ...p, company_gst: e.target.value }))
+                    setInvoiceSettingsForm((p) => ({
+                      ...p,
+                      company_gst: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -671,7 +726,10 @@ export default function Settings() {
                   rows={3}
                   value={invoiceSettingsForm.company_address}
                   onChange={(e) =>
-                    setInvoiceSettingsForm((p) => ({ ...p, company_address: e.target.value }))
+                    setInvoiceSettingsForm((p) => ({
+                      ...p,
+                      company_address: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -682,30 +740,54 @@ export default function Settings() {
                   placeholder="https://... or data:image/png;base64,..."
                   value={invoiceSettingsForm.company_logo_url}
                   onChange={(e) =>
-                    setInvoiceSettingsForm((p) => ({ ...p, company_logo_url: e.target.value }))
+                    setInvoiceSettingsForm((p) => ({
+                      ...p,
+                      company_logo_url: e.target.value,
+                    }))
                   }
                 />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-3">
-              <Button onClick={handleSaveInvoiceSettings} disabled={invoiceSettingsSaving}>
+              <Button
+                onClick={handleSaveInvoiceSettings}
+                disabled={invoiceSettingsSaving}
+              >
                 {invoiceSettingsSaving ? "Saving..." : "Save invoice settings"}
               </Button>
               {invoiceSettings?.updated_at && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   Last updated: {formatDate(invoiceSettings.updated_at)}
                 </span>
               )}
             </div>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <SettingsProductCatalogTypes />
+        {showApps && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Products</h2>
+              <p className="text-sm text-muted-foreground">
+                Interface types and feature types.
+              </p>
+            </div>
+            <SettingsProductCatalogTypes />
+          </>
+        )}
 
-        <SettingsWorkspaceSkills />
+        {showApps && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Human Resource</h2>
+              <p className="text-sm text-muted-foreground">Workspace skills.</p>
+            </div>
+            <SettingsWorkspaceSkills />
+          </>
+        )}
 
         {/* Sales Stages Section */}
-        <Card className="mb-6">
+        {showApps && <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -714,10 +796,16 @@ export default function Settings() {
                   Sales stages
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Manage deal stages used in the sales pipeline (e.g. lead, qualified, won, lost)
+                  Manage deal stages used in the sales pipeline (e.g. lead,
+                  qualified, won, lost)
                 </CardDescription>
               </div>
-              <Button onClick={() => { setStageName(""); setStageAddOpen(true); }}>
+              <Button
+                onClick={() => {
+                  setStageName("");
+                  setStageAddOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add stage
               </Button>
@@ -727,11 +815,11 @@ export default function Settings() {
             {stagesLoading ? (
               <div className="text-center py-8">Loading stages...</div>
             ) : stages.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
+              <div className="text-center py-8 text-muted-foreground">
                 No stages yet. Add one to customize your pipeline.
               </div>
             ) : (
-              <div className="rounded-md border bg-white">
+              <div className="rounded-md border border-border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -747,14 +835,18 @@ export default function Settings() {
                         <TableCell className="font-medium">{s.name}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => openEditStage(s)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditStage(s)}
+                            >
                               Edit
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => openDeleteStage(s)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-destructive hover:text-destructive/90"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -767,19 +859,20 @@ export default function Settings() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Project statuses Section */}
-        <Card className="mb-6">
+        {showApps && <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FolderKanban className="h-5 w-5" />
-                  Project statuses
+                  Project Stages
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Manage project statuses for the projects list, kanban board, and create form
+                  Manage project statuses for the projects list, kanban board,
+                  and create form
                 </CardDescription>
               </div>
               <Button
@@ -797,11 +890,11 @@ export default function Settings() {
             {projectStatusesLoading ? (
               <div className="text-center py-8">Loading statuses...</div>
             ) : projectStatuses.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
+              <div className="text-center py-8 text-muted-foreground">
                 No statuses yet. Add one to customize your project pipeline.
               </div>
             ) : (
-              <div className="rounded-md border bg-white">
+              <div className="rounded-md border border-border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -828,7 +921,7 @@ export default function Settings() {
                               variant="outline"
                               size="sm"
                               onClick={() => openDeleteProjStatus(s)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-destructive hover:text-destructive/90"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -841,10 +934,10 @@ export default function Settings() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* GitHub Connections Section */}
-        <Card>
+        {showIntegrations && <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -853,7 +946,8 @@ export default function Settings() {
                   GitHub Connections
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Manage global GitHub connections to link repositories with your projects
+                  Manage global GitHub connections to link repositories with
+                  your projects
                 </CardDescription>
               </div>
               <Button onClick={() => setAddDialogOpen(true)}>
@@ -867,10 +961,13 @@ export default function Settings() {
               <div className="text-center py-8">Loading connections...</div>
             ) : connections.length === 0 ? (
               <div className="text-center py-12">
-                <Github className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No GitHub connections</h3>
-                <p className="text-gray-600 mb-4">
-                  Add a GitHub connection to start linking repositories to your projects
+                <Github className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  No GitHub connections
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Add a GitHub connection to start linking repositories to your
+                  projects
                 </p>
                 <Button onClick={() => setAddDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -878,7 +975,7 @@ export default function Settings() {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-md border bg-white">
+              <div className="rounded-md border border-border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -901,13 +998,15 @@ export default function Settings() {
                               <>
                                 <span>{connection.github_user}</span>
                                 {connection.github_email && (
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-sm text-muted-foreground">
                                     ({connection.github_email})
                                   </span>
                                 )}
                               </>
                             ) : (
-                              <span className="text-gray-400">Not verified</span>
+                              <span className="text-muted-foreground">
+                                Not verified
+                              </span>
                             )}
                           </div>
                         </TableCell>
@@ -915,14 +1014,16 @@ export default function Settings() {
                           <Badge
                             className={
                               connection.is_active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
+                                ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+                                : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
                             }
                           >
                             {connection.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{formatDate(connection.last_verified_at)}</TableCell>
+                        <TableCell>
+                          {formatDate(connection.last_verified_at)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
@@ -933,7 +1034,9 @@ export default function Settings() {
                             >
                               <RefreshCw
                                 className={`h-4 w-4 ${
-                                  verifying === connection.id ? "animate-spin" : ""
+                                  verifying === connection.id
+                                    ? "animate-spin"
+                                    : ""
                                 }`}
                               />
                             </Button>
@@ -948,7 +1051,7 @@ export default function Settings() {
                               variant="outline"
                               size="sm"
                               onClick={() => openDeleteDialog(connection)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-destructive hover:text-destructive/90"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -961,41 +1064,92 @@ export default function Settings() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Help Section */}
-        <Card className="mt-6">
+        {showIntegrations && <Card className="mt-6">
           <CardHeader>
             <CardTitle>How to create a GitHub Personal Access Token</CardTitle>
           </CardHeader>
           <CardContent>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-              <li>Go to GitHub Settings → Developer settings → Personal access tokens</li>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-foreground">
+              <li>
+                Go to GitHub Settings → Developer settings → Personal access
+                tokens
+              </li>
               <li>Click "Generate new token (classic)"</li>
               <li>
                 Give it a descriptive name and select the following scopes:
                 <ul className="list-disc list-inside ml-6 mt-1 space-y-1">
-                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">repo</code> - Full control of private repositories</li>
-                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">read:user</code> - Read user profile data</li>
-                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">project</code> - Full control of user projects (required for GitHub Projects integration)</li>
-                  <li><code className="bg-gray-100 px-1 py-0.5 rounded">read:org</code> - Read org and team membership (if using organization projects)</li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">repo</code> -
+                    Full control of private repositories
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">
+                      read:user
+                    </code>{" "}
+                    - Read user profile data
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">
+                      project
+                    </code>{" "}
+                    - Full control of user projects (required for GitHub
+                    Projects integration)
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">
+                      read:org
+                    </code>{" "}
+                    - Read org and team membership (if using organization
+                    projects)
+                  </li>
                 </ul>
               </li>
-              <li>Click "Generate token" and copy the token immediately (you won't see it again)</li>
+              <li>
+                Click "Generate token" and copy the token immediately (you won't
+                see it again)
+              </li>
               <li>Paste the token here when creating a new connection</li>
             </ol>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-1">💡 Note about GitHub Projects:</p>
-              <p className="text-xs text-blue-800">
-                GitHub Projects (V2) are different from repositories. You need to create them separately at{" "}
-                <a href="https://github.com/users/YOUR_USERNAME/projects/new" target="_blank" rel="noopener noreferrer" className="underline">
+            <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3">
+              <p className="mb-1 text-sm font-medium text-foreground">
+                💡 Note about GitHub Projects:
+              </p>
+              <p className="text-xs text-muted-foreground">
+                GitHub Projects (V2) are different from repositories. You need
+                to create them separately at{" "}
+                <a
+                  href="https://github.com/users/YOUR_USERNAME/projects/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
                   github.com/users/YOUR_USERNAME/projects/new
                 </a>
-                . Make sure your token has the <code className="bg-blue-100 px-1 py-0.5 rounded">project</code> scope to access them.
+                . Make sure your token has the{" "}
+                <code className="rounded bg-muted px-1 py-0.5">project</code>{" "}
+                scope to access them.
               </p>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
+
+        {activeSettingsSection === "user-management" && <SettingsUserManagement />}
+
+        {showEmptySection && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Notifications
+              </CardTitle>
+              <CardDescription className="mt-2">
+                No configurable details are available in this section yet.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
 
         {/* Add Connection Dialog */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -1025,7 +1179,7 @@ export default function Settings() {
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Your token will be encrypted and stored securely
                 </p>
               </div>
@@ -1107,8 +1261,9 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Delete GitHub Connection</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{selectedConnection?.connection_name}"?
-                This will also remove all repository links using this connection.
+                Are you sure you want to delete "
+                {selectedConnection?.connection_name}"? This will also remove
+                all repository links using this connection.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -1139,7 +1294,8 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Add sales stage</DialogTitle>
               <DialogDescription>
-                Add a new stage to your sales pipeline (e.g. lead, qualified, won).
+                Add a new stage to your sales pipeline (e.g. lead, qualified,
+                won).
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1154,10 +1310,20 @@ export default function Settings() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setStageAddOpen(false); setStageName(""); }} disabled={stageFormLoading}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStageAddOpen(false);
+                  setStageName("");
+                }}
+                disabled={stageFormLoading}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddStage} disabled={stageFormLoading || !stageName.trim()}>
+              <Button
+                onClick={handleAddStage}
+                disabled={stageFormLoading || !stageName.trim()}
+              >
                 {stageFormLoading ? "Adding..." : "Add stage"}
               </Button>
             </DialogFooter>
@@ -1170,7 +1336,8 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Edit sales stage</DialogTitle>
               <DialogDescription>
-                Change the stage name. Deals using this stage will show the new name.
+                Change the stage name. Deals using this stage will show the new
+                name.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1184,10 +1351,21 @@ export default function Settings() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setStageEditOpen(false); setStageName(""); setSelectedStage(null); }} disabled={stageFormLoading}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStageEditOpen(false);
+                  setStageName("");
+                  setSelectedStage(null);
+                }}
+                disabled={stageFormLoading}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleEditStage} disabled={stageFormLoading || !stageName.trim()}>
+              <Button
+                onClick={handleEditStage}
+                disabled={stageFormLoading || !stageName.trim()}
+              >
                 {stageFormLoading ? "Updating..." : "Update"}
               </Button>
             </DialogFooter>
@@ -1200,14 +1378,28 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Delete sales stage</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{selectedStage?.name}"? Deals in this stage will keep the stage value but it may no longer appear in pipeline lists until you add a stage with the same name again.
+                Are you sure you want to delete "{selectedStage?.name}"? Deals
+                in this stage will keep the stage value but it may no longer
+                appear in pipeline lists until you add a stage with the same
+                name again.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setStageDeleteOpen(false); setSelectedStage(null); }} disabled={stageFormLoading}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStageDeleteOpen(false);
+                  setSelectedStage(null);
+                }}
+                disabled={stageFormLoading}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteStage} disabled={stageFormLoading}>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteStage}
+                disabled={stageFormLoading}
+              >
                 {stageFormLoading ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
@@ -1220,7 +1412,8 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Add project status</DialogTitle>
               <DialogDescription>
-                Add a status used on the projects board (e.g. Draft, Active, Completed).
+                Add a status used on the projects board (e.g. Draft, Active,
+                Completed).
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1261,7 +1454,8 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Edit project status</DialogTitle>
               <DialogDescription>
-                Changing the name updates how it appears in dropdowns; existing projects keep the new label when they match.
+                Changing the name updates how it appears in dropdowns; existing
+                projects keep the new label when they match.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1297,12 +1491,17 @@ export default function Settings() {
         </Dialog>
 
         {/* Delete Project Status Dialog */}
-        <Dialog open={projStatusDeleteOpen} onOpenChange={setProjStatusDeleteOpen}>
+        <Dialog
+          open={projStatusDeleteOpen}
+          onOpenChange={setProjStatusDeleteOpen}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete project status</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{selectedProjStatus?.name}"? Projects using this value will show it under Other until you edit them.
+                Are you sure you want to delete "{selectedProjStatus?.name}"?
+                Projects using this value will show it under Other until you
+                edit them.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

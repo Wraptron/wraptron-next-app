@@ -62,8 +62,8 @@ export default function DepartmentsPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
-            <p className="text-gray-600 mt-1">Manage organizational departments and teams</p>
+            <h1 className="text-2xl font-bold text-foreground">Departments</h1>
+            <p className="text-muted-foreground mt-1">Manage organizational departments and teams</p>
           </div>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -82,25 +82,25 @@ export default function DepartmentsPage() {
                     </div>
                     <div>
                         <CardTitle className="text-lg">{dept.name}</CardTitle>
-                        <p className="text-sm text-gray-500">Head: {dept.head}</p>
+                        <p className="text-sm text-muted-foreground">Head: {dept.head}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div className="flex flex-col gap-1 p-3 bg-gray-50 rounded-md">
-                    <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-3">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <Users className="w-3 h-3" /> Employees
                     </span>
-                    <span className="text-lg font-semibold text-gray-900">{dept.employeeCount}</span>
+                    <span className="text-lg font-semibold text-foreground">{dept.employeeCount}</span>
                   </div>
-                  <div className="flex flex-col gap-1 p-3 bg-gray-50 rounded-md">
-                    <span className="text-xs font-medium text-gray-500">Budget</span>
-                    <span className="text-lg font-semibold text-gray-900">{dept.budget}</span>
+                  <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-3">
+                    <span className="text-xs font-medium text-muted-foreground">Budget</span>
+                    <span className="text-lg font-semibold text-foreground">{dept.budget}</span>
                   </div>
                 </div>
               </CardContent>

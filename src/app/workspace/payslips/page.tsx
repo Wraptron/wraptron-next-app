@@ -54,8 +54,8 @@ export default function PayslipsPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Payslips</h1>
-            <p className="text-gray-600 mt-1">Manage and distribute employee salary slips</p>
+            <h1 className="text-2xl font-bold text-foreground">Payslips</h1>
+            <p className="text-muted-foreground mt-1">Manage and distribute employee salary slips</p>
           </div>
           <div className="flex gap-2">
              <Button variant="outline">
@@ -68,7 +68,7 @@ export default function PayslipsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border shadow-sm">
+        <div className="rounded-lg border border-border bg-card shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>

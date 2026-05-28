@@ -62,15 +62,15 @@ function statusClass(status?: string) {
   if (s === "pre_onboarding") return "bg-indigo-100 text-indigo-800";
   if (s === "notice_period") return "bg-amber-100 text-amber-800";
   if (s === "exited") return "bg-red-100 text-red-800";
-  return "bg-gray-100 text-gray-800";
+  return "bg-muted text-muted-foreground";
 }
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (value == null || value === "") return null;
   return (
     <div className="flex justify-between gap-4 py-1.5 text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-900 font-medium text-right">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground text-right">{value}</span>
     </div>
   );
 }
@@ -224,7 +224,7 @@ export default function EmployeeDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground p-8 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -300,10 +300,10 @@ export default function EmployeeDetailPage() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   {displayName(employee)}
                 </h1>
-                <p className="text-gray-600 mt-0.5">
+                <p className="text-muted-foreground mt-0.5">
                   {employee.designation || employee.role || "—"}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -319,7 +319,7 @@ export default function EmployeeDetailPage() {
                     {statusLabel(employee.employment_status)}
                   </span>
                   {employee.emp_code && (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       Code: {employee.emp_code}
                     </span>
                   )}
@@ -350,9 +350,9 @@ export default function EmployeeDetailPage() {
               </CardHeader>
               <CardContent>
                 {skillsLoading ? (
-                  <p className="text-sm text-gray-500">Loading skills...</p>
+                  <p className="text-sm text-muted-foreground">Loading skills...</p>
                 ) : skillAssignments.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     No skill levels recorded. Assign skills on the{" "}
                     <Link href={HR_SKILL_MATRIX_PATH} className="text-blue-600 underline">
                       skill matrix
@@ -360,14 +360,14 @@ export default function EmployeeDetailPage() {
                     .
                   </p>
                 ) : (
-                  <ul className="divide-y rounded-md border bg-white">
+                  <ul className="divide-y divide-border rounded-md border border-border bg-card">
                     {skillAssignments.map((a) => (
                       <li
                         key={a.skill_id}
                         className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm"
                       >
-                        <span className="font-medium text-gray-900">{a.skill_name}</span>
-                        <span className="text-gray-600">{workspaceSkillLevelDescription(a.level)}</span>
+                        <span className="font-medium text-foreground">{a.skill_name}</span>
+                        <span className="text-muted-foreground">{workspaceSkillLevelDescription(a.level)}</span>
                       </li>
                     ))}
                   </ul>
@@ -391,7 +391,7 @@ export default function EmployeeDetailPage() {
                   <DetailRow label="GitHub" value={employee.github_username} />
                   <DetailRow label="Location" value={employee.location} />
                   {!employee.email && !employee.phone && !employee.personal_email && !employee.work_phone && !employee.location && (
-                    <p className="text-sm text-gray-500 py-2">No contact details</p>
+                    <p className="text-sm text-muted-foreground py-2">No contact details</p>
                   )}
                 </CardContent>
               </Card>
@@ -500,7 +500,7 @@ export default function EmployeeDetailPage() {
               </CardHeader>
               <CardContent>
                 {attendanceLoading ? (
-                  <p className="text-sm text-gray-500">Loading attendance records...</p>
+                  <p className="text-sm text-muted-foreground">Loading attendance records...</p>
                 ) : attendanceError ? (
                   <div className="space-y-3">
                     <p className="text-sm text-red-600">{attendanceError}</p>
@@ -509,7 +509,7 @@ export default function EmployeeDetailPage() {
                     </Button>
                   </div>
                 ) : attendanceSessions.length === 0 ? (
-                  <p className="text-sm text-gray-500">No attendance records yet.</p>
+                  <p className="text-sm text-muted-foreground">No attendance records yet.</p>
                 ) : attendanceView === "list" ? (
                   <ul className="space-y-3">
                     {attendanceSessions.map((s) => {
@@ -529,16 +529,16 @@ export default function EmployeeDetailPage() {
                       return (
                         <li
                           key={s.id}
-                          className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-gray-100 last:border-0 text-sm"
+                          className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2 text-sm last:border-0"
                         >
                           <div>
-                            <span className="font-medium text-gray-900">{dateLabel}</span>
-                            <span className="text-gray-500 ml-2 capitalize">
+                            <span className="font-medium text-foreground">{dateLabel}</span>
+                            <span className="text-muted-foreground ml-2 capitalize">
                               {s.work_mode.replace("_", " ")}
                             </span>
                           </div>
                           <div className="flex items-center gap-4 tabular-nums">
-                            <span className="text-gray-600">
+                            <span className="text-muted-foreground">
                               {formatAttendanceTime(s.check_in_at)} -{" "}
                               {s.check_out_at ? formatAttendanceTime(s.check_out_at) : "—"}
                             </span>
@@ -568,7 +568,7 @@ export default function EmployeeDetailPage() {
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Prev
                       </Button>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {calendarMonth.toLocaleDateString("en-IN", {
                           month: "long",
                           year: "numeric",
@@ -592,7 +592,7 @@ export default function EmployeeDetailPage() {
                       {weekDays.map((day) => (
                         <div
                           key={day}
-                          className="px-2 py-1 text-center font-medium text-gray-500"
+                          className="px-2 py-1 text-center font-medium text-muted-foreground"
                         >
                           {day}
                         </div>
@@ -621,11 +621,11 @@ export default function EmployeeDetailPage() {
                               "min-h-24 rounded-lg border p-2",
                               daySessions.length > 0
                                 ? "border-green-200 bg-green-50/60"
-                                : "border-gray-100 bg-white",
+                                : "border-border bg-card",
                             )}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-900">{day}</span>
+                              <span className="text-sm font-medium text-foreground">{day}</span>
                               {daySessions.length > 0 && (
                                 <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
                                   {daySessions.length}
@@ -644,12 +644,12 @@ export default function EmployeeDetailPage() {
                                 return (
                                   <div
                                     key={s.id}
-                                    className="rounded bg-white/80 px-1.5 py-1 text-[10px]"
+                                    className="rounded border border-border bg-card/90 px-1.5 py-1 text-[10px]"
                                   >
-                                    <p className="truncate text-gray-700 capitalize">
+                                    <p className="truncate capitalize text-foreground">
                                       {s.work_mode.replace("_", " ")}
                                     </p>
-                                    <p className="truncate text-gray-600">
+                                    <p className="truncate text-muted-foreground">
                                       {formatAttendanceTime(s.check_in_at)} -{" "}
                                       {s.check_out_at
                                         ? formatAttendanceTime(s.check_out_at)
@@ -664,7 +664,7 @@ export default function EmployeeDetailPage() {
                                 );
                               })}
                               {daySessions.length > 2 && (
-                                <p className="text-[10px] text-gray-500">
+                                <p className="text-[10px] text-muted-foreground">
                                   +{daySessions.length - 2} more
                                 </p>
                               )}
@@ -688,7 +688,7 @@ export default function EmployeeDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Track assigned work items and completion status from the project tasks module.
                 </p>
                 <Button variant="outline" asChild>
@@ -707,7 +707,7 @@ export default function EmployeeDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Access salary statements and payroll history from the payslips workspace module.
                 </p>
                 <Button variant="outline" asChild>

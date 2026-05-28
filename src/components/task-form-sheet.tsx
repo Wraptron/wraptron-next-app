@@ -22,10 +22,16 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { projectsApi, type CreateTaskInput, type Project } from "@/lib/api";
+import {
+  employeesApi,
+  projectsApi,
+  type CreateTaskInput,
+  type Employee,
+  type Project,
+} from "@/lib/api";
 
 const STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
+  { value: "pending", label: "Todo" },
   { value: "in_progress", label: "In progress" },
   { value: "done", label: "Done" },
   { value: "blocked", label: "Blocked" },
@@ -52,6 +58,7 @@ const RECURRENCE_FREQUENCY_OPTIONS = [
 const initialFormState = {
   title: "",
   description: "",
+  assigned_employee_id: "",
   status: "pending",
   end_date: "",
   billable: "billable",
@@ -83,6 +90,7 @@ export function TaskFormSheet({
   projects = [],
 }: TaskFormSheetProps) {
   const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [formData, setFormData] = useState(initialFormState);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
@@ -98,6 +106,25 @@ export function TaskFormSheet({
 
   const effectiveProjectId = projectId ?? (selectedProjectId ? parseInt(selectedProjectId, 10) : null);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const loadEmployees = async () => {
+      try {
+        const activeRes = await employeesApi.getAll({
+          employment_status: "active",
+          limit: 500,
+        });
+        setEmployees(activeRes.data);
+      } catch (err) {
+        console.error("Failed to load employees:", err);
+        setEmployees([]);
+      }
+    };
+
+    loadEmployees();
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (effectiveProjectId == null || Number.isNaN(effectiveProjectId)) {
@@ -108,6 +135,9 @@ export function TaskFormSheet({
       const payload: CreateTaskInput = {
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
+        assigned_employee_id: formData.assigned_employee_id
+          ? parseInt(formData.assigned_employee_id, 10)
+          : undefined,
         status: formData.status,
         end_date: formData.end_date || undefined,
         billable: formData.billable,
@@ -149,28 +179,6 @@ export function TaskFormSheet({
           className="flex flex-col flex-1 min-h-0 overflow-y-auto"
         >
           <div className="space-y-4 p-4">
-            {!projectId && projects.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="task-project">Project *</Label>
-                <Select
-                  value={selectedProjectId}
-                  onValueChange={setSelectedProjectId}
-                  required={!projectId}
-                >
-                  <SelectTrigger id="task-project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.project_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="task-title">Title *</Label>
               <Input
@@ -198,6 +206,28 @@ export function TaskFormSheet({
               />
             </div>
 
+            {!projectId && projects.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="task-project">Project *</Label>
+                <Select
+                  value={selectedProjectId}
+                  onValueChange={setSelectedProjectId}
+                  required={!projectId}
+                >
+                  <SelectTrigger id="task-project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.project_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="task-status">Status</Label>
               <Select
@@ -213,6 +243,32 @@ export function TaskFormSheet({
                   {STATUS_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="task-assigned-to">Assign to</Label>
+              <Select
+                value={formData.assigned_employee_id || "unassigned"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    assigned_employee_id:
+                      value === "unassigned" ? "" : value,
+                  })
+                }
+              >
+                <SelectTrigger id="task-assigned-to">
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {`${employee.first_name} ${employee.last_name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -274,7 +330,7 @@ export function TaskFormSheet({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-estimate">Estimate (hours)</Label>
+              <Label htmlFor="task-estimate">Story point estimate</Label>
               <Input
                 id="task-estimate"
                 type="number"

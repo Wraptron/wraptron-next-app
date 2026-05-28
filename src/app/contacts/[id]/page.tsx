@@ -2,36 +2,39 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { contactsApi, type Contact } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { ContactActivities } from "@/components/contact-activities";
+import { ArrowLeft, Edit, Loader2, Mail, Phone } from "lucide-react";
 
 const getStatusColor = (status?: string) => {
   const colors: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    archived: "bg-red-100 text-red-800",
+    active: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+    inactive: "bg-muted text-muted-foreground",
+    archived: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
   };
-  return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
+  return colors[status?.toLowerCase() || ""] || "bg-muted text-muted-foreground";
 };
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (value == null || value === "") return null;
   return (
-    <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-      <span className="text-gray-500 text-sm">{label}</span>
-      <span className="text-sm font-medium text-right max-w-[60%]">{value}</span>
+    <div className="flex justify-between gap-4 border-b border-border py-2 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="max-w-[60%] text-right text-sm font-medium">{value}</span>
     </div>
   );
 }
 
+const telHref = (phone: string) =>
+  `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
+
 export default function ContactDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { setTitle } = usePageTitle();
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,9 @@ export default function ContactDetailPage() {
 
   useEffect(() => {
     if (contact) {
-      const name = [contact.prefix, contact.first_name, contact.last_name].filter(Boolean).join(" ");
+      const name = [contact.prefix, contact.first_name, contact.last_name]
+        .filter(Boolean)
+        .join(" ");
       setTitle(name || "Contact");
     }
     return () => setTitle(null);
@@ -62,71 +67,94 @@ export default function ContactDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error || !contact) {
     return (
-      <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
-        <div className="max-w-2xl mx-auto">
-          <p className="text-red-600">{error || "Contact not found"}</p>
+      <div className="min-h-screen bg-background p-4 text-foreground md:p-8">
+        <div className="mx-auto max-w-2xl">
+          <p className="text-destructive">{error || "Contact not found"}</p>
           <Button variant="outline" className="mt-4" asChild>
-            <Link href="/contacts">Back to Contacts</Link>
+            <Link href="/sales/contacts">Back to Contacts</Link>
           </Button>
         </div>
       </div>
     );
   }
 
-  const displayName = [contact.prefix, contact.first_name, contact.last_name].filter(Boolean).join(" ") || "Unnamed";
+  const displayName =
+    [contact.prefix, contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
+    "Unnamed";
+  const dial = (contact.mobile || contact.phone || "").trim();
+  const mail = contact.email?.trim();
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <Link href="/contacts">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+    <div className="min-h-screen bg-background p-4 text-foreground md:p-8">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/sales/contacts">
+              <ArrowLeft className="mr-1 h-4 w-4" />
               Contacts
-            </Button>
-          </Link>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/contacts?edit=${contact.id}`}>
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
             </Link>
           </Button>
+          <div className="flex flex-wrap gap-2">
+            {dial ? (
+              <Button variant="outline" size="sm" asChild>
+                <a href={telHref(dial)}>
+                  <Phone className="mr-1 h-4 w-4" />
+                  Call
+                </a>
+              </Button>
+            ) : null}
+            {mail ? (
+              <Button variant="outline" size="sm" asChild>
+                <a href={`mailto:${mail}`}>
+                  <Mail className="mr-1 h-4 w-4" />
+                  Email
+                </a>
+              </Button>
+            ) : null}
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/sales/contacts?edit=${contact.id}`}>
+                <Edit className="mr-1 h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle className="text-xl">
-                {displayName}
-              </CardTitle>
+              <CardTitle className="text-xl">{displayName}</CardTitle>
               <div className="flex items-center gap-2">
                 <Badge className={getStatusColor(contact.status)}>
                   {contact.status || "N/A"}
                 </Badge>
                 {contact.is_primary && (
-                  <Badge className="bg-blue-100 text-blue-800">Primary</Badge>
+                  <Badge className="bg-primary/15 text-primary">Primary</Badge>
                 )}
               </div>
             </div>
             {(contact.job_title || contact.company) && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {[contact.job_title, contact.company].filter(Boolean).join(" · ")}
               </p>
             )}
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-1">
             <DetailRow label="Email" value={contact.email} />
             <DetailRow label="Phone" value={contact.phone} />
             <DetailRow label="Mobile" value={contact.mobile} />
-            <DetailRow label="Company" value={contact.company || contact.client_company_name} />
+            <DetailRow
+              label="Company"
+              value={contact.company || contact.client_company_name}
+            />
             <DetailRow label="Address" value={contact.address} />
             <DetailRow label="City" value={contact.city} />
             <DetailRow label="State" value={contact.state} />
@@ -139,6 +167,8 @@ export default function ContactDetailPage() {
             <DetailRow label="Notes" value={contact.notes} />
           </CardContent>
         </Card>
+
+        <ContactActivities contact={contact} />
       </div>
     </div>
   );
