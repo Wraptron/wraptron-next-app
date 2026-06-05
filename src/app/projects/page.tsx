@@ -131,12 +131,17 @@ const ProjectKanbanCard = ({
   project,
   onEdit,
   onDelete,
+  onCardClick,
 }: {
   project: Project;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCardClick?: () => void;
 }) => (
-  <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
+  <Card
+    className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing"
+    onClick={onCardClick}
+  >
     <CardContent className="p-3">
       <div className="flex justify-between items-start mb-2">
         <div className="min-w-0 flex-1">
@@ -150,6 +155,7 @@ const ProjectKanbanCard = ({
               variant="ghost"
               size="sm"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onEdit();
               }}
@@ -163,6 +169,7 @@ const ProjectKanbanCard = ({
               variant="ghost"
               size="sm"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onDelete();
               }}
@@ -190,10 +197,12 @@ const SortableProjectCard = ({
   project,
   onEdit,
   onDelete,
+  onCardClick,
 }: {
   project: Project;
   onEdit: () => void;
   onDelete: (project: Project) => void;
+  onCardClick: (project: Project) => void;
 }) => {
   const {
     attributes,
@@ -212,16 +221,12 @@ const SortableProjectCard = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Link
-        href={`/projects/${project.id}`}
-        className="block no-underline text-inherit"
-      >
-        <ProjectKanbanCard
-          project={project}
-          onEdit={onEdit}
-          onDelete={() => onDelete(project)}
-        />
-      </Link>
+      <ProjectKanbanCard
+        project={project}
+        onEdit={onEdit}
+        onDelete={() => onDelete(project)}
+        onCardClick={() => onCardClick(project)}
+      />
     </div>
   );
 };
@@ -233,6 +238,7 @@ const KanbanColumn = ({
   statusSubtext,
   onEdit,
   onDelete,
+  onCardClick,
 }: {
   id: string;
   label: string;
@@ -240,6 +246,7 @@ const KanbanColumn = ({
   statusSubtext: string;
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
+  onCardClick: (project: Project) => void;
 }) => {
   const { setNodeRef } = useSortable({ id });
 
@@ -265,6 +272,7 @@ const KanbanColumn = ({
                 project={project}
                 onEdit={() => onEdit(project)}
                 onDelete={onDelete}
+                onCardClick={onCardClick}
               />
             ))}
             {projects.length === 0 && (
@@ -612,6 +620,8 @@ const Projects = () => {
                         setSelectedProjects([project.id]);
                         setDeleteDialogOpen(true);
                       }}
+                      onCardClick={(project) =>
+                        router.push(`/projects/${project.id}`)}
                     />
                   );
                 })}

@@ -165,7 +165,7 @@ export default function ProductDetailPage() {
         <div className="space-y-8">
           <section
             id="interface"
-            className="scroll-mt-24 rounded-lg border bg-white shadow-sm"
+            className="scroll-mt-24 rounded-lg border bg-card text-card-foreground shadow-sm"
           >
             <div className="border-b px-4 py-3 sm:px-6">
               <h2 className="text-base font-semibold">Interface</h2>
@@ -190,7 +190,7 @@ export default function ProductDetailPage() {
 
           <section
             id="features"
-            className="scroll-mt-24 rounded-lg border bg-white shadow-sm"
+            className="scroll-mt-24 rounded-lg border bg-card text-card-foreground shadow-sm"
           >
             <div className="border-b px-4 py-3 sm:px-6">
               <h2 className="text-base font-semibold">Features</h2>
@@ -224,7 +224,7 @@ export default function ProductDetailPage() {
 
           <section
             id="tech-stack"
-            className="scroll-mt-24 rounded-lg border bg-white shadow-sm"
+            className="scroll-mt-24 rounded-lg border bg-card text-card-foreground shadow-sm"
           >
             <div className="border-b px-4 py-3 sm:px-6">
               <h2 className="text-base font-semibold">Tech Stack</h2>
@@ -290,7 +290,7 @@ export default function ProductDetailPage() {
 
           <section
             id="milestone"
-            className="scroll-mt-24 rounded-lg border bg-white shadow-sm"
+            className="scroll-mt-24 rounded-lg border bg-card text-card-foreground shadow-sm"
           >
             <div className="border-b px-4 py-3 sm:px-6">
               <h2 className="text-base font-semibold">Milestone</h2>

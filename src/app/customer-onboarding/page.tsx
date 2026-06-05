@@ -134,10 +134,10 @@ function StepIndicator({
           className={cn(
             "h-1.5 rounded-full transition-all duration-300",
             i + 1 === step
-              ? "w-8 bg-blue-600"
+              ? "w-8 bg-blue-600 dark:bg-blue-500"
               : i + 1 < step
-                ? "w-4 bg-blue-300"
-                : "w-4 bg-neutral-200",
+                ? "w-4 bg-blue-300 dark:bg-blue-700"
+                : "w-4 bg-muted",
           )}
           aria-hidden
         />
@@ -266,13 +266,19 @@ export default function CustomerOnboardingPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 px-6 py-12">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-12">
         <div className="max-w-md text-center space-y-4">
           <Link href="/" className="inline-block mb-4">
-            <Image width={200} height={32} src="/wordmark.svg" alt="Wraptron" />
+            <Image
+              width={200}
+              height={32}
+              src="/wordmark.svg"
+              alt="Wraptron"
+              className="dark:brightness-0 dark:invert"
+            />
           </Link>
-          <h1 className="text-2xl font-semibold text-neutral-900">Thank you</h1>
-          <p className="text-neutral-600 text-sm leading-relaxed">
+          <h1 className="text-2xl font-semibold text-foreground">Thank you</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
             Your details have been saved to our systems. Our team will follow up
             if anything else is needed.
           </p>
@@ -285,7 +291,7 @@ export default function CustomerOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-50">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Step 1: full-bleed hero with background */}
       {step === 1 ? (
         <div className="relative flex-1 flex flex-col min-h-[100dvh]">
@@ -311,18 +317,18 @@ export default function CustomerOnboardingPage() {
                 className="brightness-0 invert drop-shadow-md"
               />
             </Link>
-            <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-white/95 p-8 shadow-xl backdrop-blur-sm md:p-10">
-              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 md:text-3xl">
+            <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-white/95 dark:border-border/50 dark:bg-card/95 p-8 shadow-xl backdrop-blur-sm md:p-10">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
                 Understanding the customer
               </h1>
-              <p className="mt-4 text-sm leading-relaxed text-neutral-600 md:text-base">
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground md:text-base">
                 Hello and Welcome to Wraptron! Our customer onboarding form is
                 aimed to make your journey to our services as smooth as
                 possible. Please provide the necessary details to ensure a
                 seamless client experience. We appreciate your time and look
                 forward to further serving you in your future with us.
               </p>
-              <p className="mt-6 text-sm font-medium text-neutral-800">
+              <p className="mt-6 text-sm font-medium text-foreground">
                 Please click next to start.
               </p>
               <div className="mt-8 flex justify-end">
@@ -336,7 +342,7 @@ export default function CustomerOnboardingPage() {
         </div>
       ) : (
         <div className="flex flex-1 flex-col">
-          <header className="border-b border-neutral-200 bg-white px-4 py-3">
+          <header className="border-b border-border bg-card px-4 py-3">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
               <Link href="/" className="shrink-0">
                 <Image
@@ -344,9 +350,10 @@ export default function CustomerOnboardingPage() {
                   height={24}
                   src="/wordmark.svg"
                   alt="Wraptron"
+                  className="dark:brightness-0 dark:invert"
                 />
               </Link>
-              <p className="text-xs text-neutral-500 hidden sm:block">
+              <p className="text-xs text-muted-foreground hidden sm:block">
                 Customer onboarding (KYC)
               </p>
             </div>
@@ -368,19 +375,19 @@ export default function CustomerOnboardingPage() {
               {stepError && (
                 <div
                   role="alert"
-                  className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                  className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
                 >
                   {stepError}
                 </div>
               )}
 
               {step === 2 && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8 space-y-8">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 space-y-8">
                   <div>
-                    <h2 className="text-xl font-semibold text-neutral-900 md:text-2xl">
+                    <h2 className="text-xl font-semibold text-foreground md:text-2xl">
                       Let&apos;s get started
                     </h2>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Tell us how you&apos;ll use Wraptron and how to reach you.
                     </p>
                   </div>
@@ -418,8 +425,8 @@ export default function CustomerOnboardingPage() {
                             className={cn(
                               "relative flex cursor-pointer rounded-xl border-2 p-4 transition-all",
                               selected
-                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20"
-                                : "border-neutral-200 hover:border-neutral-300 bg-white",
+                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
+                                : "border-border bg-card hover:border-muted-foreground/40",
                             )}
                           >
                             <RadioGroupItem
@@ -433,16 +440,16 @@ export default function CustomerOnboardingPage() {
                                   "flex size-10 shrink-0 items-center justify-center rounded-lg",
                                   selected
                                     ? "bg-blue-600 text-white"
-                                    : "bg-neutral-100 text-neutral-600",
+                                    : "bg-muted text-muted-foreground",
                                 )}
                               >
                                 <Icon className="size-5" />
                               </div>
                               <div>
-                                <span className="font-medium text-neutral-900 block">
+                                <span className="font-medium text-foreground block">
                                   {opt.label}
                                 </span>
-                                <span className="text-xs text-neutral-500 mt-0.5 block">
+                                <span className="text-xs text-muted-foreground mt-0.5 block">
                                   {opt.description}
                                 </span>
                               </div>
@@ -491,12 +498,12 @@ export default function CustomerOnboardingPage() {
               )}
 
               {step === 3 && needsCompanyDetails(form.signupType) && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8 space-y-8">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 space-y-8">
                   <div>
-                    <h2 className="text-xl font-semibold text-neutral-900 md:text-2xl">
+                    <h2 className="text-xl font-semibold text-foreground md:text-2xl">
                       Company details
                     </h2>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Business identity, location, and website.
                     </p>
                   </div>
@@ -562,12 +569,12 @@ export default function CustomerOnboardingPage() {
               )}
 
               {step === 4 && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8 space-y-8">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 space-y-8">
                   <div>
-                    <h2 className="text-xl font-semibold text-neutral-900 md:text-2xl">
+                    <h2 className="text-xl font-semibold text-foreground md:text-2xl">
                       GST details
                     </h2>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       How your business is registered for GST and your GSTIN
                       when applicable.
                     </p>
@@ -600,8 +607,8 @@ export default function CustomerOnboardingPage() {
                             className={cn(
                               "flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-all",
                               selected
-                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20"
-                                : "border-neutral-200 hover:border-neutral-300 bg-white",
+                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
+                                : "border-border bg-card hover:border-muted-foreground/40",
                             )}
                           >
                             <RadioGroupItem
@@ -609,7 +616,7 @@ export default function CustomerOnboardingPage() {
                               id={`gst-${opt.id}`}
                               className="mt-0.5"
                             />
-                            <span className="text-sm font-medium text-neutral-900 leading-snug">
+                            <span className="text-sm font-medium text-foreground leading-snug">
                               {opt.label}
                             </span>
                           </label>
@@ -636,18 +643,18 @@ export default function CustomerOnboardingPage() {
               )}
 
               {step === 5 && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8 space-y-8">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 space-y-8">
                   <div>
-                    <h2 className="text-xl font-semibold text-neutral-900 md:text-2xl">
+                    <h2 className="text-xl font-semibold text-foreground md:text-2xl">
                       Customer preferences
                     </h2>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       How you&apos;d like to work with us digitally.
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    <p className="text-sm text-neutral-700 leading-relaxed">
+                    <p className="text-sm text-foreground leading-relaxed">
                       Do you want to access our portal to view your transactions
                       and make payments online?
                     </p>
@@ -656,7 +663,7 @@ export default function CustomerOnboardingPage() {
                       onValueChange={(v) =>
                         update("portalAccess", v as "yes" | "no")
                       }
-                      className="flex rounded-xl border border-neutral-200 bg-neutral-100 p-1 gap-1 max-w-md"
+                      className="flex rounded-xl border border-border bg-muted p-1 gap-1 max-w-md"
                     >
                       {(["yes", "no"] as const).map((val) => {
                         const selected = form.portalAccess === val;
@@ -666,8 +673,8 @@ export default function CustomerOnboardingPage() {
                             className={cn(
                               "flex flex-1 cursor-pointer items-center justify-center rounded-lg px-4 py-3 text-sm font-medium transition-all",
                               selected
-                                ? "bg-white text-neutral-900 shadow-sm"
-                                : "text-neutral-600 hover:text-neutral-900",
+                                ? "bg-card text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground",
                             )}
                           >
                             <RadioGroupItem
@@ -685,26 +692,26 @@ export default function CustomerOnboardingPage() {
               )}
 
               {step === 6 && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8 space-y-6">
+                <div className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 space-y-6">
                   {submitError && (
                     <div
                       role="alert"
-                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                      className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
                     >
                       {submitError}
                     </div>
                   )}
-                  <h2 className="text-xl font-semibold text-neutral-900 md:text-2xl">
+                  <h2 className="text-xl font-semibold text-foreground md:text-2xl">
                     Privacy policy
                   </h2>
-                  <div className="prose prose-sm max-w-none text-neutral-600 space-y-4">
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground space-y-4">
                     <p>
                       We collect several types of information to provide and
                       improve our services to you. The types of data we collect
                       include:
                     </p>
                     <div>
-                      <p className="font-medium text-neutral-800">
+                      <p className="font-medium text-foreground">
                         Personal information
                       </p>
                       <p className="mt-1">
@@ -724,14 +731,14 @@ export default function CustomerOnboardingPage() {
                       </ul>
                     </div>
                     <div>
-                      <p className="font-medium text-neutral-800">Usage data</p>
+                      <p className="font-medium text-foreground">Usage data</p>
                       <p className="mt-1">
                         We collect information about how you use our website and
                         services, to enhance your experience on our website.
                       </p>
                     </div>
                     <div>
-                      <p className="font-medium text-neutral-800">Cookies</p>
+                      <p className="font-medium text-foreground">Cookies</p>
                       <p className="mt-1">
                         We use cookies. You can control the use of cookies at
                         the individual browser level.
@@ -743,7 +750,7 @@ export default function CustomerOnboardingPage() {
                         href="https://wraptron.com/privacy-policy"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 underline hover:text-blue-700"
+                        className="text-primary underline-offset-4 hover:underline"
                       >
                         https://wraptron.com/privacy-policy
                       </a>

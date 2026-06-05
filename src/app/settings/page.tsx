@@ -16,6 +16,7 @@ import {
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { SettingsUserManagement } from "@/components/settings-user-management";
+import { SortableSettingsTable } from "@/components/sortable-settings-table";
 import {
   Card,
   CardContent,
@@ -411,6 +412,26 @@ export default function Settings() {
     setStageDeleteOpen(true);
   };
 
+  const handleReorderStages = async (reordered: SalesStage[]) => {
+    const previous = stages;
+    setStages(reordered);
+    setError(null);
+    try {
+      await Promise.all(
+        reordered.map((stage, index) =>
+          salesStagesApi.update(stage.id, { sort_order: index }),
+        ),
+      );
+      setSuccessMessage("Sales stages reordered.");
+    } catch (err) {
+      setStages(previous);
+      setError(
+        err instanceof Error ? err.message : "Failed to reorder sales stages",
+      );
+      throw err;
+    }
+  };
+
   const fetchProjectStatuses = async () => {
     try {
       const res = await projectStatusesApi.getAll();
@@ -493,6 +514,28 @@ export default function Settings() {
   const openDeleteProjStatus = (s: ProjectStatus) => {
     setSelectedProjStatus(s);
     setProjStatusDeleteOpen(true);
+  };
+
+  const handleReorderProjectStatuses = async (reordered: ProjectStatus[]) => {
+    const previous = projectStatuses;
+    setProjectStatuses(reordered);
+    setError(null);
+    try {
+      await Promise.all(
+        reordered.map((status, index) =>
+          projectStatusesApi.update(status.id, { sort_order: index }),
+        ),
+      );
+      setSuccessMessage("Project stages reordered.");
+    } catch (err) {
+      setProjectStatuses(previous);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to reorder project stages",
+      );
+      throw err;
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -819,44 +862,12 @@ export default function Settings() {
                 No stages yet. Add one to customize your pipeline.
               </div>
             ) : (
-              <div className="rounded-md border border-border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stages.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.sort_order}</TableCell>
-                        <TableCell className="font-medium">{s.name}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditStage(s)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteStage(s)}
-                              className="text-destructive hover:text-destructive/90"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <SortableSettingsTable
+                items={stages}
+                onReorder={handleReorderStages}
+                onEdit={openEditStage}
+                onDelete={openDeleteStage}
+              />
             )}
           </CardContent>
         </Card>}
@@ -894,44 +905,12 @@ export default function Settings() {
                 No statuses yet. Add one to customize your project pipeline.
               </div>
             ) : (
-              <div className="rounded-md border border-border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {projectStatuses.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.sort_order}</TableCell>
-                        <TableCell className="font-medium">{s.name}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditProjStatus(s)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteProjStatus(s)}
-                              className="text-destructive hover:text-destructive/90"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <SortableSettingsTable
+                items={projectStatuses}
+                onReorder={handleReorderProjectStatuses}
+                onEdit={openEditProjStatus}
+                onDelete={openDeleteProjStatus}
+              />
             )}
           </CardContent>
         </Card>}

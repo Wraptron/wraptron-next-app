@@ -101,7 +101,7 @@ export default async function ProductSectionPage({ params }: PageProps) {
         </Button>
 
         <div className="flex items-start gap-4 mb-8">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
             <Icon className="h-6 w-6" />
           </div>
           <div>

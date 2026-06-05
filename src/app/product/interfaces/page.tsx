@@ -175,7 +175,7 @@ export default function ProductInterfacesPage() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-lg border bg-white p-12 text-center space-y-4">
+          <div className="rounded-lg border bg-card p-12 text-center space-y-4">
             <p className="text-muted-foreground">
               No interfaces yet. Add types in Settings if needed, then create your first
               interface.
@@ -186,7 +186,7 @@ export default function ProductInterfacesPage() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-md border bg-white overflow-x-auto">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

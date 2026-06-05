@@ -2,6 +2,53 @@ This is the Wraptron frontend, built with [Next.js](https://nextjs.org) and depl
 
 ## Getting Started
 
+
+### Users
+
+|User Profile|Description|
+|-------------|-------------|
+|Administrator|App admin users with master permissions|
+|Managers|Wraptron Leadership and project management|
+|Staff| Employees from wraptron|
+|Users| 1st time users, Potential customers and leads|
+|Customers| Customers of wraptron|
+|Vendors| Service providers for wraptron|
+
+## Sales
+### Process Flow
+1. New Lead Generation - Contact
+2. Sales Qualification - Deal
+3. Discovery and Requirement - BRD
+4. Sales Proposal - Quotation
+5. Acceptance - PO and Move to projects
+
+## Projects
+### Process Flow
+1. Planning - Milestone and Tasklist with target dates
+2. UI/UX Design - Brand and Product Guideline, Copy Content and Media
+3. Development
+4. Quality 
+5. Deployment 
+
+## Support
+### Process Flow
+1. Production
+2. Triage
+3. Maintenance
+
+## Finance
+
+ 
+## HR
+### Roles and Responsiblities
+- Recruitment & Talent Acquition
+- Onboarding and Induction
+- Operations and Performance Management
+- Employee engagement
+- Payroll
+- Seperation
+
+
 ### Environment configuration (dev vs prod)
 
 The frontend talks to the backend using `NEXT_PUBLIC_API_URL`.
