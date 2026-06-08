@@ -106,6 +106,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
       id: "code",
       header: "Code",
       headerClassName: "w-[120px]",
+      sortValue: (item) => byId.get(Number(item.id))?.customer_code ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return (
@@ -119,6 +120,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
       id: "name",
       header: "Name",
       headerClassName: "w-[300px]",
+      sortValue: (item) => byId.get(Number(item.id))?.name ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.name ?? "—";
@@ -127,6 +129,11 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "contact",
       header: "Contact",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return "";
+        return contactDisplayName(c) ?? contactEmail(c) ?? "";
+      },
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return "—";
@@ -136,6 +143,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "company",
       header: "Company",
+      sortValue: (item) => byId.get(Number(item.id))?.company?.name ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.company?.name ?? "—";
@@ -144,6 +152,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "gst_type",
       header: "GST type",
+      sortValue: (item) => byId.get(Number(item.id))?.gst_registration_type ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.gst_registration_type) return "—";
@@ -157,6 +166,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "gstin",
       header: "GSTIN",
+      sortValue: (item) => byId.get(Number(item.id))?.gstin ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return <span className="font-mono text-sm">{c?.gstin ?? "—"}</span>;
@@ -165,6 +175,7 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "city",
       header: "City",
+      sortValue: (item) => byId.get(Number(item.id))?.billing_address_city ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.billing_address_city ?? "—";

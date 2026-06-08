@@ -77,11 +77,13 @@ function buildColumns(activities: SalesActivity[]): CollectionColumn[] {
       id: "subject",
       header: "Subject",
       headerClassName: "w-[300px]",
+      sortValue: (item) => byId.get(Number(item.id))?.subject ?? "",
       cell: (item) => byId.get(Number(item.id))?.subject || "—",
     },
     {
       id: "type",
       header: "Type",
+      sortValue: (item) => byId.get(Number(item.id))?.type ?? "",
       cell: (item) => {
         const a = byId.get(Number(item.id));
         if (!a) return "—";
@@ -91,26 +93,34 @@ function buildColumns(activities: SalesActivity[]): CollectionColumn[] {
     {
       id: "status",
       header: "Status",
+      sortValue: (item) => byId.get(Number(item.id))?.status ?? "",
       cell: (item) => byId.get(Number(item.id))?.status || "—",
     },
     {
       id: "company",
       header: "Company",
+      sortValue: (item) => byId.get(Number(item.id))?.company_name ?? "",
       cell: (item) => byId.get(Number(item.id))?.company_name || "—",
     },
     {
       id: "contact",
       header: "Contact",
+      sortValue: (item) => byId.get(Number(item.id))?.contact_name ?? "",
       cell: (item) => byId.get(Number(item.id))?.contact_name || "—",
     },
     {
       id: "deal",
       header: "Deal",
+      sortValue: (item) => byId.get(Number(item.id))?.deal_title ?? "",
       cell: (item) => byId.get(Number(item.id))?.deal_title || "—",
     },
     {
       id: "when",
       header: "When",
+      sortValue: (item) => {
+        const date = byId.get(Number(item.id))?.activity_date;
+        return date ? new Date(date) : "";
+      },
       cell: (item) => formatDateTime(byId.get(Number(item.id))?.activity_date),
     },
   ];

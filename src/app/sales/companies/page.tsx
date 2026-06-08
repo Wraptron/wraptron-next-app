@@ -75,6 +75,10 @@ function buildCompanyTableColumns(
       id: "company_name",
       header: "Company Name",
       headerClassName: "w-[250px]",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.company_name || c?.name || "";
+      },
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return <span className="font-medium">{c?.company_name || c?.name || "—"}</span>;
@@ -83,31 +87,37 @@ function buildCompanyTableColumns(
     {
       id: "contact_name",
       header: "Contact Name",
+      sortValue: (item) => byId.get(Number(item.id))?.name ?? "",
       cell: (item) => byId.get(Number(item.id))?.name || "—",
     },
     {
       id: "email",
       header: "Email",
+      sortValue: (item) => byId.get(Number(item.id))?.email ?? "",
       cell: (item) => byId.get(Number(item.id))?.email || "—",
     },
     {
       id: "phone",
       header: "Phone",
+      sortValue: (item) => byId.get(Number(item.id))?.phone ?? "",
       cell: (item) => byId.get(Number(item.id))?.phone || "—",
     },
     {
       id: "industry",
       header: "Industry",
+      sortValue: (item) => byId.get(Number(item.id))?.industry ?? "",
       cell: (item) => byId.get(Number(item.id))?.industry || "—",
     },
     {
       id: "company_size",
       header: "Company Size",
+      sortValue: (item) => byId.get(Number(item.id))?.company_size ?? "",
       cell: (item) => byId.get(Number(item.id))?.company_size || "—",
     },
     {
       id: "status",
       header: "Status",
+      sortValue: (item) => byId.get(Number(item.id))?.status ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.status) return "—";
@@ -120,6 +130,7 @@ function buildCompanyTableColumns(
       id: "actions",
       header: "Actions",
       headerClassName: "w-[100px]",
+      sortable: false,
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return null;

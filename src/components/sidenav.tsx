@@ -92,10 +92,10 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/hiring",
   },
   {
-    id: "transactions",
-    label: "Finance",
+    id: "accounts",
+    label: "Accounts",
     icon: CreditCard,
-    href: "/transactions",
+    href: "/accounts",
   },
   {
     id: "invoices",
@@ -288,38 +288,30 @@ const SETTINGS_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-const FINANCE_MENU_ITEMS: MenuItem[] = [
+const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
   {
     id: "sales-invoices",
     label: "Sales Invoices",
     icon: FileText,
-    href: "/finances/invoices",
+    href: "/accounts/invoices",
   },
   {
     id: "expense-bills",
     label: "Expense Bills",
     icon: Receipt,
-    href: "/finances/bills",
+    href: "/accounts/bills",
   },
   {
-    id: "accounts",
-    label: "Accounts",
+    id: "chart-of-accounts",
+    label: "Chart of Accounts",
     icon: BookOpen,
-    href: "/finances/accounts",
-    children: [
-      {
-        id: "chart-of-accounts",
-        label: "Chart of Accounts",
-        icon: BookOpen,
-        href: "/finances/accounts/chart-of-accounts",
-      },
-      {
-        id: "journals",
-        label: "Journals",
-        icon: Book,
-        href: "/finances/accounts/journals",
-      },
-    ],
+    href: "/accounts/chart-of-accounts",
+  },
+  {
+    id: "journals",
+    label: "Journals",
+    icon: Book,
+    href: "/accounts/journals",
   },
 ];
 
@@ -380,8 +372,8 @@ export default function SideNav() {
   const isSalesPage =
     pathname?.startsWith("/sales") ||
     pathname?.startsWith("/customer-onboarding");
-  // When on /finances, show only finance menu items
-  const isFinancePage = pathname?.startsWith("/finances");
+  // When on /accounts, show only accounts menu items
+  const isAccountsPage = pathname?.startsWith("/accounts");
   /** Employee CRUD under `/hr/employees`; `/workspace/employees/*` redirects here for old links. */
   const isEmployeeManagementSection =
     pathname?.startsWith("/hr") || pathname?.startsWith("/workspace/employees");
@@ -409,8 +401,8 @@ export default function SideNav() {
     menuItems = productsMenuItems;
   } else if (isSalesPage) {
     menuItems = SALES_MENU_ITEMS;
-  } else if (isFinancePage) {
-    menuItems = FINANCE_MENU_ITEMS;
+  } else if (isAccountsPage) {
+    menuItems = ACCOUNTS_MENU_ITEMS;
   } else if (isEmployeeManagementSection) {
     menuItems = HUMAN_RESOURCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
@@ -500,9 +492,9 @@ export default function SideNav() {
       return;
     }
 
-    // For finance page, check finance menu items and their children
-    if (isFinancePage) {
-      for (const parentItem of FINANCE_MENU_ITEMS) {
+    // For accounts page, check accounts menu items and their children
+    if (isAccountsPage) {
+      for (const parentItem of ACCOUNTS_MENU_ITEMS) {
         // Check if pathname matches parent
         if (pathname.startsWith(parentItem.href)) {
           // Check children
@@ -534,9 +526,9 @@ export default function SideNav() {
           }
         }
       }
-      // If on /finances but no specific sub-route, default to first item
-      if (pathname === "/finances") {
-        const firstItem = FINANCE_MENU_ITEMS[0];
+      // If on /accounts but no specific sub-route, default to first item
+      if (pathname === "/accounts") {
+        const firstItem = ACCOUNTS_MENU_ITEMS[0];
         if (firstItem?.children?.[0]) {
           setActiveItem(firstItem.children[0].id);
           setExpandedItems((prev) => new Set(prev).add(firstItem.id));
@@ -558,7 +550,7 @@ export default function SideNav() {
     pathname,
     menuItems,
     isSalesPage,
-    isFinancePage,
+    isAccountsPage,
     isProjectsPage,
     isProductNavContext,
     isHumanResourcePage,
@@ -785,7 +777,7 @@ export default function SideNav() {
               <DialogTitle>About Wraptron</DialogTitle>
               <DialogDescription className="text-pretty">
                 Wraptron helps you run day-to-day business operations—sales,
-                projects, products, workspace, and finances—in one place.
+                projects, products, workspace, and accounts—in one place.
               </DialogDescription>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">

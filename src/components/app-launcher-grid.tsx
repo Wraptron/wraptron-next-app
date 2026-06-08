@@ -65,11 +65,11 @@ const BUILTIN_APPS: BuiltinApp[] = [
     color: "bg-teal-500",
   },
   {
-    id: "finances",
-    name: "Finances",
+    id: "accounts",
+    name: "Accounts",
     description: "View payment history",
     icon: CreditCard,
-    href: "/finances",
+    href: "/accounts",
     color: "bg-yellow-500",
   },
   {

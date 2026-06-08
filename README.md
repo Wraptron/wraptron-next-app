@@ -36,7 +36,7 @@ This is the Wraptron frontend, built with [Next.js](https://nextjs.org) and depl
 2. Triage
 3. Maintenance
 
-## Finance
+## Accounts
 
  
 ## HR

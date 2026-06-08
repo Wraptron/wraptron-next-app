@@ -16,6 +16,7 @@ import {
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { SettingsUserManagement } from "@/components/settings-user-management";
+import { SettingsZohoIntegrations } from "@/components/settings-zoho-integrations";
 import { SortableSettingsTable } from "@/components/sortable-settings-table";
 import {
   Card,
@@ -1114,6 +1115,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>}
+
+        {showIntegrations && <SettingsZohoIntegrations />}
 
         {activeSettingsSection === "user-management" && <SettingsUserManagement />}
 

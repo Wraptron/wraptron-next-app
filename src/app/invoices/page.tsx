@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   invoicesApi,
-  invoiceSettingsApi,
   type Invoice,
   type InvoiceItem,
   type CreateInvoiceInput,
-  type InvoiceSettings,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,10 +85,8 @@ export default function InvoicesPage() {
   const [rows, setRows] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<InvoiceSettings | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
@@ -106,12 +102,8 @@ export default function InvoicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [list, invoiceSettings] = await Promise.all([
-        invoicesApi.getAll({ limit: 200 }),
-        invoiceSettingsApi.get(),
-      ]);
+      const list = await invoicesApi.getAll({ limit: 200 });
       setRows(list.data);
-      setSettings(invoiceSettings);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load invoices");
     } finally {
@@ -173,14 +165,8 @@ export default function InvoicesPage() {
     }
   };
 
-  const openView = async (invoice: Invoice) => {
-    try {
-      const full = await invoicesApi.getById(invoice.id);
-      setSelected(full);
-      setViewOpen(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to open invoice");
-    }
+  const openView = (invoice: Invoice) => {
+    router.push(`/accounts/invoices/${invoice.id}`);
   };
 
   const onSave = async () => {
@@ -548,105 +534,6 @@ export default function InvoicesPage() {
                 {saving ? "Saving..." : editing ? "Update Invoice" : "Create Invoice"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Invoice {selected?.invoice_number}</DialogTitle>
-              <DialogDescription>Invoice preview</DialogDescription>
-            </DialogHeader>
-            {selected && (
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between">
-                  <div>
-                    <div className="font-semibold text-base">{settings?.company_name || "Company"}</div>
-                    <div className="whitespace-pre-line">{settings?.company_address || "-"}</div>
-                    <div>GSTIN: {settings?.company_gst || "-"}</div>
-                    {settings?.company_logo_url && (
-                      <img
-                        src={settings.company_logo_url}
-                        alt="Company logo"
-                        className="h-10 mt-2 object-contain"
-                      />
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-lg">TAX INVOICE</div>
-                    <div>#{selected.invoice_number}</div>
-                    <div>Invoice Date: {selected.invoice_date?.slice(0, 10)}</div>
-                    <div>Due Date: {selected.due_date?.slice(0, 10) || "-"}</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="font-semibold">Bill To</div>
-                    <div>{selected.customer_name}</div>
-                    <div className="whitespace-pre-line">{selected.customer_address || "-"}</div>
-                    <div>GSTIN: {selected.customer_gst || "-"}</div>
-                  </div>
-                  <div>
-                    <div>Payment terms: {selected.payment_terms || "-"}</div>
-                    <div>Place of supply: {selected.place_of_supply || "-"}</div>
-                  </div>
-                </div>
-
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead>HSN</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Rate</TableHead>
-                        <TableHead>Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selected.items?.map((it, idx) => (
-                        <TableRow key={it.id ?? idx}>
-                          <TableCell>{it.item_description}</TableCell>
-                          <TableCell>{it.hsn}</TableCell>
-                          <TableCell>{it.quantity}</TableCell>
-                          <TableCell>{money(Number(it.rate || 0))}</TableCell>
-                          <TableCell>{money(Number(it.amount || 0))}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <div className="ml-auto max-w-xs rounded-md border bg-gray-50 p-3 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>{money(Number(selected.subtotal || 0))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CGST</span>
-                    <span>{money(Number(selected.cgst_total || 0))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SGST</span>
-                    <span>{money(Number(selected.sgst_total || 0))}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{money(Number(selected.total || 0))}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="font-semibold">Terms and Conditions</div>
-                  <div className="whitespace-pre-line">{selected.terms_and_conditions || "-"}</div>
-                </div>
-                <div>
-                  <div className="font-semibold">Authorized Signature</div>
-                  <div>{selected.authorized_signature || "-"}</div>
-                </div>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -73,16 +72,22 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
       id: "name",
       header: "Deal name",
       headerClassName: "w-[300px]",
+      sortValue: (item) => {
+        const deal = byId.get(Number(item.id));
+        return deal ? dealDisplayTitle(deal) : "";
+      },
       cell: (item) => byId.get(Number(item.id)) ? dealDisplayTitle(byId.get(Number(item.id))!) : "—",
     },
     {
       id: "contact",
       header: "Contact",
+      sortValue: (item) => byId.get(Number(item.id))?.contact_name ?? "",
       cell: (item) => byId.get(Number(item.id))?.contact_name || "—",
     },
     {
       id: "stage",
       header: "Stage",
+      sortValue: (item) => byId.get(Number(item.id))?.stage ?? "",
       cell: (item) => {
         const deal = byId.get(Number(item.id));
         if (!deal?.stage) return "—";
@@ -92,6 +97,7 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
     {
       id: "status",
       header: "Status",
+      sortValue: (item) => byId.get(Number(item.id))?.status ?? "",
       cell: (item) => {
         const deal = byId.get(Number(item.id));
         if (!deal?.status) return "—";
@@ -101,6 +107,7 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
     {
       id: "probability",
       header: "Probability",
+      sortValue: (item) => byId.get(Number(item.id))?.probability ?? 0,
       cell: (item) => {
         const deal = byId.get(Number(item.id));
         return deal ? `${deal.probability ?? 0}%` : "—";
@@ -116,53 +123,56 @@ const DealCard = ({
   deal,
   onEdit,
   onDelete,
+  onCardClick,
 }: {
   deal: Deal;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCardClick?: () => void;
 }) => (
-  <div className="group block relative">
-    <Link href={`/sales/deals/${deal.id}`} className="block no-underline">
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div className="min-w-0 flex-1">
-              <CardTitle className="text-lg">
-                {deal.title ||
-                  deal.client_name ||
-                  deal.client_company_name ||
-                  "Deal"}
-              </CardTitle>
-              {deal.company_id &&
-                (deal.client_company_name || deal.client_name) && (
-                  <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                    Customer:{" "}
-                    {[deal.client_company_name, deal.client_name]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-            </div>
+  <div className="group relative block">
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
+      onClick={onCardClick}
+    >
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-lg">
+              {deal.title ||
+                deal.client_name ||
+                deal.client_company_name ||
+                "Deal"}
+            </CardTitle>
+            {deal.company_id &&
+              (deal.client_company_name || deal.client_name) && (
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                  Customer:{" "}
+                  {[deal.client_company_name, deal.client_name]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
           </div>
-          <div className="flex gap-2 mt-2">
-            <Badge variant="outline">{deal.stage || "No stage"}</Badge>
-            <Badge variant="outline">{deal.status || "No status"}</Badge>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Badge variant="outline">{deal.stage || "No stage"}</Badge>
+          <Badge variant="outline">{deal.status || "No status"}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Contact:</span>
+            <span>{deal.contact_name || "N/A"}</span>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Contact:</span>
-              <span>{deal.contact_name || "N/A"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Probability:</span>
-              <span>{deal.probability}%</span>
-            </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Probability:</span>
+            <span>{deal.probability}%</span>
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+      </CardContent>
+    </Card>
     <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
       {onEdit && (
         <Button
@@ -170,6 +180,7 @@ const DealCard = ({
           size="sm"
           className="h-8 w-8 p-0"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onEdit();
           }}
@@ -183,6 +194,7 @@ const DealCard = ({
           size="sm"
           className="h-8 w-8 p-0 text-destructive"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onDelete();
           }}
@@ -198,12 +210,17 @@ const DealKanbanCard = ({
   deal,
   onEdit,
   onDelete,
+  onCardClick,
 }: {
   deal: Deal;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCardClick?: () => void;
 }) => (
-  <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
+  <Card
+    className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing"
+    onClick={onCardClick}
+  >
     <CardContent className="p-3">
       <div className="flex justify-between items-start mb-2">
         <div className="min-w-0 flex-1">
@@ -229,6 +246,7 @@ const DealKanbanCard = ({
               variant="ghost"
               size="sm"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onEdit();
               }}
@@ -242,6 +260,7 @@ const DealKanbanCard = ({
               variant="ghost"
               size="sm"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onDelete();
               }}
@@ -470,15 +489,15 @@ export default function DealsPage() {
             return getStageSubtext(stageDeals);
           }}
           onItemMove={handleDealKanbanMove}
-          getRowHref={(item) => `/sales/deals/${item.id}`}
           renderCard={(item) => {
             const deal = dealById.get(Number(item.id));
             if (!deal) return null;
             return (
               <DealKanbanCard
                 deal={deal}
-                onEdit={() => router.push(`/sales/deals/${deal.id}`)}
+                onEdit={() => handleEdit(deal)}
                 onDelete={() => handleDelete(deal)}
+                onCardClick={() => router.push(`/sales/deals/${deal.id}`)}
               />
             );
           }}
@@ -496,6 +515,7 @@ export default function DealsPage() {
             deal={deal}
             onEdit={() => handleEdit(deal)}
             onDelete={() => handleDelete(deal)}
+            onCardClick={() => router.push(`/sales/deals/${deal.id}`)}
           />
         ))}
       </div>

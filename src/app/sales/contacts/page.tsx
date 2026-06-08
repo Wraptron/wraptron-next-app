@@ -113,6 +113,11 @@ function buildContactTableColumns(
       id: "name",
       header: "Name",
       headerClassName: "w-[200px]",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c) return "";
+        return [c.prefix, c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+      },
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return "—";
@@ -127,11 +132,16 @@ function buildContactTableColumns(
     {
       id: "email",
       header: "Email",
+      sortValue: (item) => byId.get(Number(item.id))?.email ?? "",
       cell: (item) => byId.get(Number(item.id))?.email || "—",
     },
     {
       id: "phone",
       header: "Phone",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.phone || c?.mobile || "";
+      },
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.phone || c?.mobile || "—";
@@ -140,6 +150,10 @@ function buildContactTableColumns(
     {
       id: "company",
       header: "Company",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.company || c?.client_company_name || "";
+      },
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.company || c?.client_company_name || "—";
@@ -148,11 +162,13 @@ function buildContactTableColumns(
     {
       id: "job_title",
       header: "Job Title",
+      sortValue: (item) => byId.get(Number(item.id))?.job_title ?? "",
       cell: (item) => byId.get(Number(item.id))?.job_title || "—",
     },
     {
       id: "status",
       header: "Status",
+      sortValue: (item) => byId.get(Number(item.id))?.status ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.status) return "—";
@@ -162,6 +178,7 @@ function buildContactTableColumns(
     {
       id: "primary",
       header: "Primary",
+      sortValue: (item) => (byId.get(Number(item.id))?.is_primary ? 1 : 0),
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return "—";
@@ -182,6 +199,7 @@ function buildContactTableColumns(
       ),
       headerClassName: "w-[108px] text-right",
       className: "text-right",
+      sortable: false,
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return null;

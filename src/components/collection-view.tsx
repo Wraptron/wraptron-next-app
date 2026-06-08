@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,13 +22,90 @@ export type CollectionItem = {
   actions?: React.ReactNode;
 };
 
+export type SortDirection = "asc" | "desc";
+
 export type CollectionColumn = {
   id: string;
   header: React.ReactNode;
   cell: (item: CollectionItem) => React.ReactNode;
   className?: string;
   headerClassName?: string;
+  /** Raw value used when sorting this column. Falls back to primitive cell output. */
+  sortValue?: (
+    item: CollectionItem,
+  ) => string | number | Date | null | undefined;
+  /** Defaults to true except for action columns. */
+  sortable?: boolean;
 };
+
+const NON_SORTABLE_COLUMN_IDS = new Set(["actions", "quick_actions"]);
+
+function isColumnSortable(column: CollectionColumn): boolean {
+  if (column.sortable === false) return false;
+  if (NON_SORTABLE_COLUMN_IDS.has(column.id)) return false;
+  return true;
+}
+
+function normalizeSortValue(
+  value: string | number | Date | null | undefined,
+): string | number {
+  if (value == null || value === "") return "";
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  return value === "—" ? "" : value;
+}
+
+function getColumnSortValue(
+  column: CollectionColumn,
+  item: CollectionItem,
+): string | number {
+  if (column.sortValue) {
+    return normalizeSortValue(column.sortValue(item));
+  }
+
+  if (column.id === "title" && typeof item.title === "string") {
+    return item.title;
+  }
+  if (column.id === "description" && typeof item.description === "string") {
+    return item.description;
+  }
+  if (column.id === "meta" && typeof item.meta === "string") {
+    return item.meta;
+  }
+
+  const cellValue = column.cell(item);
+  if (typeof cellValue === "string" || typeof cellValue === "number") {
+    return normalizeSortValue(cellValue);
+  }
+
+  return "";
+}
+
+function compareSortValues(
+  a: string | number,
+  b: string | number,
+  direction: SortDirection,
+): number {
+  if (a === b) return 0;
+
+  const aEmpty = a === "";
+  const bEmpty = b === "";
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+
+  let cmp = 0;
+  if (typeof a === "number" && typeof b === "number") {
+    cmp = a - b;
+  } else {
+    cmp = String(a).localeCompare(String(b), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  return direction === "asc" ? cmp : -cmp;
+}
 
 export type CollectionColumnLabels = {
   title?: React.ReactNode;
@@ -139,6 +217,39 @@ export function CollectionView({
   const resolvedPrimaryColumnId = primaryColumnId ?? columns[0]?.id;
   const selectionEnabled = selectable || !!onSelectedIdsChange;
   const colSpan = columns.length + (selectionEnabled ? 1 : 0);
+  const [sortConfig, setSortConfig] = useState<{
+    columnId: string;
+    direction: SortDirection;
+  } | null>(null);
+
+  const sortedItems = useMemo(() => {
+    if (!sortConfig) return items;
+
+    const column = columns.find((col) => col.id === sortConfig.columnId);
+    if (!column || !isColumnSortable(column)) return items;
+
+    return [...items].sort((a, b) =>
+      compareSortValues(
+        getColumnSortValue(column, a),
+        getColumnSortValue(column, b),
+        sortConfig.direction,
+      ),
+    );
+  }, [columns, items, sortConfig]);
+
+  const handleSort = (column: CollectionColumn) => {
+    if (!isColumnSortable(column)) return;
+
+    setSortConfig((current) => {
+      if (current?.columnId === column.id) {
+        return {
+          columnId: column.id,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { columnId: column.id, direction: "asc" };
+    });
+  };
 
   const allSelected =
     items.length > 0 && selectedIds.length === items.length;
@@ -226,14 +337,51 @@ export function CollectionView({
                 />
               </TableHead>
             )}
-            {columns.map((column) => (
-              <TableHead
-                key={column.id}
-                className={column.headerClassName}
-              >
-                {column.header}
-              </TableHead>
-            ))}
+            {columns.map((column) => {
+              const sortable = isColumnSortable(column);
+              const isActive = sortConfig?.columnId === column.id;
+              const isRightAligned = column.headerClassName?.includes("text-right");
+
+              return (
+                <TableHead
+                  key={column.id}
+                  className={cn(
+                    column.headerClassName,
+                    sortable &&
+                      "group cursor-pointer select-none transition-colors hover:bg-muted/50",
+                  )}
+                  onClick={
+                    sortable ? () => handleSort(column) : undefined
+                  }
+                  aria-sort={
+                    sortable && isActive
+                      ? sortConfig.direction === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                >
+                  <div
+                    className={cn(
+                      "flex items-center gap-1",
+                      isRightAligned && "justify-end",
+                    )}
+                  >
+                    {column.header}
+                    {sortable &&
+                      (isActive ? (
+                        sortConfig.direction === "asc" ? (
+                          <ArrowUp className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 shrink-0" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-30" />
+                      ))}
+                  </div>
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -259,7 +407,7 @@ export function CollectionView({
               </TableCell>
             </TableRow>
           ) : (
-            items.map((item) => {
+            sortedItems.map((item) => {
               const isSelected = selectedIds.includes(item.id);
               return (
                 <TableRow

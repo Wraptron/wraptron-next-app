@@ -1593,7 +1593,12 @@ export interface SalesActivitiesResponse {
   offset: number;
 }
 
-export type DealActivityType = "task" | "call" | "note" | "meeting" | "whatsapp";
+export type DealActivityType =
+  | "task"
+  | "call"
+  | "note"
+  | "meeting"
+  | "whatsapp";
 
 export interface DealActivity {
   id: number;
@@ -1693,7 +1698,9 @@ export const dealsApi = {
 
 export const dealActivitiesApi = {
   list: async (dealId: number): Promise<{ data: DealActivity[] }> => {
-    return fetchApi<{ data: DealActivity[] }>(`/api/deals/${dealId}/activities`);
+    return fetchApi<{ data: DealActivity[] }>(
+      `/api/deals/${dealId}/activities`,
+    );
   },
 
   create: async (
@@ -2721,6 +2728,155 @@ export const githubApi = {
         method: "DELETE",
       },
     );
+  },
+};
+
+// ============================================================================
+// Zoho Connections Types and API
+// ============================================================================
+
+export interface ZohoConnection {
+  id: number;
+  user_id: number;
+  connection_name: string;
+  token_type: string;
+  expires_at?: string;
+  api_domain?: string;
+  accounts_domain?: string;
+  zoho_user_id?: string;
+  zoho_email?: string;
+  zoho_display_name?: string;
+  scopes?: string[];
+  books_organization_id?: string;
+  books_organization_name?: string;
+  is_active: boolean;
+  last_verified_at?: string;
+  last_sync_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ZohoBooksOrganization {
+  organization_id: string;
+  name: string;
+  contact_name?: string;
+  email?: string;
+  is_default_org?: boolean;
+  currency_code?: string;
+  is_org_active?: boolean;
+}
+
+export interface ZohoBooksOrganizationsResponse {
+  data: ZohoBooksOrganization[];
+  total: number;
+}
+
+export interface ZohoSyncEntityStats {
+  created: number;
+  matched: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+}
+
+export interface ZohoSyncStats {
+  customers: ZohoSyncEntityStats;
+  products: ZohoSyncEntityStats;
+  invoices: ZohoSyncEntityStats;
+}
+
+export interface ZohoSyncResponse {
+  success: boolean;
+  stats?: ZohoSyncStats;
+  error?: string;
+  message?: string;
+}
+
+export interface ZohoConnectionsResponse {
+  data: ZohoConnection[];
+  total: number;
+}
+
+export interface ZohoOAuthConfigResponse {
+  configured: boolean;
+  accounts_domain: string;
+  scopes: string;
+  redirect_uri?: string;
+}
+
+export const zohoApi = {
+  getOAuthConfig: async (): Promise<ZohoOAuthConfigResponse> => {
+    return fetchApi<ZohoOAuthConfigResponse>("/api/zoho/oauth/config");
+  },
+
+  startOAuth: async (data: {
+    connection_name: string;
+  }): Promise<{ authorization_url: string }> => {
+    return fetchApi<{ authorization_url: string }>("/api/zoho/oauth/start", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getConnections: async (): Promise<ZohoConnectionsResponse> => {
+    return fetchApi<ZohoConnectionsResponse>("/api/zoho/connections");
+  },
+
+  getConnection: async (id: number): Promise<ZohoConnection> => {
+    return fetchApi<ZohoConnection>(`/api/zoho/connections/${id}`);
+  },
+
+  updateConnection: async (
+    id: number,
+    data: {
+      connection_name?: string;
+      is_active?: boolean;
+      books_organization_id?: string;
+      books_organization_name?: string;
+    },
+  ): Promise<ZohoConnection> => {
+    return fetchApi<ZohoConnection>(`/api/zoho/connections/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteConnection: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/zoho/connections/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  verifyConnection: async (
+    id: number,
+  ): Promise<{
+    success: boolean;
+    zoho_user_id?: string;
+    zoho_email?: string;
+    zoho_display_name?: string;
+    books_organizations_count?: number;
+    books_organization_id?: string;
+    books_organization_name?: string;
+    books_error?: string;
+    error?: string;
+  }> => {
+    return fetchApi(`/api/zoho/connections/${id}/verify`, {
+      method: "POST",
+    });
+  },
+
+  getBooksOrganizations: async (
+    id: number,
+  ): Promise<ZohoBooksOrganizationsResponse> => {
+    return fetchApi<ZohoBooksOrganizationsResponse>(
+      `/api/zoho/connections/${id}/books/organizations`,
+    );
+  },
+
+  syncConnection: async (id: number): Promise<ZohoSyncResponse> => {
+    return fetchApi<ZohoSyncResponse>(`/api/zoho/connections/${id}/sync`, {
+      method: "POST",
+    });
   },
 };
 
