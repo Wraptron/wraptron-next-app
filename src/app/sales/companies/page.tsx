@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { RefreshCw, Plus, Edit, Trash2 } from "lucide-react";
 import { CompanyForm } from "@/components/company-form";
+import { statusBadgeClass } from "@/lib/status-colors";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
   { id: "active", label: "Active" },
@@ -38,16 +39,6 @@ const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
 ];
 
 const KANBAN_COLUMN_IDS = new Set(KANBAN_COLUMNS.map((c) => c.id));
-
-const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    prospect: "bg-yellow-100 text-yellow-800",
-    customer: "bg-blue-100 text-blue-800",
-  };
-  return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
-};
 
 function companyKanbanColumnId(company: Company) {
   const key = company.status?.toLowerCase() ?? "other";
@@ -122,7 +113,7 @@ function buildCompanyTableColumns(
         const c = byId.get(Number(item.id));
         if (!c?.status) return "—";
         return (
-          <Badge className={getStatusColor(c.status)}>{c.status}</Badge>
+          <Badge className={statusBadgeClass(c.status)}>{c.status}</Badge>
         );
       },
     },
@@ -215,7 +206,7 @@ const CompanyCard = ({
         )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Status:</span>
-          <Badge className={getStatusColor(company.status)}>
+          <Badge className={statusBadgeClass(company.status)}>
             {company.status || "N/A"}
           </Badge>
         </div>

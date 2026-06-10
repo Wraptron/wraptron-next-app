@@ -15,15 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
-
-type InvoiceItemDraft = {
-  item_description: string;
-  hsn: string;
-  quantity: string;
-  rate: string;
-  gst_rate: string;
-};
+import {
+  InvoiceLineItemsTable,
+  type InvoiceItemDraft,
+} from "@/components/invoice-line-items-table";
 
 type InvoiceDraft = {
   customer_name: string;
@@ -261,118 +256,11 @@ export default function NewInvoicePage() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base">Items</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setDraft((p) => ({ ...p, items: [...p.items, { ...emptyItem }] }))
-                  }
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Item
-                </Button>
-              </div>
-              {draft.items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-12 md:col-span-4">
-                    <Label>Item</Label>
-                    <Input
-                      value={item.item_description}
-                      onChange={(e) =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.map((it, i) =>
-                            i === idx ? { ...it, item_description: e.target.value } : it,
-                          ),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 md:col-span-2">
-                    <Label>HSN</Label>
-                    <Input
-                      value={item.hsn}
-                      onChange={(e) =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.map((it, i) => (i === idx ? { ...it, hsn: e.target.value } : it)),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 md:col-span-1">
-                    <Label>Qty</Label>
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.map((it, i) =>
-                            i === idx ? { ...it, quantity: e.target.value } : it,
-                          ),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-span-6 md:col-span-2">
-                    <Label>Rate</Label>
-                    <Input
-                      type="number"
-                      value={item.rate}
-                      onChange={(e) =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.map((it, i) => (i === idx ? { ...it, rate: e.target.value } : it)),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-span-4 md:col-span-1">
-                    <Label>GST %</Label>
-                    <Input
-                      type="number"
-                      value={item.gst_rate}
-                      onChange={(e) =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.map((it, i) =>
-                            i === idx ? { ...it, gst_rate: e.target.value } : it,
-                          ),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="col-span-8 md:col-span-1">
-                    <Label>Amount</Label>
-                    <Input
-                      readOnly
-                      value={money(Number(item.quantity || 0) * Number(item.rate || 0))}
-                    />
-                  </div>
-                  <div className="col-span-12 md:col-span-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      disabled={draft.items.length === 1}
-                      onClick={() =>
-                        setDraft((p) => ({
-                          ...p,
-                          items: p.items.filter((_, i) => i !== idx),
-                        }))
-                      }
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <InvoiceLineItemsTable
+              items={draft.items}
+              emptyItem={emptyItem}
+              onItemsChange={(items) => setDraft((p) => ({ ...p, items }))}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Activity, CheckSquare, Phone, RefreshCw, StickyNote } from "lucide-react";
+import { statusBadgeClass } from "@/lib/status-colors";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
   { id: "scheduled", label: "Scheduled" },
@@ -29,16 +30,6 @@ const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
 ];
 
 const KANBAN_COLUMN_IDS = new Set(KANBAN_COLUMNS.map((c) => c.id));
-
-const getTypeBadgeClass = (type?: string) => {
-  const key = type?.toLowerCase() || "";
-  if (key === "task") return "bg-blue-100 text-blue-800";
-  if (key === "call") return "bg-green-100 text-green-800";
-  if (key === "note") return "bg-purple-100 text-purple-800";
-  if (key === "meeting") return "bg-orange-100 text-orange-800";
-  if (key === "whatsapp") return "bg-emerald-100 text-emerald-800";
-  return "bg-gray-100 text-gray-800";
-};
 
 function formatDateTime(value?: string) {
   if (!value) return "—";
@@ -56,7 +47,7 @@ function activityToItem(a: SalesActivity): CollectionItem {
     description: a.description || a.outcome || "—",
     meta: (
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={getTypeBadgeClass(a.type)}>
+        <Badge variant="outline" className={statusBadgeClass(a.type)}>
           {a.type}
         </Badge>
         <span className="text-xs text-muted-foreground">{formatDateTime(a.activity_date)}</span>
@@ -87,7 +78,7 @@ function buildColumns(activities: SalesActivity[]): CollectionColumn[] {
       cell: (item) => {
         const a = byId.get(Number(item.id));
         if (!a) return "—";
-        return <Badge className={getTypeBadgeClass(a.type)}>{a.type}</Badge>;
+        return <Badge className={statusBadgeClass(a.type)}>{a.type}</Badge>;
       },
     },
     {
@@ -225,7 +216,7 @@ export default function SalesActivitiesPage() {
               <div key={a.id} className="rounded-md border border-border bg-card p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="font-medium">{a.subject || "Untitled activity"}</p>
-                  <Badge className={getTypeBadgeClass(a.type)}>{a.type}</Badge>
+                  <Badge className={statusBadgeClass(a.type)}>{a.type}</Badge>
                 </div>
                 <p className="mb-2 text-xs text-muted-foreground">{formatDateTime(a.activity_date)}</p>
                 <p className="line-clamp-3 text-sm text-muted-foreground">

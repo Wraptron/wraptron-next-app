@@ -26,6 +26,10 @@ import type { CollectionItem } from "@/components/collection-view";
 export type CollectionKanbanColumn = {
   id: string;
   label: React.ReactNode;
+  /** Optional tint for the column header (use theme + dark: tokens). */
+  headerClassName?: string;
+  /** Optional classes for the column container. */
+  className?: string;
 };
 
 export type CollectionKanbanViewProps = {
@@ -47,9 +51,11 @@ export type CollectionKanbanViewProps = {
 
 function DefaultKanbanCard({ item }: { item: CollectionItem }) {
   return (
-    <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
+    <Card className="cursor-grab gap-0 rounded-lg border border-border bg-card py-0 text-card-foreground shadow-none active:cursor-grabbing">
       <CardContent className="p-3">
-        <h4 className="line-clamp-2 text-sm font-semibold">{item.title}</h4>
+        <h4 className="line-clamp-2 text-sm font-semibold text-foreground">
+          {item.title}
+        </h4>
         {item.description != null && item.description !== "" && (
           <div className="mt-2 truncate text-xs text-muted-foreground">
             {item.description}
@@ -113,6 +119,8 @@ function KanbanColumn({
   getRowHref,
   renderCard,
   draggable,
+  headerClassName,
+  className,
 }: {
   id: string;
   label: React.ReactNode;
@@ -121,21 +129,31 @@ function KanbanColumn({
   getRowHref?: (item: CollectionItem) => string | undefined;
   renderCard?: (item: CollectionItem) => React.ReactNode;
   draggable: boolean;
+  headerClassName?: string;
+  className?: string;
 }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
     <div
       ref={setNodeRef}
-      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
+      className={cn(
+        "flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card",
+        className,
+      )}
     >
-      <div className="shrink-0 border-b border-border px-3 py-2">
+      <div
+        className={cn(
+          "shrink-0 border-b border-border px-3 py-2",
+          headerClassName,
+        )}
+      >
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
         {subtext != null && subtext !== "" && (
           <p className="mt-0.5 text-xs text-muted-foreground">{subtext}</p>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/20 p-2">
         <SortableContext
           id={id}
           items={items.map((item) => item.id)}
@@ -246,7 +264,7 @@ export function CollectionKanbanView({
     return (
       <div
         className={cn(
-          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-card",
+          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
           className,
         )}
       >
@@ -259,7 +277,7 @@ export function CollectionKanbanView({
     return (
       <div
         className={cn(
-          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-card",
+          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
           className,
         )}
       >
@@ -273,7 +291,7 @@ export function CollectionKanbanView({
   return (
     <div
       className={cn(
-        "flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-card",
+        "flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-muted/30 text-foreground",
         className,
       )}
     >
@@ -301,6 +319,8 @@ export function CollectionKanbanView({
                   getRowHref={getRowHref}
                   renderCard={renderCard}
                   draggable={draggable}
+                  headerClassName={column.headerClassName}
+                  className={column.className}
                 />
               );
             })}

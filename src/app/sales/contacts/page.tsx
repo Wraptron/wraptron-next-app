@@ -45,6 +45,7 @@ import {
 import { ContactFormSheet } from "@/components/contact-form-sheet";
 import { ContactImportSheet } from "@/components/contact-import-sheet";
 import { cn } from "@/lib/utils";
+import { statusBadgeClass } from "@/lib/status-colors";
 
 const CONTACTS_PAGE_SIZE = 200;
 
@@ -72,15 +73,6 @@ const contactDisplayName = (c: Contact) =>
 
 const contactCompanyLine = (c: Contact) =>
   (c.company || c.client_company_name)?.trim() || "";
-
-const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    archived: "bg-red-100 text-red-800",
-  };
-  return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
-};
 
 function contactKanbanColumnId(contact: Contact) {
   const key = contact.status?.toLowerCase() ?? "other";
@@ -172,7 +164,7 @@ function buildContactTableColumns(
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.status) return "—";
-        return <Badge className={getStatusColor(c.status)}>{c.status}</Badge>;
+        return <Badge className={statusBadgeClass(c.status)}>{c.status}</Badge>;
       },
     },
     {
@@ -183,7 +175,7 @@ function buildContactTableColumns(
         const c = byId.get(Number(item.id));
         if (!c) return "—";
         return c.is_primary ? (
-          <Badge className="bg-blue-100 text-blue-800">Primary</Badge>
+          <Badge className={statusBadgeClass("customer")}>Primary</Badge>
         ) : (
           <span className="text-muted-foreground">-</span>
         );
@@ -370,7 +362,7 @@ const ContactCard = ({
         )}
         <div className="flex justify-between">
           <span className="text-gray-500">Status:</span>
-          <Badge className={getStatusColor(contact.status)}>
+          <Badge className={statusBadgeClass(contact.status)}>
             {contact.status || "N/A"}
           </Badge>
         </div>

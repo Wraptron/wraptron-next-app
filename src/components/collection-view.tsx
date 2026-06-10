@@ -288,7 +288,7 @@ export function CollectionView({
       return (
         <Link
           href={href}
-          className="font-medium hover:underline"
+          className="font-medium text-foreground hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
           {renderCellValue(value)}
@@ -308,12 +308,12 @@ export function CollectionView({
   return (
     <div
       className={cn(
-        "rounded-md border border-border bg-card",
+        "rounded-md border border-border bg-card text-card-foreground",
         className,
       )}
     >
       {(title || description) && (
-        <div className="border-b px-4 py-3">
+        <div className="border-b border-border px-4 py-3">
           {title && (
             <p className="text-sm font-semibold leading-none">{title}</p>
           )}
@@ -324,8 +324,8 @@ export function CollectionView({
       )}
 
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="bg-muted/50">
+          <TableRow className="hover:bg-transparent">
             {selectionEnabled && (
               <TableHead className="w-[50px]">
                 <Checkbox
@@ -376,7 +376,7 @@ export function CollectionView({
                           <ArrowDown className="h-3 w-3 shrink-0" />
                         )
                       ) : (
-                        <ArrowUpDown className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-30" />
+                        <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-50" />
                       ))}
                   </div>
                 </TableHead>
@@ -387,16 +387,22 @@ export function CollectionView({
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={colSpan} className="h-24 text-center">
+              <TableCell
+                colSpan={colSpan}
+                className="h-24 text-center text-muted-foreground"
+              >
                 {loadingMessage}
               </TableCell>
             </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={colSpan} className="h-24 text-center">
+              <TableCell
+                colSpan={colSpan}
+                className="h-24 text-center text-muted-foreground"
+              >
                 {emptyMessage ?? (
                   <div>
-                    <p className="font-medium">{emptyTitle}</p>
+                    <p className="font-medium text-foreground">{emptyTitle}</p>
                     {emptyDescription && (
                       <p className="mt-1 text-sm text-muted-foreground">
                         {emptyDescription}
@@ -414,7 +420,7 @@ export function CollectionView({
                   key={item.id}
                   className={cn(
                     (onRowClick || getRowHref) && "cursor-pointer hover:bg-muted/50",
-                    isSelected && "bg-primary/10",
+                    isSelected && "bg-accent",
                   )}
                   onClick={
                     onRowClick ? () => onRowClick(item) : undefined

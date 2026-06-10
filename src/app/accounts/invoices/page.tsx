@@ -35,11 +35,37 @@ import { Eye, RefreshCw, Search, Trash2 } from "lucide-react";
 const LIST_LIMIT = 500;
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
+  { id: "paid", label: "Paid" },
+  { id: "draft", label: "Draft" },
   { id: "overdue", label: "Overdue" },
   { id: "due_soon", label: "Due soon" },
   { id: "upcoming", label: "Upcoming" },
   { id: "no_due", label: "No due date" },
 ];
+
+const CLOSED_STATUSES = new Set(["paid", "void"]);
+
+function todayDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateOnly(value?: string | null): string | null {
+  if (!value?.trim()) return null;
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+function daysBetween(from: string, to: string): number {
+  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
+  const [toYear, toMonth, toDay] = to.split("-").map(Number);
+  const fromUtc = Date.UTC(fromYear, fromMonth - 1, fromDay);
+  const toUtc = Date.UTC(toYear, toMonth - 1, toDay);
+  return Math.round((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
+}
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -54,21 +80,72 @@ function formatDate(value?: string) {
   return value.slice(0, 10);
 }
 
+function invoiceStatusKey(invoice: Invoice): string | null {
+  const status = invoice.status?.trim().toLowerCase();
+  return status || null;
+}
+
 function invoiceDueBucket(invoice: Invoice): string {
-  if (!invoice.due_date) return "no_due";
-  const due = new Date(invoice.due_date.slice(0, 10));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  const diffDays = Math.ceil(
-    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  if (diffDays < 0) return "overdue";
+  const status = invoiceStatusKey(invoice);
+  if (status === "draft") return "draft";
+  if (status && CLOSED_STATUSES.has(status)) return "paid";
+
+  const dueDate = parseDateOnly(invoice.due_date);
+  if (!dueDate) return "no_due";
+
+  const today = todayDateString();
+  if (status === "overdue" || dueDate < today) {
+    return "overdue";
+  }
+
+  const diffDays = daysBetween(today, dueDate);
   if (diffDays <= 7) return "due_soon";
   return "upcoming";
 }
 
+function statusBadgeLabel(status: string): string {
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function dueBadge(invoice: Invoice) {
+  const status = invoiceStatusKey(invoice);
+  if (status === "paid") {
+    return <Badge className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">Paid</Badge>;
+  }
+  if (status === "void") {
+    return <Badge variant="outline">Void</Badge>;
+  }
+  if (status === "draft") {
+    return <Badge variant="outline">Draft</Badge>;
+  }
+  if (status === "partially_paid") {
+    return (
+      <Badge className="bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200">
+        Partially paid
+      </Badge>
+    );
+  }
+  if (status === "overdue") {
+    return <Badge variant="destructive">Overdue</Badge>;
+  }
+  if (status === "sent" || status === "viewed" || status === "unpaid") {
+    const bucket = invoiceDueBucket(invoice);
+    if (bucket === "overdue") {
+      return <Badge variant="destructive">Overdue</Badge>;
+    }
+    if (bucket === "due_soon") {
+      return (
+        <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          Due soon
+        </Badge>
+      );
+    }
+    return <Badge variant="secondary">{statusBadgeLabel(status)}</Badge>;
+  }
+
   const bucket = invoiceDueBucket(invoice);
   if (bucket === "overdue") {
     return <Badge variant="destructive">Overdue</Badge>;
@@ -134,22 +211,25 @@ function buildInvoiceColumns(
       cell: (item) => formatDate(byId.get(Number(item.id))?.invoice_date),
     },
     {
+      id: "status",
+      header: "Status",
+      sortValue: (item) => {
+        const inv = byId.get(Number(item.id));
+        return inv ? (invoiceStatusKey(inv) ?? "") : "";
+      },
+      cell: (item) => {
+        const inv = byId.get(Number(item.id));
+        return inv ? dueBadge(inv) : "—";
+      },
+    },
+    {
       id: "due_date",
       header: "Due date",
       sortValue: (item) => {
         const date = byId.get(Number(item.id))?.due_date;
         return date ? new Date(date) : "";
       },
-      cell: (item) => {
-        const inv = byId.get(Number(item.id));
-        if (!inv) return "—";
-        return (
-          <div className="flex flex-col gap-1">
-            <span>{formatDate(inv.due_date)}</span>
-            {dueBadge(inv)}
-          </div>
-        );
-      },
+      cell: (item) => formatDate(byId.get(Number(item.id))?.due_date),
     },
     {
       id: "total",

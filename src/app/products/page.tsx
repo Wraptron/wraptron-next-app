@@ -1,96 +1,175 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
+import {
+  CollectionView,
+  type CollectionColumn,
+  type CollectionItem,
+} from "@/components/collection-view";
+import {
+  CollectionKanbanView,
+  type CollectionKanbanColumn,
+} from "@/components/collection-kanban-view";
+import {
+  CollectionPageToolbar,
+  useCollectionViewMode,
+  type CollectionViewMode,
+} from "@/components/collection-page-toolbar";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Loader2, Store, Search, RefreshCw, Menu, LayoutGrid, Columns3 } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 import { productsApi, type Product } from "@/lib/api";
+import { statusBadgeClass, kanbanColumnHeaderClass } from "@/lib/status-colors";
 import { ProductFormSheet } from "@/components/product-form-sheet";
 
-type ViewMode = "list" | "card" | "kanban";
+const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
+  { id: "draft", label: "Draft", headerClassName: kanbanColumnHeaderClass("draft") },
+  { id: "pending", label: "Pending", headerClassName: kanbanColumnHeaderClass("pending") },
+  { id: "active", label: "Active", headerClassName: kanbanColumnHeaderClass("active") },
+  { id: "completed", label: "Completed", headerClassName: kanbanColumnHeaderClass("completed") },
+  { id: "inactive", label: "Inactive", headerClassName: kanbanColumnHeaderClass("inactive") },
+  { id: "other", label: "Other", headerClassName: kanbanColumnHeaderClass("other") },
+];
 
-const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    completed: "bg-blue-100 text-blue-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    draft: "bg-gray-100 text-gray-800",
-    inactive: "bg-red-100 text-red-800",
-  };
-  return (
-    colors[status?.toLowerCase() ?? ""] || "bg-gray-100 text-gray-800"
-  );
-};
+const KANBAN_COLUMN_IDS = new Set(KANBAN_COLUMNS.map((c) => c.id));
 
 const formatPrice = (value?: number | null) =>
   value != null ? value.toLocaleString() : "—";
 
-const ProductCard = ({ product }: { product: Product }) => (
-  <Link href={`/products/${product.id}`} className="group block no-underline">
-    <Card className="hover:shadow-md transition-shadow h-full">
-      <CardHeader>
-        <CardTitle className="text-lg">{product.part_name}</CardTitle>
-        <Badge className={getStatusColor(product.status)}>
-          {product.status || "No status"}
-        </Badge>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground shrink-0">Part code</span>
-            <span className="font-mono text-right">{product.part_code}</span>
-          </div>
-          {product.product_description?.trim() ? (
-            <p className="text-muted-foreground text-sm line-clamp-3 leading-snug">
-              {product.product_description}
-            </p>
-          ) : (
-            <p className="text-muted-foreground text-sm italic">No description</p>
-          )}
-          <div className="flex justify-between pt-1 border-t border-border/60">
-            <span>Selling price</span>
-            <span className="font-medium">{formatPrice(product.selling_price)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Buying price</span>
-            <span className="font-medium">{formatPrice(product.total_cost)}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  </Link>
-);
+function productKanbanColumnId(product: Product) {
+  const key = product.status?.toLowerCase() ?? "other";
+  return KANBAN_COLUMN_IDS.has(key) ? key : "other";
+}
 
-const ProductKanbanCard = ({ product }: { product: Product }) => (
-  <Link href={`/products/${product.id}`} className="group block no-underline">
-    <Card className="hover:shadow transition-shadow mb-3">
+function productToCollectionItem(product: Product): CollectionItem {
+  return {
+    id: product.id,
+    title: product.part_name,
+    description: product.product_description?.trim() || undefined,
+    meta: (
+      <span className="font-mono text-xs">{product.part_code}</span>
+    ),
+  };
+}
+
+function buildProductTableColumns(products: Product[]): CollectionColumn[] {
+  const byId = new Map(products.map((p) => [p.id, p]));
+
+  return [
+    {
+      id: "part_code",
+      header: "Part code",
+      headerClassName: "w-[120px]",
+      sortValue: (item) => byId.get(Number(item.id))?.part_code ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="font-mono text-sm text-foreground">
+            {product?.part_code ?? "—"}
+          </span>
+        );
+      },
+    },
+    {
+      id: "part_name",
+      header: "Product name",
+      headerClassName: "min-w-[140px]",
+      sortValue: (item) => byId.get(Number(item.id))?.part_name ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="text-foreground">
+            {product?.part_name ?? "—"}
+          </span>
+        );
+      },
+    },
+    {
+      id: "description",
+      header: "Description",
+      headerClassName: "min-w-[200px] max-w-[320px]",
+      sortValue: (item) =>
+        byId.get(Number(item.id))?.product_description?.trim() ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        const description = product?.product_description?.trim();
+        if (!description) return "—";
+        return (
+          <span className="line-clamp-2 text-sm text-muted-foreground">
+            {description}
+          </span>
+        );
+      },
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortValue: (item) => byId.get(Number(item.id))?.status ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        if (!product?.status) return "—";
+        return (
+          <Badge className={statusBadgeClass(product.status)}>
+            {product.status}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: "selling_price",
+      header: "Selling price",
+      headerClassName: "text-right",
+      className: "text-right tabular-nums",
+      sortValue: (item) => byId.get(Number(item.id))?.selling_price ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="tabular-nums text-foreground">
+            {formatPrice(product?.selling_price)}
+          </span>
+        );
+      },
+    },
+    {
+      id: "total_cost",
+      header: "Buying price",
+      headerClassName: "text-right",
+      className: "text-right tabular-nums",
+      sortValue: (item) => byId.get(Number(item.id))?.total_cost ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="tabular-nums text-foreground">
+            {formatPrice(product?.total_cost)}
+          </span>
+        );
+      },
+    },
+  ];
+}
+
+function ProductKanbanCard({ product }: { product: Product }) {
+  return (
+    <Card className="mb-0 gap-0 rounded-lg border border-border bg-card py-0 text-card-foreground shadow-none transition-colors hover:bg-accent/30">
       <CardContent className="p-3">
-        <h4 className="font-semibold text-sm mb-2">{product.part_name}</h4>
-        <Badge className={getStatusColor(product.status)}>
+        <h4 className="mb-2 text-sm font-semibold text-foreground">
+          {product.part_name}
+        </h4>
+        <Badge className={statusBadgeClass(product.status)}>
           {product.status || "No status"}
         </Badge>
-        <div className="mt-2 text-xs text-muted-foreground space-y-1.5">
-          <div className="font-mono">{product.part_code}</div>
+        <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+          <div className="font-mono text-foreground/80">{product.part_code}</div>
           {product.product_description?.trim() ? (
-            <p className="line-clamp-2 text-[11px] leading-relaxed text-foreground/80">
+            <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
               {product.product_description}
             </p>
           ) : null}
-          <div className="pt-1 border-t border-border/50 space-y-0.5">
+          <div className="space-y-0.5 border-t border-border/50 pt-1">
             <div className="flex justify-between gap-2">
               <span>Sell</span>
               <span className="font-medium text-foreground">
@@ -107,28 +186,23 @@ const ProductKanbanCard = ({ product }: { product: Product }) => (
         </div>
       </CardContent>
     </Card>
-  </Link>
-);
+  );
+}
 
 export default function ProductsPage() {
   const router = useRouter();
   const { setTitle } = usePageTitle();
+  const [viewMode, setViewMode] = useCollectionViewMode(
+    "products_view_mode",
+    "list",
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [productSheetOpen, setProductSheetOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("products_view_mode");
-      if (saved === "list" || saved === "card" || saved === "kanban") {
-        return saved as ViewMode;
-      }
-    }
-    return "card";
-  });
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -142,7 +216,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
   useEffect(() => {
     setTitle("Products");
@@ -150,14 +224,14 @@ export default function ProductsPage() {
   }, [setTitle]);
 
   useEffect(() => {
-    fetchProducts();
+    productsApi
+      .getAll({ limit: 200 })
+      .then((res) => setProducts(res.data))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Failed to fetch"),
+      )
+      .finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("products_view_mode", viewMode);
-    }
-  }, [viewMode]);
 
   useEffect(() => {
     const scrollToHash = () => {
@@ -174,238 +248,135 @@ export default function ProductsPage() {
     return () => window.removeEventListener("hashchange", scrollToHash);
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchProducts();
-  };
+  const collectionItems = useMemo(
+    () => products.map(productToCollectionItem),
+    [products],
+  );
 
-  const getProductsByStatus = () => {
-    const grouped: Record<string, Product[]> = {
-      draft: [],
-      pending: [],
-      active: [],
-      completed: [],
-      inactive: [],
-      other: [],
-    };
-    products.forEach((product) => {
-      const status = product.status?.toLowerCase() || "other";
-      if (grouped[status]) {
-        grouped[status].push(product);
-      } else {
-        grouped.other.push(product);
-      }
-    });
-    return grouped;
-  };
+  const productTableColumns = useMemo(
+    () => buildProductTableColumns(products),
+    [products],
+  );
 
-  const renderContent = () => {
-    if (viewMode === "list") {
+  const productById = useMemo(
+    () => new Map(products.map((p) => [p.id, p])),
+    [products],
+  );
+
+  const getProductHref = (item: CollectionItem) =>
+    `/products/${item.id}`;
+
+  const listDescription = loading
+    ? "Loading…"
+    : `${products.length} product${products.length !== 1 ? "s" : ""}`;
+
+  const renderProducts = (mode: CollectionViewMode) => {
+    if (mode === "kanban") {
       return (
-        <div className="rounded-md border bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Part code</TableHead>
-                <TableHead className="min-w-[140px]">Product name</TableHead>
-                <TableHead className="min-w-[200px] max-w-[320px]">
-                  Description
-                </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Selling price</TableHead>
-                <TableHead className="text-right">Buying price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                products.map((product) => (
-                  <TableRow
-                    key={product.id}
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => router.push(`/products/${product.id}`)}
-                  >
-                    <TableCell className="font-mono text-sm">
-                      {product.part_code}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {product.part_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[320px]">
-                      <span className="line-clamp-2 text-foreground/90">
-                        {product.product_description?.trim() || "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(product.status)}>
-                        {product.status || "—"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatPrice(product.selling_price)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatPrice(product.total_cost)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      );
-    }
-
-    if (viewMode === "kanban") {
-      const grouped = getProductsByStatus();
-      const columns = [
-        { key: "draft", label: "Draft", color: "bg-gray-50" },
-        { key: "pending", label: "Pending", color: "bg-yellow-50" },
-        { key: "active", label: "Active", color: "bg-green-50" },
-        { key: "completed", label: "Completed", color: "bg-blue-50" },
-        { key: "inactive", label: "Inactive", color: "bg-red-50" },
-        { key: "other", label: "Other", color: "bg-slate-50" },
-      ];
-      return (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <div
-              key={column.key}
-              className={`flex-shrink-0 w-72 ${column.color} rounded-lg p-3`}
-            >
-              <h3 className="font-semibold mb-3 text-sm uppercase">
-                {column.label} ({grouped[column.key]?.length || 0})
-              </h3>
-              <div>
-                {(grouped[column.key] ?? []).map((product) => (
-                  <ProductKanbanCard key={product.id} product={product} />
-                ))}
-                {(!grouped[column.key] || grouped[column.key].length === 0) && (
-                  <div className="text-sm text-muted-foreground text-center py-4">
-                    No items
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <CollectionKanbanView
+          loading={loading}
+          items={collectionItems}
+          columns={KANBAN_COLUMNS}
+          groupBy={(item) => {
+            const product = productById.get(Number(item.id));
+            return product ? productKanbanColumnId(product) : "other";
+          }}
+          getColumnSubtext={(_columnId, columnItems) => {
+            const count = columnItems.length;
+            return `${count} product${count !== 1 ? "s" : ""}`;
+          }}
+          getRowHref={getProductHref}
+          renderCard={(item) => {
+            const product = productById.get(Number(item.id));
+            return product ? <ProductKanbanCard product={product} /> : null;
+          }}
+          loadingMessage="Loading products…"
+          emptyMessage="No products found."
+        />
       );
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      <CollectionView
+        loading={loading}
+        items={collectionItems}
+        columns={productTableColumns}
+        primaryColumnId="part_name"
+        getRowHref={getProductHref}
+        onRowClick={(item) => router.push(getProductHref(item))}
+        emptyTitle="No products yet"
+        emptyDescription={
+          search.trim()
+            ? "No products match your search."
+            : "Create your first product to get started."
+        }
+        emptyMessage="No products found."
+        loadingMessage="Loading products…"
+      />
     );
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8">
         <section id="interface" className="scroll-mt-24 space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <p className="text-muted-foreground shrink-0">
-                {products.length} product{products.length !== 1 ? "s" : ""}
-              </p>
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 h-9 w-40"
-                  />
-                </div>
-                <Button type="submit" variant="secondary" size="sm">
-                  Search
-                </Button>
-              </form>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Products</h1>
+              <p className="mt-1 text-muted-foreground">{listDescription}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ButtonGroup orientation="horizontal">
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  aria-label="List view"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "card" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("card")}
-                  aria-label="Card view"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "kanban" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("kanban")}
-                  aria-label="Kanban view"
-                >
-                  <Columns3 className="h-4 w-4" />
-                </Button>
-              </ButtonGroup>
-              <Button onClick={fetchProducts} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+
+            <CollectionPageToolbar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              newAction={{
+                label: "New product",
+                onClick: () => setProductSheetOpen(true),
+                ariaLabel: "Create new product",
+              }}
+              className="w-full lg:w-auto"
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  fetchProducts();
+                }}
+                className="relative min-w-0 flex-1 sm:w-72"
+              >
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                  aria-label="Search products"
+                />
+              </form>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setProductSheetOpen(true)}
+                onClick={() => fetchProducts()}
+                disabled={loading}
+                aria-label="Refresh products"
               >
-                <Plus className="h-4 w-4 mr-1" /> New product
+                <RefreshCw
+                  className={`size-4 ${loading ? "animate-spin" : ""}`}
+                />
               </Button>
-            </div>
+            </CollectionPageToolbar>
           </div>
 
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
               {error}
             </div>
           )}
 
-          {loading && (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {!loading && !error && products.length === 0 && (
-            <div className="text-center py-16">
-              <Store className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No products yet</h3>
-              <p className="text-muted-foreground mb-4">
-                {search.trim()
-                  ? "No products match your search."
-                  : "Create your first product above."}
-              </p>
-              {!search.trim() && (
-                <Button onClick={() => setProductSheetOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" /> New product
-                </Button>
-              )}
-            </div>
-          )}
-
-          {!loading && !error && products.length > 0 && renderContent()}
+          {!error && renderProducts(viewMode)}
         </section>
 
         <ProductFormSheet

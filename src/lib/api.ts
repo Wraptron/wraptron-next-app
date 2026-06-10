@@ -2015,6 +2015,8 @@ export interface Invoice {
   place_of_supply: string;
   invoice_date: string;
   due_date?: string;
+  status?: string | null;
+  balance_due?: number | null;
   subtotal: number;
   cgst_total: number;
   sgst_total: number;
