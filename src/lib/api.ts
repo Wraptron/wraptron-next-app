@@ -336,6 +336,47 @@ export interface ProjectsResponse {
   offset: number;
 }
 
+export type ProjectDashboardPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
+
+export interface ProjectDashboardMemberProjects {
+  name: string;
+  project_count: number;
+}
+
+export interface ProjectDashboardMemberTasks {
+  name: string;
+  tasks_done: number;
+  tasks_assigned: number;
+}
+
+export interface ProjectDashboardStatusCount {
+  status: string;
+  project_count: number;
+}
+
+export interface ProjectDashboardWorkload {
+  name: string;
+  open_tasks: number;
+  estimate_hours: number;
+}
+
+export interface ProjectDashboardData {
+  period: ProjectDashboardPeriod;
+  active_projects: number;
+  completed_tasks: number;
+  total_tasks: number;
+  overdue_tasks: number;
+  projects_by_member: ProjectDashboardMemberProjects[];
+  member_tasks: ProjectDashboardMemberTasks[];
+  active_projects_by_status: ProjectDashboardStatusCount[];
+  team_workload: ProjectDashboardWorkload[];
+}
+
 export const projectsApi = {
   // Get all projects with optional filters
   getAll: async (params?: {
@@ -353,6 +394,14 @@ export const projectsApi = {
     const query = searchParams.toString();
     return fetchApi<ProjectsResponse>(
       `/api/projects${query ? `?${query}` : ""}`,
+    );
+  },
+
+  getDashboard: async (
+    period: ProjectDashboardPeriod = "month",
+  ): Promise<ProjectDashboardData> => {
+    return fetchApi<ProjectDashboardData>(
+      `/api/projects/dashboard?period=${encodeURIComponent(period)}`,
     );
   },
 
@@ -1565,6 +1614,36 @@ export interface DealStats {
   avg_deal_size: number;
 }
 
+export type SalesDashboardPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
+
+export interface SalesDashboardFunnelStage {
+  stage: string;
+  deal_count: number;
+}
+
+export interface SalesDashboardActivity extends SalesActivity {}
+
+export interface SalesDashboardRevenueTrendPoint {
+  bucket: string;
+  revenue: number;
+}
+
+export interface SalesDashboardData {
+  period: SalesDashboardPeriod;
+  pipeline_value: number;
+  closed_deals_value: number;
+  active_deals: number;
+  funnel: SalesDashboardFunnelStage[];
+  recent_activities: SalesDashboardActivity[];
+  revenue_trend: SalesDashboardRevenueTrendPoint[];
+  revenue_trend_granularity: "daily" | "weekly" | "quarterly" | "yearly";
+}
+
 export interface SalesActivity {
   id: number;
   type: string;
@@ -1666,6 +1745,14 @@ export const dealsApi = {
 
   getPipeline: async (): Promise<{ pipeline: PipelineSummary[] }> => {
     return fetchApi<{ pipeline: PipelineSummary[] }>("/api/deals/pipeline");
+  },
+
+  getDashboard: async (
+    period: SalesDashboardPeriod = "month",
+  ): Promise<SalesDashboardData> => {
+    return fetchApi<SalesDashboardData>(
+      `/api/deals/dashboard?period=${encodeURIComponent(period)}`,
+    );
   },
 
   getStats: async (): Promise<DealStats> => {

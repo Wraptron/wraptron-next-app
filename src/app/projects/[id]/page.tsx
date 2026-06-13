@@ -556,8 +556,15 @@ export default function ProjectPage() {
                 <FileText className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">Project Charter</span>
               </Button>
-              <Link href={`/projects/${projectId}/edit`} className="flex-1 sm:flex-initial min-w-0">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Link
+                href={`/projects/${projectId}/edit`}
+                className="flex-1 sm:flex-initial min-w-0"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <Edit className="h-4 w-4 mr-2 shrink-0" />
                   Edit Project
                 </Button>
@@ -579,13 +586,27 @@ export default function ProjectPage() {
         >
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-max min-w-0 flex-nowrap">
-              <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
-              <TabsTrigger value="requirements" className="shrink-0">Requirements</TabsTrigger>
-              <TabsTrigger value="releases" className="shrink-0">Releases</TabsTrigger>
-              <TabsTrigger value="tasks" className="shrink-0">Tasks</TabsTrigger>
-              <TabsTrigger value="commits" className="shrink-0">Commits</TabsTrigger>
-              <TabsTrigger value="teams" className="shrink-0">Teams</TabsTrigger>
-              <TabsTrigger value="integrations" className="shrink-0">Integrations</TabsTrigger>
+              <TabsTrigger value="overview" className="shrink-0">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="requirements" className="shrink-0">
+                Requirements
+              </TabsTrigger>
+              <TabsTrigger value="releases" className="shrink-0">
+                Releases
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="shrink-0">
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="commits" className="shrink-0">
+                Commits
+              </TabsTrigger>
+              <TabsTrigger value="teams" className="shrink-0">
+                Teams
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="shrink-0">
+                Integrations
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -830,7 +851,6 @@ export default function ProjectPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
         </Tabs>
       </div>
     </div>
@@ -879,7 +899,11 @@ function TaskViewSwitcher({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <Button onClick={() => setAddTaskOpen(true)} size="sm" className="w-full sm:w-auto">
+        <Button
+          onClick={() => setAddTaskOpen(true)}
+          size="sm"
+          className="w-full sm:w-auto"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Task
         </Button>
@@ -984,7 +1008,9 @@ function TaskKanbanCard({ task }: { task: Task }) {
           <div className="min-w-0 flex-1">
             <h4 className="font-semibold text-sm line-clamp-2">{task.title}</h4>
           </div>
-          <div className="ml-2 shrink-0">{getStatusIconHelper(task.status)}</div>
+          <div className="ml-2 shrink-0">
+            {getStatusIconHelper(task.status)}
+          </div>
         </div>
         {task.description && (
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -1010,7 +1036,13 @@ function TaskKanbanCard({ task }: { task: Task }) {
   );
 }
 
-function SortableTaskCard({ task, projectId }: { task: Task; projectId: number }) {
+function SortableTaskCard({
+  task,
+  projectId,
+}: {
+  task: Task;
+  projectId: number;
+}) {
   const {
     attributes,
     listeners,
@@ -1185,9 +1217,7 @@ function TaskBoard({
             })}
           </div>
           <DragOverlay>
-            {activeDragTask ? (
-              <TaskKanbanCard task={activeDragTask} />
-            ) : null}
+            {activeDragTask ? <TaskKanbanCard task={activeDragTask} /> : null}
           </DragOverlay>
         </DndContext>
       </div>

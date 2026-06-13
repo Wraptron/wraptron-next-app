@@ -23,7 +23,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { EMPLOYEES_BASE_PATH, HR_SKILL_MATRIX_PATH } from "@/lib/employee-routes";
+import {
+  EMPLOYEES_BASE_PATH,
+  HR_SKILL_MATRIX_PATH,
+} from "@/lib/employee-routes";
 import {
   ChartContainer,
   ChartLegend,
@@ -231,10 +234,14 @@ export function Dashboard({
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             {description ? (
-              <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>
+              <p className="text-sm text-muted-foreground max-w-2xl">
+                {description}
+              </p>
             ) : null}
           </div>
-          {actions ? <div className="shrink-0 flex flex-wrap gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className="shrink-0 flex flex-wrap gap-2">{actions}</div>
+          ) : null}
         </header>
 
         <div className="mt-8 space-y-6">
@@ -247,7 +254,10 @@ export function Dashboard({
                     const Icon = item.icon;
                     return (
                       <li key={item.href}>
-                        <Link href={item.href} className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        <Link
+                          href={item.href}
+                          className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
                           <Card className="h-full border-border/80 transition-colors hover:bg-accent/40 hover:border-border">
                             <CardHeader className="gap-3">
                               <div className="flex items-start justify-between gap-2">
@@ -278,7 +288,10 @@ export function Dashboard({
 
               <section aria-label="Module analytics" className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <BarChart3
+                    className="h-4 w-4 text-muted-foreground"
+                    aria-hidden
+                  />
                   <h2 className="text-sm font-medium text-muted-foreground">
                     Module analytics
                   </h2>
@@ -290,9 +303,13 @@ export function Dashboard({
                         <CardHeader className="space-y-2">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <CardTitle className="text-base">{module.title}</CardTitle>
+                              <CardTitle className="text-base">
+                                {module.title}
+                              </CardTitle>
                               {module.description ? (
-                                <CardDescription>{module.description}</CardDescription>
+                                <CardDescription>
+                                  {module.description}
+                                </CardDescription>
                               ) : null}
                             </div>
                             {module.href ? (
@@ -315,14 +332,19 @@ export function Dashboard({
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="space-y-1">
-                            <p className="text-sm font-medium">{module.chartTitle ?? "Trend"}</p>
+                            <p className="text-sm font-medium">
+                              {module.chartTitle ?? "Trend"}
+                            </p>
                             {module.chartDescription ? (
                               <p className="text-xs text-muted-foreground">
                                 {module.chartDescription}
                               </p>
                             ) : null}
                           </div>
-                          <ChartContainer config={module.chartConfig} className="h-44 w-full">
+                          <ChartContainer
+                            config={module.chartConfig}
+                            className="h-44 w-full"
+                          >
                             <BarChart data={module.chartData}>
                               <CartesianGrid vertical={false} />
                               <XAxis

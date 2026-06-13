@@ -71,7 +71,7 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     id: "customers",
     label: "Sales",
     icon: TrendingUp,
-    href: "/sales",
+    href: "/sales/dashboard",
   },
   {
     id: "projects",
@@ -125,6 +125,12 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
 
 const SALES_MENU_ITEMS: MenuItem[] = [
   {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/sales/dashboard",
+  },
+  {
     id: "deals",
     label: "Deals",
     icon: AlignHorizontalJustifyStart,
@@ -163,6 +169,12 @@ const SALES_MENU_ITEMS: MenuItem[] = [
 ];
 
 const PROJECTS_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "projects-dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/projects/dashboard",
+  },
   {
     id: "projects-list",
     label: "Projects",
@@ -419,14 +431,14 @@ export default function SideNav() {
 
     // For projects page
     if (isProjectsPage) {
-      const projectsItem = PROJECTS_MENU_ITEMS.find((item) =>
-        pathname.startsWith(item.href),
-      );
+      const projectsItem = [...PROJECTS_MENU_ITEMS]
+        .sort((a, b) => b.href.length - a.href.length)
+        .find((item) => pathname.startsWith(item.href));
       if (projectsItem) {
         setActiveItem(projectsItem.id);
         return;
       }
-      setActiveItem("projects-list");
+      setActiveItem("projects-dashboard");
       return;
     }
 
@@ -446,17 +458,17 @@ export default function SideNav() {
       return;
     }
 
-    // For Sales page, check Sales menu items
+    // For Sales page, check Sales menu items (longest href first so /sales/deals beats /sales)
     if (isSalesPage) {
-      const salesItem = SALES_MENU_ITEMS.find((item) =>
-        pathname.startsWith(item.href),
-      );
+      const salesItem = [...SALES_MENU_ITEMS]
+        .sort((a, b) => b.href.length - a.href.length)
+        .find((item) => pathname.startsWith(item.href));
       if (salesItem) {
         setActiveItem(salesItem.id);
         return;
       }
-      // If on /sales but no specific sub-route, default to first item
-      if (pathname === "/sales") {
+      // If on /sales but no specific sub-route, default to dashboard
+      if (pathname === "/sales" || pathname === "/sales/dashboard") {
         setActiveItem(SALES_MENU_ITEMS[0]?.id || "");
       }
       return;

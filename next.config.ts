@@ -12,14 +12,14 @@
 //         tls: false,
 //       };
 //     }
-    
+
 //     // Prevent setImmediate polyfill issues by providing a no-op
 //     config.plugins.push(
 //       new webpack.DefinePlugin({
 //         'global.setImmediate': 'setTimeout',
 //       })
 //     );
-    
+
 //     return config;
 //   },
 // };
@@ -63,7 +63,6 @@
 // // added by create-cloudflare to enable calling `getCloudflareContext()` in `next dev`
 // import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 // initOpenNextCloudflareForDev();
-
 
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";

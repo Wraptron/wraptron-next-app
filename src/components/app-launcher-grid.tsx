@@ -45,7 +45,7 @@ const BUILTIN_APPS: BuiltinApp[] = [
     name: "Sales",
     description: "Deals, contacts, and companies",
     icon: TrendingUp,
-    href: "/sales",
+    href: "/sales/dashboard",
     color: "bg-green-500",
   },
   {

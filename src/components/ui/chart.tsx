@@ -38,7 +38,9 @@ function ChartContainer({
   ...props
 }: React.ComponentProps<"div"> & {
   config: ChartConfig;
-  children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
+  children: React.ComponentProps<
+    typeof RechartsPrimitive.ResponsiveContainer
+  >["children"];
 }) {
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
@@ -59,13 +61,17 @@ function ChartContainer({
             __html: Object.entries(config)
               .map(([key, itemConfig]) => {
                 const color = itemConfig.color;
-                return color ? `[data-chart=${chartId}] { --color-${key}: ${color}; }` : null;
+                return color
+                  ? `[data-chart=${chartId}] { --color-${key}: ${color}; }`
+                  : null;
               })
               .filter(Boolean)
               .join("\n"),
           }}
         />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        <RechartsPrimitive.ResponsiveContainer>
+          {children}
+        </RechartsPrimitive.ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   );
@@ -79,17 +85,17 @@ function ChartTooltipContent({
   className,
   hideLabel = false,
 }: React.ComponentProps<"div"> & {
-    active?: boolean;
-    payload?: Array<{
-      dataKey?: string | number;
-      name?: React.ReactNode;
-      color?: string;
-      fill?: string;
-      value?: number | string;
-    }>;
-    labelFormatter?: (value: string | number | Date) => React.ReactNode;
-    hideLabel?: boolean;
-  }) {
+  active?: boolean;
+  payload?: Array<{
+    dataKey?: string | number;
+    name?: React.ReactNode;
+    color?: string;
+    fill?: string;
+    value?: number | string;
+  }>;
+  labelFormatter?: (value: string | number | Date) => React.ReactNode;
+  hideLabel?: boolean;
+}) {
   const { config } = useChart();
 
   if (!active || !payload?.length) {
@@ -110,14 +116,21 @@ function ChartTooltipContent({
         const color = item.color ?? item.fill ?? "hsl(var(--muted-foreground))";
 
         return (
-          <div key={dataKey} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+          <div
+            key={dataKey}
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-2"
+          >
             <span
               className="h-2.5 w-2.5 rounded-[2px]"
               style={{ backgroundColor: String(color) }}
             />
-            {!hideLabel ? <span className="text-muted-foreground">{label}</span> : null}
+            {!hideLabel ? (
+              <span className="text-muted-foreground">{label}</span>
+            ) : null}
             <span className="font-mono font-medium text-foreground">
-              {typeof item.value === "number" ? item.value.toLocaleString() : String(item.value)}
+              {typeof item.value === "number"
+                ? item.value.toLocaleString()
+                : String(item.value)}
             </span>
           </div>
         );
@@ -131,14 +144,13 @@ const ChartLegend = RechartsPrimitive.Legend;
 function ChartLegendContent({
   className,
   payload,
-}: React.ComponentProps<"div"> &
-  {
-    payload?: Array<{
-      dataKey?: string | number;
-      value?: React.ReactNode;
-      color?: string;
-    }>;
-  }) {
+}: React.ComponentProps<"div"> & {
+  payload?: Array<{
+    dataKey?: string | number;
+    value?: React.ReactNode;
+    color?: string;
+  }>;
+}) {
   const { config } = useChart();
 
   if (!payload?.length) {

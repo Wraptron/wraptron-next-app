@@ -560,8 +560,15 @@ export default function ProjectPage() {
                 <FileText className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">Project Charter</span>
               </Button>
-              <Link href={`/projects/${projectId}/edit`} className="flex-1 sm:flex-initial min-w-0">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Link
+                href={`/projects/${projectId}/edit`}
+                className="flex-1 sm:flex-initial min-w-0"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <Edit className="h-4 w-4 mr-2 shrink-0" />
                   Edit Project
                 </Button>
@@ -583,13 +590,27 @@ export default function ProjectPage() {
         >
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-max min-w-0 flex-nowrap">
-              <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
-              <TabsTrigger value="requirements" className="shrink-0">Requirements</TabsTrigger>
-              <TabsTrigger value="releases" className="shrink-0">Releases</TabsTrigger>
-              <TabsTrigger value="tasks" className="shrink-0">Tasks</TabsTrigger>
-              <TabsTrigger value="commits" className="shrink-0">Commits</TabsTrigger>
-              <TabsTrigger value="teams" className="shrink-0">Teams</TabsTrigger>
-              <TabsTrigger value="integrations" className="shrink-0">Integrations</TabsTrigger>
+              <TabsTrigger value="overview" className="shrink-0">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="requirements" className="shrink-0">
+                Requirements
+              </TabsTrigger>
+              <TabsTrigger value="releases" className="shrink-0">
+                Releases
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="shrink-0">
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="commits" className="shrink-0">
+                Commits
+              </TabsTrigger>
+              <TabsTrigger value="teams" className="shrink-0">
+                Teams
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="shrink-0">
+                Integrations
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -834,7 +855,6 @@ export default function ProjectPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
         </Tabs>
       </div>
     </div>
@@ -1025,7 +1045,13 @@ function TaskKanbanCard({ task }: { task: Task }) {
   );
 }
 
-function SortableTaskCard({ task, projectId }: { task: Task; projectId: number }) {
+function SortableTaskCard({
+  task,
+  projectId,
+}: {
+  task: Task;
+  projectId: number;
+}) {
   const {
     attributes,
     listeners,
@@ -1200,9 +1226,7 @@ function TaskBoard({
             })}
           </div>
           <DragOverlay>
-            {activeDragTask ? (
-              <TaskKanbanCard task={activeDragTask} />
-            ) : null}
+            {activeDragTask ? <TaskKanbanCard task={activeDragTask} /> : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -1574,9 +1598,7 @@ function TaskListView({
                       key={column.id}
                       className="cursor-pointer"
                       onClick={() =>
-                        router.push(
-                          `/projects/${projectId}/tasks/${task.id}`,
-                        )
+                        router.push(`/projects/${projectId}/tasks/${task.id}`)
                       }
                     >
                       {renderCellContent(task, column.id)}
@@ -1615,10 +1637,7 @@ function TaskCardView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {tasks.map((task) => (
-        <Link
-          key={task.id}
-          href={`/projects/${projectId}/tasks/${task.id}`}
-        >
+        <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-2">
