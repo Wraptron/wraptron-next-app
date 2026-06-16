@@ -1060,6 +1060,34 @@ export interface EmployeesResponse {
   offset: number;
 }
 
+export type HrDashboardPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
+
+export interface HrDashboardAttendanceRow {
+  employee_id: number;
+  emp_code: string;
+  name: string;
+  department: string | null;
+  attendance_count: number;
+}
+
+export interface HrDashboardTimeLoggedRow {
+  name: string;
+  hours_logged: number;
+}
+
+export interface HrDashboardData {
+  period: HrDashboardPeriod;
+  total_active_employees: number;
+  avg_employees_present: number;
+  active_employees_by_attendance: HrDashboardAttendanceRow[];
+  employees_by_time_logged: HrDashboardTimeLoggedRow[];
+}
+
 export const employeesApi = {
   getAll: async (params?: {
     search?: string;
@@ -1112,6 +1140,14 @@ export const employeesApi = {
     return fetchApi<void>(`/api/employees/${id}`, {
       method: "DELETE",
     });
+  },
+
+  getDashboard: async (
+    period: HrDashboardPeriod = "month",
+  ): Promise<HrDashboardData> => {
+    return fetchApi<HrDashboardData>(
+      `/api/employees/dashboard?period=${encodeURIComponent(period)}`,
+    );
   },
 };
 

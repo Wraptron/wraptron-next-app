@@ -183,9 +183,15 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     section: "Workspace",
   },
   {
-    href: "/hr",
+    href: "/hr/dashboard",
     label: "Human resources",
     keywords: "employees people staff",
+    section: "Human resources",
+  },
+  {
+    href: "/hr/dashboard",
+    label: "HR dashboard",
+    keywords: "attendance headcount employees present",
     section: "Human resources",
   },
   {

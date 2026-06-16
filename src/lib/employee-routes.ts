@@ -1,3 +1,6 @@
+/** HR overview dashboard (attendance and headcount metrics). */
+export const HR_DASHBOARD_PATH = "/hr/dashboard";
+
 /** Canonical path for employee directory and CRUD (detail, new, edit). */
 export const EMPLOYEES_BASE_PATH = "/hr/employees";
 

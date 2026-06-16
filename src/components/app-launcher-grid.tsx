@@ -85,7 +85,7 @@ const BUILTIN_APPS: BuiltinApp[] = [
     name: "Human resources",
     description: "Employees and people operations",
     icon: Users,
-    href: "/hr",
+    href: "/hr/dashboard",
     color: "bg-indigo-500",
   },
   {

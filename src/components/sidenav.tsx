@@ -113,7 +113,7 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     id: "human-resource",
     label: "Human resources",
     icon: Users,
-    href: "/hr",
+    href: "/hr/dashboard",
   },
   {
     id: "settings",
@@ -247,6 +247,12 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
 ];
 
 const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/hr/dashboard",
+  },
   {
     id: "employees",
     label: "Employees",
