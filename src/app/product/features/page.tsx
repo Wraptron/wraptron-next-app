@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -124,8 +125,7 @@ export default function ProductFeaturesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
@@ -263,7 +263,6 @@ export default function ProductFeaturesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </PageShell>
   );
 }

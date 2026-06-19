@@ -229,7 +229,7 @@ export function Dashboard({
         className,
       )}
     >
-      <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
+      <div className="w-full px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>

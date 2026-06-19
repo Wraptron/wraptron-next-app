@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useCurrency } from "@/contexts/currency-context";
@@ -596,8 +597,7 @@ export default function Settings() {
   const showEmptySection = activeSettingsSection === "notifications";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         {/* Success Message */}
         {successMessage && (
           <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/50">
@@ -1507,7 +1507,6 @@ export default function Settings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </PageShell>
   );
 }

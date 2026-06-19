@@ -1,5 +1,7 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
+import { cn } from "@/lib/utils";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { customersApi, type Customer } from "@/lib/api";
@@ -392,8 +394,7 @@ export default function SalesCustomersPage() {
   const showEmpty = !loading && !error && customers.length === 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold">KYC</h1>
@@ -446,7 +447,9 @@ export default function SalesCustomersPage() {
 
         {viewMode === "list" && !error && renderCustomers("list")}
 
-        {viewMode === "kanban" && !error && renderCustomers("kanban")}
+        {viewMode === "kanban" && !error && (
+          <div className="flex min-h-0 flex-1 flex-col">{renderCustomers("kanban")}</div>
+        )}
 
         {viewMode === "card" && loading && customers.length === 0 && (
           <div className="py-10 text-center text-sm text-muted-foreground">
@@ -474,7 +477,6 @@ export default function SalesCustomersPage() {
           !error &&
           customers.length > 0 &&
           renderCustomers("card")}
-      </div>
-    </div>
+      </PageShell>
   );
 }

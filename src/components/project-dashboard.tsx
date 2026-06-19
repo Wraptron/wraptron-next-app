@@ -10,7 +10,7 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -49,12 +49,8 @@ const projectsByMemberChartConfig = {
 
 const memberTasksChartConfig = {
   tasks_done: {
-    label: "Done",
+    label: "Completed",
     color: "hsl(var(--chart-2, 150 55% 45%))",
-  },
-  tasks_assigned: {
-    label: "Assigned",
-    color: "hsl(var(--chart-3, 35 90% 55%))",
   },
 } satisfies ChartConfig;
 
@@ -164,9 +160,7 @@ export function ProjectDashboard() {
   const [period, setPeriod] = useState<ProjectDashboardPeriod>("month");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState<ProjectDashboardData | null>(
-    null,
-  );
+  const [dashboard, setDashboard] = useState<ProjectDashboardData | null>(null);
 
   const loadDashboard = useCallback(
     async (selectedPeriod: ProjectDashboardPeriod) => {
@@ -198,10 +192,15 @@ export function ProjectDashboard() {
     [dashboard?.projects_by_member],
   );
 
-  const memberTasksData = useMemo(
-    () => dashboard?.member_tasks ?? [],
-    [dashboard?.member_tasks],
-  );
+  const memberTasksData = useMemo(() => {
+    const rows = dashboard?.member_tasks ?? [];
+    return rows
+      .filter((row) => row.tasks_done > 0)
+      .sort(
+        (a, b) =>
+          b.tasks_done - a.tasks_done || a.name.localeCompare(b.name),
+      );
+  }, [dashboard?.member_tasks]);
 
   const activeProjectsByStatusData = useMemo(
     () =>
@@ -218,19 +217,12 @@ export function ProjectDashboard() {
   );
 
   const maxProjectsByMember = useMemo(
-    () =>
-      Math.max(...projectsByMemberData.map((row) => row.project_count), 1),
+    () => Math.max(...projectsByMemberData.map((row) => row.project_count), 1),
     [projectsByMemberData],
   );
 
   const maxMemberTasks = useMemo(
-    () =>
-      Math.max(
-        ...memberTasksData.map((row) =>
-          Math.max(row.tasks_assigned, row.tasks_done),
-        ),
-        1,
-      ),
+    () => Math.max(...memberTasksData.map((row) => row.tasks_done), 1),
     [memberTasksData],
   );
 
@@ -253,7 +245,7 @@ export function ProjectDashboard() {
     : `${(dashboard?.completed_tasks ?? 0).toLocaleString()} / ${(dashboard?.total_tasks ?? 0).toLocaleString()}`;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8 space-y-6">
+    <div className="w-full px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10 space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -293,7 +285,7 @@ export function ProjectDashboard() {
 
       <section
         aria-label="Project metrics"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         <MetricCard
           title="Active projects"
@@ -318,51 +310,12 @@ export function ProjectDashboard() {
         />
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <HorizontalBarChartCard
-          title="Projects by team member"
-          description={`Number of projects per team member`}
-          loading={loading}
-          emptyMessage="No team members linked to projects yet."
-          dataLength={projectsByMemberData.length}
-          config={projectsByMemberChartConfig}
-        >
-          <BarChart
-            data={projectsByMemberData}
-            layout="vertical"
-            margin={{ left: 8, right: 16, top: 8, bottom: 8 }}
-          >
-            <CartesianGrid horizontal={false} />
-            <XAxis
-              type="number"
-              allowDecimals={false}
-              domain={[0, maxProjectsByMember]}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={120}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar
-              dataKey="project_count"
-              fill="var(--color-project_count)"
-              radius={[0, 6, 6, 0]}
-              barSize={22}
-            />
-          </BarChart>
-        </HorizontalBarChartCard>
-
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <HorizontalBarChartCard
           title="Tasks by team member"
-          description={`Done vs assigned · ${periodLabel.toLowerCase()}`}
+          description={`Completed tasks · ${periodLabel.toLowerCase()}`}
           loading={loading}
-          emptyMessage="No task activity for this period."
+          emptyMessage="No completed tasks for this period."
           dataLength={memberTasksData.length}
           config={memberTasksChartConfig}
         >
@@ -388,57 +341,9 @@ export function ProjectDashboard() {
               tickMargin={8}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Legend />
             <Bar
               dataKey="tasks_done"
               fill="var(--color-tasks_done)"
-              radius={[0, 4, 4, 0]}
-              barSize={14}
-            />
-            <Bar
-              dataKey="tasks_assigned"
-              fill="var(--color-tasks_assigned)"
-              radius={[0, 4, 4, 0]}
-              barSize={14}
-            />
-          </BarChart>
-        </HorizontalBarChartCard>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <HorizontalBarChartCard
-          title="Active projects by status"
-          description={`Projects updated ${periodLabel.toLowerCase()} · grouped by status`}
-          loading={loading}
-          emptyMessage="No projects updated in this period."
-          dataLength={activeProjectsByStatusData.length}
-          config={activeProjectsChartConfig}
-        >
-          <BarChart
-            data={activeProjectsByStatusData}
-            layout="vertical"
-            margin={{ left: 8, right: 16, top: 8, bottom: 8 }}
-          >
-            <CartesianGrid horizontal={false} />
-            <XAxis
-              type="number"
-              allowDecimals={false}
-              domain={[0, maxActiveProjects]}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="statusLabel"
-              width={120}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar
-              dataKey="project_count"
-              fill="var(--color-project_count)"
               radius={[0, 6, 6, 0]}
               barSize={22}
             />
@@ -499,6 +404,86 @@ export function ProjectDashboard() {
             <Bar
               dataKey="open_tasks"
               fill="var(--color-open_tasks)"
+              radius={[0, 6, 6, 0]}
+              barSize={22}
+            />
+          </BarChart>
+        </HorizontalBarChartCard>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <HorizontalBarChartCard
+          title="Active projects by status"
+          description={`Projects updated ${periodLabel.toLowerCase()} · grouped by status`}
+          loading={loading}
+          emptyMessage="No projects updated in this period."
+          dataLength={activeProjectsByStatusData.length}
+          config={activeProjectsChartConfig}
+        >
+          <BarChart
+            data={activeProjectsByStatusData}
+            layout="vertical"
+            margin={{ left: 8, right: 16, top: 8, bottom: 8 }}
+          >
+            <CartesianGrid horizontal={false} />
+            <XAxis
+              type="number"
+              allowDecimals={false}
+              domain={[0, maxActiveProjects]}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="statusLabel"
+              width={120}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Bar
+              dataKey="project_count"
+              fill="var(--color-project_count)"
+              radius={[0, 6, 6, 0]}
+              barSize={22}
+            />
+          </BarChart>
+        </HorizontalBarChartCard>
+
+        <HorizontalBarChartCard
+          title="Projects by team member"
+          description="Number of projects per team member"
+          loading={loading}
+          emptyMessage="No team members linked to projects yet."
+          dataLength={projectsByMemberData.length}
+          config={projectsByMemberChartConfig}
+        >
+          <BarChart
+            data={projectsByMemberData}
+            layout="vertical"
+            margin={{ left: 8, right: 16, top: 8, bottom: 8 }}
+          >
+            <CartesianGrid horizontal={false} />
+            <XAxis
+              type="number"
+              allowDecimals={false}
+              domain={[0, maxProjectsByMember]}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={120}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Bar
+              dataKey="project_count"
+              fill="var(--color-project_count)"
               radius={[0, 6, 6, 0]}
               barSize={22}
             />

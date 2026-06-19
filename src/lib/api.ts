@@ -219,7 +219,7 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   description?: string;
-  assigned_employee_id?: number;
+  assigned_employee_id?: number | null;
   status?: string;
   end_date?: string;
   priority?: string;
@@ -231,6 +231,22 @@ export interface CreateTaskInput {
   recurrence_interval?: number;
   recurrence_anchor_date?: string;
   recurrence_end_date?: string;
+}
+
+export interface TaskChange {
+  id: number;
+  task_id: number;
+  project_id: number;
+  changed_by_user_id?: number | null;
+  changed_by_name?: string | null;
+  change_type: "created" | "updated";
+  field_name: string;
+  field_label?: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  old_display_value?: string | null;
+  new_display_value?: string | null;
+  created_at: string;
 }
 
 export interface Project {
@@ -469,6 +485,15 @@ export const projectsApi = {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  },
+
+  getTaskChanges: async (
+    projectId: number,
+    taskId: number,
+  ): Promise<{ data: TaskChange[] }> => {
+    return fetchApi<{ data: TaskChange[] }>(
+      `/api/projects/${projectId}/tasks/${taskId}/changes`,
+    );
   },
 };
 

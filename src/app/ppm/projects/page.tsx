@@ -49,6 +49,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { PageShell } from "@/components/page-shell";
+import { cn } from "@/lib/utils";
 
 import {
   RefreshCw,
@@ -67,6 +69,23 @@ const formatDate = (dateString?: string) => {
   } catch {
     return "Invalid date";
   }
+};
+
+const formatProjectManager = (project: Project) => {
+  const staffName = [project.manager_first_name, project.manager_last_name]
+    .filter(Boolean)
+    .join(" ");
+  if (staffName) return staffName;
+
+  const employeeName = [
+    project.manager_employee_first_name,
+    project.manager_employee_last_name,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (employeeName) return employeeName;
+
+  return "Unassigned";
 };
 
 const getStatusColor = (status?: string) => {
@@ -105,8 +124,12 @@ const ProjectCard = ({ project }: { project: Project }) => (
             <span>{project.tasks?.length || 0}</span>
           </div>
           <div className="flex justify-between">
-            <span>Start:</span>
-            <span>{formatDate(project.start_date)}</span>
+            <span>Manager:</span>
+            <span>{formatProjectManager(project)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Created:</span>
+            <span>{formatDate(project.created_at)}</span>
           </div>
           <div className="flex justify-between">
             <span>Target:</span>
@@ -252,7 +275,7 @@ const KanbanColumn = ({
   return (
     <div
       ref={setNodeRef}
-      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
+      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm"
     >
       <div className="shrink-0 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -516,14 +539,15 @@ const Projects = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead>Tasks</TableHead>
-                <TableHead>Start Date</TableHead>
+                <TableHead>Project Manager</TableHead>
+                <TableHead>Created Date</TableHead>
                 <TableHead>Target Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -570,7 +594,8 @@ const Projects = () => {
                       />
                     </TableCell>
                     <TableCell>{project.tasks?.length || 0}</TableCell>
-                    <TableCell>{formatDate(project.start_date)}</TableCell>
+                    <TableCell>{formatProjectManager(project)}</TableCell>
+                    <TableCell>{formatDate(project.created_at)}</TableCell>
                     <TableCell>{formatDate(project.target_date)}</TableCell>
                   </TableRow>
                 ))
@@ -595,7 +620,7 @@ const Projects = () => {
       }
 
       return (
-        <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-card">
+        <div className="flex h-full min-h-[320px] flex-col overflow-hidden rounded-md border border-border bg-card">
           <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
             <DndContext
               sensors={sensors}
@@ -638,7 +663,7 @@ const Projects = () => {
 
     // Card view (default)
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
@@ -647,9 +672,8 @@ const Projects = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground ">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
+    <PageShell fill className="bg-background text-foreground">
+        <div className="mb-6 flex shrink-0 items-center justify-between">
           <div>
             <p className="text-muted-foreground">{projects.length} projects</p>
           </div>
@@ -758,10 +782,16 @@ const Projects = () => {
               <p className="text-muted-foreground">Create your first project above.</p>
             </div>
           ) : (
-            renderProjects()
+            <div
+              className={cn(
+                "min-h-0",
+                viewMode === "kanban" && "flex flex-1 flex-col",
+              )}
+            >
+              {renderProjects()}
+            </div>
           ))}
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

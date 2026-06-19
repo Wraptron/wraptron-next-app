@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useState, useEffect, useMemo } from "react";
 import { companiesApi, type Company } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -384,8 +385,7 @@ export default function CompaniesPage() {
   const showEmpty = !loading && !error && companies.length === 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Companies</h1>
@@ -418,7 +418,9 @@ export default function CompaniesPage() {
         )}
 
         {viewMode === "list" && !error && renderCompanies("list")}
-        {viewMode === "kanban" && !error && renderCompanies("kanban")}
+        {viewMode === "kanban" && !error && (
+          <div className="flex min-h-0 flex-1 flex-col">{renderCompanies("kanban")}</div>
+        )}
 
         {viewMode === "card" && loading && companies.length === 0 && (
           <div className="py-8 text-center text-muted-foreground">Loading…</div>
@@ -481,7 +483,6 @@ export default function CompaniesPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </PageShell>
   );
 }

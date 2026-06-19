@@ -51,7 +51,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
         </div>
         <div
           id="main-content-portal"
-          className="flex-1 overflow-y-auto pb-4 relative min-h-0 bg-background text-foreground"
+          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background pb-4 text-foreground"
         >
           {children}
         </div>

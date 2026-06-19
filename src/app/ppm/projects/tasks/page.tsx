@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -356,8 +357,7 @@ export default function ProjectsTasksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <Link href="/projects">
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -451,7 +451,6 @@ export default function ProjectsTasksPage() {
           onSuccess={refreshTasks}
           projects={projects}
         />
-      </div>
-    </div>
+      </PageShell>
   );
 }

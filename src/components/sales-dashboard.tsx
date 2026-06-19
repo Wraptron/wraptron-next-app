@@ -42,6 +42,7 @@ import {
 } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
 import { statusBadgeClass } from "@/lib/status-colors";
+import { PageShell } from "@/components/page-shell";
 
 const PERIOD_OPTIONS: { value: SalesDashboardPeriod; label: string }[] = [
   { value: "today", label: "Today" },
@@ -317,7 +318,7 @@ export function SalesDashboard() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8 space-y-6">
+    <PageShell className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -356,7 +357,7 @@ export function SalesDashboard() {
 
       <section
         aria-label="Sales metrics"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         <MetricCard
           title="Pipeline value"
@@ -406,7 +407,7 @@ export function SalesDashboard() {
           ) : (
             <ChartContainer
               config={revenueChartConfig}
-              className="h-[280px] w-full"
+              className="h-[280px] w-full xl:h-[360px]"
             >
               <BarChart
                 data={revenueChartData}
@@ -458,8 +459,8 @@ export function SalesDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="border-border/80 lg:col-span-3">
+      <div className="grid gap-4 lg:grid-cols-5 xl:grid-cols-3">
+        <Card className="border-border/80 lg:col-span-3 xl:col-span-2">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -485,7 +486,7 @@ export function SalesDashboard() {
               <div className="[--sales-funnel-bar:oklch(0.62_0.17_152)] dark:[--sales-funnel-bar:oklch(0.55_0.22_264)]">
                 <ChartContainer
                   config={funnelChartConfig}
-                  className="h-[320px] w-full"
+                  className="h-[320px] w-full xl:h-[400px]"
                 >
                   <BarChart
                     data={funnelChartData}
@@ -522,7 +523,7 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 lg:col-span-2">
+        <Card className="border-border/80 lg:col-span-2 xl:col-span-1">
           <CardHeader className="flex flex-row items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -577,6 +578,6 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
       </section>
-    </div>
+    </PageShell>
   );
 }

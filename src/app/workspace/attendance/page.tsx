@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useEffect, useState, useCallback } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Button } from "@/components/ui/button";
@@ -105,8 +106,7 @@ export default function AttendancePage() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
@@ -338,7 +338,6 @@ export default function AttendancePage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+      </PageShell>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
+import { cn } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -333,7 +335,7 @@ export function EmployeesDirectoryPage() {
       }
 
       return (
-        <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-card">
+        <div className="flex h-full min-h-[320px] flex-col overflow-hidden rounded-md border border-border bg-card">
           <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
             <div className="flex h-full py-0">
               {columns.map((col) => {
@@ -341,7 +343,7 @@ export function EmployeesDirectoryPage() {
                 return (
                   <div
                     key={col.key}
-                    className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
+                    className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm"
                   >
                     <div className="shrink-0 border-b border-border px-3 py-2">
                       <h3 className="font-medium text-sm text-foreground">
@@ -539,8 +541,7 @@ export function EmployeesDirectoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex justify-between items-center mb-6">
           <div>
             <p className="text-muted-foreground">{employees.length} employees</p>
@@ -591,9 +592,15 @@ export function EmployeesDirectoryPage() {
             <p className="text-muted-foreground">Create your first employee above.</p>
           </div>
         ) : (
-          renderEmployees()
+          <div
+            className={cn(
+              "min-h-0",
+              viewMode === "kanban" && "flex flex-1 flex-col",
+            )}
+          >
+            {renderEmployees()}
+          </div>
         )}
-      </div>
-    </div>
+      </PageShell>
   );
 }

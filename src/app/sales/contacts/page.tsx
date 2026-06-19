@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { contactsApi, type Contact } from "@/lib/api";
@@ -651,8 +652,7 @@ export default function ContactsPage() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center mb-6">
           <div className="hidden md:block">
             <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
@@ -744,7 +744,14 @@ export default function ContactsPage() {
                 );
               })}
             </div>
-            <div className="hidden md:block">{renderContacts(viewMode)}</div>
+            <div
+              className={cn(
+                "hidden md:block",
+                viewMode === "kanban" && "flex min-h-0 flex-1 flex-col",
+              )}
+            >
+              {renderContacts(viewMode)}
+            </div>
           </>
         )}
 
@@ -801,7 +808,6 @@ export default function ContactsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </PageShell>
   );
 }

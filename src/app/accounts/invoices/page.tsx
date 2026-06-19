@@ -1,5 +1,7 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
+import { cn } from "@/lib/utils";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -523,8 +525,7 @@ export default function AccountsInvoicesPage() {
   const showEmpty = !loading && !error && invoices.length === 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Invoices</h1>
@@ -573,7 +574,16 @@ export default function AccountsInvoicesPage() {
           </div>
         )}
 
-        {!error && renderInvoices(viewMode)}
+        {!error && (
+          <div
+            className={cn(
+              "min-h-0",
+              viewMode === "kanban" && "flex flex-1 flex-col",
+            )}
+          >
+            {renderInvoices(viewMode)}
+          </div>
+        )}
 
         {showEmpty && viewMode !== "list" && (
           <div className="mt-8 text-center text-muted-foreground">
@@ -615,7 +625,6 @@ export default function AccountsInvoicesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </PageShell>
   );
 }

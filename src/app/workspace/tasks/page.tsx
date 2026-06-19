@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -123,8 +124,7 @@ export default function WorkspaceTasksPage() {
   }, [loadAssignedTasks]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <p className="text-muted-foreground">
@@ -209,7 +209,6 @@ export default function WorkspaceTasksPage() {
             </Table>
           </div>
         )}
-      </div>
-    </div>
+      </PageShell>
   );
 }

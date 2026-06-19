@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Search } from "lucide-react";
 import { productsApi, type Product } from "@/lib/api";
 import { statusBadgeClass, kanbanColumnHeaderClass } from "@/lib/status-colors";
+import { PageShell } from "@/components/page-shell";
+import { cn } from "@/lib/utils";
 import { ProductFormSheet } from "@/components/product-form-sheet";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
@@ -317,9 +319,8 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <section id="interface" className="scroll-mt-24 space-y-6">
+    <PageShell fill className="bg-background text-foreground">
+        <section id="interface" className="scroll-mt-24 flex min-h-0 flex-1 flex-col space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Products</h1>
@@ -376,7 +377,16 @@ export default function ProductsPage() {
             </div>
           )}
 
-          {!error && renderProducts(viewMode)}
+          {!error && (
+            <div
+              className={cn(
+                "min-h-0",
+                viewMode === "kanban" && "flex flex-1 flex-col",
+              )}
+            >
+              {renderProducts(viewMode)}
+            </div>
+          )}
         </section>
 
         <ProductFormSheet
@@ -384,7 +394,6 @@ export default function ProductsPage() {
           onOpenChange={setProductSheetOpen}
           onSuccess={fetchProducts}
         />
-      </div>
-    </div>
+    </PageShell>
   );
 }

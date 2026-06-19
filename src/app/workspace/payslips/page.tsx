@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Button } from "@/components/ui/button";
@@ -50,8 +51,7 @@ export default function PayslipsPage() {
   }, [setTitle]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
-      <div className="max-w-7xl mx-auto">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Payslips</h1>
@@ -106,7 +106,6 @@ export default function PayslipsPage() {
             </TableBody>
           </Table>
         </div>
-      </div>
-    </div>
+      </PageShell>
   );
 }

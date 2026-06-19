@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useState, useEffect } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +28,7 @@ export default function TasksPage() {
   }, [setTitle]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
@@ -60,7 +60,6 @@ export default function TasksPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </PageShell>
   );
 }

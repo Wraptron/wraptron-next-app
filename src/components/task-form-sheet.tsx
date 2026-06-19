@@ -122,8 +122,36 @@ export function TaskFormSheet({
       }
     };
 
+    const loadDefaultAssignee = async () => {
+      if (projectId != null) {
+        try {
+          const project = await projectsApi.getById(projectId);
+          if (project.project_manager_employee_id != null) {
+            setFormData((prev) => ({
+              ...prev,
+              assigned_employee_id: String(project.project_manager_employee_id),
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to load project manager:", err);
+        }
+        return;
+      }
+
+      if (selectedProjectId) {
+        const project = projects.find((p) => p.id === parseInt(selectedProjectId, 10));
+        if (project?.project_manager_employee_id != null) {
+          setFormData((prev) => ({
+            ...prev,
+            assigned_employee_id: String(project.project_manager_employee_id),
+          }));
+        }
+      }
+    };
+
     loadEmployees();
-  }, [open]);
+    loadDefaultAssignee();
+  }, [open, projectId, selectedProjectId, projects]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,9 +163,16 @@ export function TaskFormSheet({
       const payload: CreateTaskInput = {
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        assigned_employee_id: formData.assigned_employee_id
-          ? parseInt(formData.assigned_employee_id, 10)
-          : undefined,
+        ...(formData.assigned_employee_id === "unassigned"
+          ? { assigned_employee_id: null }
+          : formData.assigned_employee_id
+            ? {
+                assigned_employee_id: parseInt(
+                  formData.assigned_employee_id,
+                  10,
+                ),
+              }
+            : {}),
         status: formData.status,
         end_date: formData.end_date || undefined,
         billable: formData.billable,
@@ -211,7 +246,18 @@ export function TaskFormSheet({
                 <Label htmlFor="task-project">Project *</Label>
                 <Select
                   value={selectedProjectId}
-                  onValueChange={setSelectedProjectId}
+                  onValueChange={(value) => {
+                    setSelectedProjectId(value);
+                    const project = projects.find(
+                      (p) => p.id === parseInt(value, 10),
+                    );
+                    setFormData((prev) => ({
+                      ...prev,
+                      assigned_employee_id: project?.project_manager_employee_id
+                        ? String(project.project_manager_employee_id)
+                        : "unassigned",
+                    }));
+                  }}
                   required={!projectId}
                 >
                   <SelectTrigger id="task-project">
@@ -252,12 +298,17 @@ export function TaskFormSheet({
             <div className="space-y-2">
               <Label htmlFor="task-assigned-to">Assign to</Label>
               <Select
-                value={formData.assigned_employee_id || "unassigned"}
+                value={
+                  formData.assigned_employee_id === "unassigned" ||
+                  !formData.assigned_employee_id
+                    ? "unassigned"
+                    : formData.assigned_employee_id
+                }
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
                     assigned_employee_id:
-                      value === "unassigned" ? "" : value,
+                      value === "unassigned" ? "unassigned" : value,
                   })
                 }
               >

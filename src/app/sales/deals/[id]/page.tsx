@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -143,8 +144,7 @@ export default function DealDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6">
           <Link href="/sales/deals">
             <Button variant="ghost" className="mb-4">
@@ -349,7 +349,6 @@ export default function DealDetailPage() {
             <DealActivities deal={deal} />
           </TabsContent>
         </Tabs>
-      </div>
 
       <DealFormSheet
         open={sheetOpen}
@@ -379,6 +378,6 @@ export default function DealDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

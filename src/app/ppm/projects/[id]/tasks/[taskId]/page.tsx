@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { TaskChangeHistory } from "@/components/task-change-history";
 
 export default function EditTaskPage() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function EditTaskPage() {
   const [storyPoints, setStoryPoints] = useState<number>(0);
   const [notes, setNotes] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [changeHistoryKey, setChangeHistoryKey] = useState(0);
 
   useEffect(() => {
     if (!projectId || !taskId || isNaN(projectId) || isNaN(taskId)) {
@@ -175,6 +177,7 @@ export default function EditTaskPage() {
 
       // We will implement a `updateTask` method in api.ts next.
       await projectsApi.updateTask(targetProjectId, taskId, updatedTask);
+      setChangeHistoryKey((key) => key + 1);
 
       router.push(`/projects/${targetProjectId}`);
     } catch (err) {
@@ -426,6 +429,12 @@ export default function EditTaskPage() {
               />
             </CardContent>
           </Card>
+
+          <TaskChangeHistory
+            projectId={projectId}
+            taskId={taskId}
+            refreshKey={changeHistoryKey}
+          />
 
           <div className="flex items-center justify-end gap-3 pt-4">
             <Link href={`/projects/${selectedProjectId || projectId}`}>

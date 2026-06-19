@@ -1,5 +1,7 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
+
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -315,8 +317,7 @@ export default function WorkspaceDashboardPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <PageShell className="space-y-6 bg-background text-foreground">
         <Card>
           <CardContent className="py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -520,7 +521,6 @@ export default function WorkspaceDashboardPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </PageShell>
   );
 }

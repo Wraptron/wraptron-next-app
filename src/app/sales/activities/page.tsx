@@ -1,5 +1,6 @@
 "use client";
 
+import { PageShell } from "@/components/page-shell";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { activitiesApi, type SalesActivity } from "@/lib/api";
@@ -168,8 +169,7 @@ export default function SalesActivitiesPage() {
   const columns = useMemo(() => buildColumns(activities), [activities]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-5xl px-4 py-8">
+    <PageShell fill className="bg-background text-foreground">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Sales activities</h1>
@@ -199,7 +199,8 @@ export default function SalesActivitiesPage() {
         ) : null}
 
         {viewMode === "kanban" ? (
-          <CollectionKanbanView
+          <div className="flex min-h-0 flex-1 flex-col">
+            <CollectionKanbanView
             items={items}
             columns={KANBAN_COLUMNS}
             groupBy={(item) => {
@@ -210,6 +211,7 @@ export default function SalesActivitiesPage() {
             loading={loading}
             emptyMessage="No activities found."
           />
+          </div>
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activities.map((a) => (
@@ -258,8 +260,7 @@ export default function SalesActivitiesPage() {
             Meetings / WhatsApp
           </Badge>
         </div>
-      </div>
-    </div>
+      </PageShell>
   );
 }
 

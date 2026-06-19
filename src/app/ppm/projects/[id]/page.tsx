@@ -525,7 +525,7 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-3 py-4 sm:px-4 sm:py-6 lg:py-8">
+      <div className="w-full px-3 py-4 sm:px-4 sm:py-6 lg:px-8 lg:py-8 xl:px-10">
         <div className="mb-4 sm:mb-6">
           <Link href="/projects">
             <Button variant="ghost" className="mb-3 sm:mb-4 -ml-1">
@@ -1097,7 +1097,7 @@ function TaskKanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card"
+      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm"
     >
       <div className="shrink-0 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -1202,7 +1202,7 @@ function TaskBoard({
   };
 
   return (
-    <div className="flex min-h-[260px] h-[calc(100vh-260px)] flex-col overflow-hidden rounded-md border border-border bg-card sm:h-[calc(100vh-280px)]">
+    <div className="flex min-h-[320px] h-full flex-col overflow-hidden rounded-md border border-border bg-card">
       <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
         <DndContext
           sensors={sensors}

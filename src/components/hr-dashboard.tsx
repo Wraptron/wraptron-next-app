@@ -141,7 +141,7 @@ export function HrDashboard() {
       });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8 space-y-6">
+    <div className="w-full px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10 space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -181,7 +181,7 @@ export function HrDashboard() {
 
       <section
         aria-label="HR metrics"
-        className="grid gap-4 sm:grid-cols-2"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         <MetricCard
           title="Total active employees"

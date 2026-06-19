@@ -138,7 +138,7 @@ function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card",
+        "flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm",
         className,
       )}
     >
@@ -264,7 +264,7 @@ export function CollectionKanbanView({
     return (
       <div
         className={cn(
-          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
+          "flex h-full min-h-[320px] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
           className,
         )}
       >
@@ -277,7 +277,7 @@ export function CollectionKanbanView({
     return (
       <div
         className={cn(
-          "flex h-[calc(100vh-200px)] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
+          "flex h-full min-h-[320px] items-center justify-center rounded-md border border-border bg-muted/30 text-foreground",
           className,
         )}
       >
@@ -291,7 +291,7 @@ export function CollectionKanbanView({
   return (
     <div
       className={cn(
-        "flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-md border border-border bg-muted/30 text-foreground",
+        "flex h-full min-h-[320px] flex-col overflow-hidden rounded-md border border-border bg-muted/30 text-foreground",
         className,
       )}
     >

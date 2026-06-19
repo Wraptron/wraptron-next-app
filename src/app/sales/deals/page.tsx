@@ -39,6 +39,7 @@ import { DealFormSheet } from "@/components/deal-form-sheet";
 import { DealImportSheet } from "@/components/deal-import-sheet";
 import { RefreshCw, Edit, Trash2, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/page-shell";
 
 
 function dealDisplayTitle(deal: Deal) {
@@ -508,7 +509,7 @@ export default function DealsPage() {
     }
 
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {deals.map((deal) => (
           <DealCard
             key={deal.id}
@@ -542,9 +543,8 @@ export default function DealsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
+    <PageShell fill className="bg-background text-foreground">
+      <div className="mb-6 flex shrink-0 items-center justify-between">
           <div>
             <p className="text-muted-foreground">{deals.length} deals</p>
           </div>
@@ -570,7 +570,7 @@ export default function DealsPage() {
         </div>
 
         {selectedDeals.length > 0 && (
-          <div className="mb-6 flex items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
+          <div className="mb-6 flex shrink-0 items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
             <span className="text-sm font-medium">
               {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"}{" "}
               selected
@@ -620,10 +620,19 @@ export default function DealsPage() {
         </Dialog>
 
         {error && (
-          <div className="py-8 text-center text-destructive">{error}</div>
+          <div className="shrink-0 py-8 text-center text-destructive">{error}</div>
         )}
 
-        {!error && deals.length > 0 && renderDeals(viewMode)}
+        {!error && deals.length > 0 && (
+          <div
+            className={cn(
+              "min-h-0",
+              viewMode === "kanban" && "flex flex-1 flex-col",
+            )}
+          >
+            {renderDeals(viewMode)}
+          </div>
+        )}
 
         {!loading && !error && deals.length === 0 && (
             <div className="text-center py-16">
@@ -667,7 +676,6 @@ export default function DealsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+    </PageShell>
   );
 }
