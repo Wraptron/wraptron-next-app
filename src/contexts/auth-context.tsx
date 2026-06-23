@@ -8,7 +8,8 @@ import React, {
   ReactNode,
 } from "react";
 import { authApi, setAuthToken, type User } from "@/lib/api";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 
 interface AuthContextType {
   user: User | null;
@@ -33,7 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   // Check if user is authenticated on mount only
   useEffect(() => {
@@ -115,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
+      posthog.reset();
+    }
     authApi.logout();
   };
 

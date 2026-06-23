@@ -45,7 +45,9 @@
 	// "vars": { "MY_VARIABLE": "production_value" },
 	"vars": {
 		// Used by server runtime. For client code, NEXT_PUBLIC_* must be set at build time too.
-		"NEXT_PUBLIC_API_URL": "http://localhost:8000"
+		"NEXT_PUBLIC_API_URL": "http://localhost:8000",
+		"NEXT_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com",
+		"NEXT_PUBLIC_POSTHOG_UI_HOST": "https://eu.posthog.com"
 	},
 	/**
 	 * Note: Use secrets to store sensitive data.
@@ -71,7 +73,9 @@
 	"env": {
 		"production": {
 			"vars": {
-				"NEXT_PUBLIC_API_URL": "https://api.your-domain.com"
+				"NEXT_PUBLIC_API_URL": "https://api.your-domain.com",
+				"NEXT_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com",
+				"NEXT_PUBLIC_POSTHOG_UI_HOST": "https://eu.posthog.com"
 			}
 			// For a custom domain, uncomment and set your route:
 			// ,

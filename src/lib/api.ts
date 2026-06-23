@@ -1085,12 +1085,7 @@ export interface EmployeesResponse {
   offset: number;
 }
 
-export type HrDashboardPeriod =
-  | "today"
-  | "week"
-  | "month"
-  | "quarter"
-  | "year";
+export type HrDashboardPeriod = "today" | "week" | "month" | "quarter" | "year";
 
 export interface HrDashboardAttendanceRow {
   employee_id: number;
@@ -1625,6 +1620,7 @@ export interface Deal {
   client_name?: string;
   client_company_name?: string;
   contact_name?: string;
+  contact_phone?: string;
   owner_name?: string;
   contacts_associated?: number[];
   companies_associated?: number[];

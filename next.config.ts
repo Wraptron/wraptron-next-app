@@ -68,6 +68,9 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import path from "path";
 
+const posthogHost =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
+
 const nextConfig: NextConfig = {
   // Set the output file tracing root to this directory to avoid lockfile warnings
   outputFileTracingRoot: path.join(__dirname),
@@ -82,6 +85,14 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      {
+        source: "/ingest/static/:path*",
+        destination: `${posthogHost}/static/:path*`,
+      },
+      {
+        source: "/ingest/:path*",
+        destination: `${posthogHost}/:path*`,
+      },
       { source: "/projects", destination: "/ppm/projects" },
       { source: "/projects/tasks", destination: "/ppm/projects/tasks" },
       { source: "/projects/:path*", destination: "/ppm/projects/:path*" },

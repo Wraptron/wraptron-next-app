@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Header from "@/components/header";
 import SideNav from "@/components/sidenav";
 import ProtectedRoute from "@/components/protected-route";
@@ -10,6 +11,8 @@ import { PageTitleProvider } from "@/contexts/page-title-context";
 import { CurrencyProvider } from "@/contexts/currency-context";
 import { SheetPushProvider } from "@/contexts/sheet-push-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PostHogIdentify } from "@/components/posthog/posthog-identify";
+import { PostHogPageView } from "@/components/posthog/posthog-pageview";
 import { cn } from "@/lib/utils";
 
 function MainContent({ children }: { children: React.ReactNode }) {
@@ -66,6 +69,10 @@ export default function ClientLayout({
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <AuthProvider>
+        <PostHogIdentify />
+        <Suspense fallback={null}>
+          <PostHogPageView />
+        </Suspense>
         <ProtectedRoute>
           <CurrencyProvider>
             <PageTitleProvider>

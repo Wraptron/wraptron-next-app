@@ -80,6 +80,8 @@ export interface TaskFormSheetProps {
   projectId?: number;
   /** When projectId is not set, pass projects for the project selector */
   projects?: Project[];
+  /** When set, pre-selects this employee instead of the project manager */
+  defaultAssigneeEmployeeId?: number;
 }
 
 export function TaskFormSheet({
@@ -88,6 +90,7 @@ export function TaskFormSheet({
   onSuccess,
   projectId,
   projects = [],
+  defaultAssigneeEmployeeId,
 }: TaskFormSheetProps) {
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -123,6 +126,14 @@ export function TaskFormSheet({
     };
 
     const loadDefaultAssignee = async () => {
+      if (defaultAssigneeEmployeeId != null) {
+        setFormData((prev) => ({
+          ...prev,
+          assigned_employee_id: String(defaultAssigneeEmployeeId),
+        }));
+        return;
+      }
+
       if (projectId != null) {
         try {
           const project = await projectsApi.getById(projectId);
@@ -151,7 +162,7 @@ export function TaskFormSheet({
 
     loadEmployees();
     loadDefaultAssignee();
-  }, [open, projectId, selectedProjectId, projects]);
+  }, [open, projectId, selectedProjectId, projects, defaultAssigneeEmployeeId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,9 +264,12 @@ export function TaskFormSheet({
                     );
                     setFormData((prev) => ({
                       ...prev,
-                      assigned_employee_id: project?.project_manager_employee_id
-                        ? String(project.project_manager_employee_id)
-                        : "unassigned",
+                      assigned_employee_id:
+                        defaultAssigneeEmployeeId != null
+                          ? String(defaultAssigneeEmployeeId)
+                          : project?.project_manager_employee_id
+                            ? String(project.project_manager_employee_id)
+                            : "unassigned",
                     }));
                   }}
                   required={!projectId}

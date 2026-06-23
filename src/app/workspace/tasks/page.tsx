@@ -17,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, RefreshCw, CheckSquare } from "lucide-react";
+import { Loader2, RefreshCw, CheckSquare, Plus } from "lucide-react";
 import { projectsApi, employeesApi, type Task, type Project } from "@/lib/api";
+import { TaskFormSheet } from "@/components/task-form-sheet";
 
 type TaskWithProject = Task & { project_name: string };
 
@@ -52,6 +53,9 @@ export default function WorkspaceTasksPage() {
   const { setTitle } = usePageTitle();
   const { user } = useAuth();
   const [tasks, setTasks] = useState<TaskWithProject[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +63,8 @@ export default function WorkspaceTasksPage() {
     () => async () => {
       if (!user?.id) {
         setTasks([]);
+        setProjects([]);
+        setCurrentEmployeeId(null);
         setError("You need to be logged in to view assigned tasks.");
         setLoading(false);
         return;
@@ -79,11 +85,16 @@ export default function WorkspaceTasksPage() {
 
         if (!currentEmployee) {
           setTasks([]);
+          setProjects(projectsRes.data);
+          setCurrentEmployeeId(null);
           setError(
             "No linked employee record found for your account. Ask an admin to link your employee profile.",
           );
           return;
         }
+
+        setProjects(projectsRes.data);
+        setCurrentEmployeeId(currentEmployee.id);
 
         const flat: TaskWithProject[] = [];
         projectsRes.data.forEach((project: Project) => {
@@ -131,9 +142,19 @@ export default function WorkspaceTasksPage() {
               {tasks.length} assigned task{tasks.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <Button onClick={() => void loadAssignedTasks()} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTaskSheetOpen(true)}
+              disabled={!currentEmployeeId}
+            >
+              <Plus className="h-4 w-4 mr-1" /> New task
+            </Button>
+            <Button onClick={() => void loadAssignedTasks()} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -153,9 +174,14 @@ export default function WorkspaceTasksPage() {
             <CardContent className="py-16 text-center">
               <CheckSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-xl font-semibold mb-2">No assigned tasks</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 You currently do not have any tasks assigned in projects.
               </p>
+              {currentEmployeeId && (
+                <Button onClick={() => setTaskSheetOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" /> New task
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
@@ -209,6 +235,13 @@ export default function WorkspaceTasksPage() {
             </Table>
           </div>
         )}
+      <TaskFormSheet
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
+        onSuccess={() => void loadAssignedTasks()}
+        projects={projects}
+        defaultAssigneeEmployeeId={currentEmployeeId ?? undefined}
+      />
       </PageShell>
   );
 }

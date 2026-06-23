@@ -58,6 +58,9 @@ const formatDate = (dateString?: string) => {
   });
 };
 
+const telHref = (phone: string) =>
+  `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
+
 export default function DealDetailPage() {
   const params = useParams();
   const { setTitle } = usePageTitle();
@@ -145,210 +148,249 @@ export default function DealDetailPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="mb-6">
-          <Link href="/sales/deals">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Deals
+      <div className="mb-6">
+        <Link href="/sales/deals">
+          <Button variant="ghost" className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Deals
+          </Button>
+        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Badge className={getStageColor(deal.stage)}>
+              {deal.stage || "—"}
+            </Badge>
+            <Badge className={getStatusColor(deal.status)}>
+              {deal.status || "—"}
+            </Badge>
+            <span className="text-sm text-gray-500">
+              Created {formatDate(deal.created_at)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSheetOpen(true)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Deal
             </Button>
-          </Link>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Badge className={getStageColor(deal.stage)}>
-                {deal.stage || "—"}
-              </Badge>
-              <Badge className={getStatusColor(deal.status)}>
-                {deal.status || "—"}
-              </Badge>
-              <span className="text-sm text-gray-500">
-                Created {formatDate(deal.created_at)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSheetOpen(true)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Deal
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
           </div>
         </div>
+      </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="qualification">Qualification</TabsTrigger>
-            <TabsTrigger value="activities">Activities</TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="qualification">Qualification</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Deal information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-xl border border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-sky-50/40 px-4 py-3.5 shadow-sm ring-1 ring-violet-100/70">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-violet-800/85">
-                    Deal name
-                  </p>
-                  <p className="mt-1.5 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
-                    {deal.title?.trim() || "Untitled deal"}
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Deal information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-sky-50/40 px-4 py-3.5 shadow-sm ring-1 ring-violet-100/70">
+                <p className="text-xs font-semibold uppercase tracking-wider text-violet-800/85">
+                  Deal name
+                </p>
+                <p className="mt-1.5 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+                  {deal.title?.trim() || "Untitled deal"}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Stage</p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.stage || "—"}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Stage</p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.stage || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Status</p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.status || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Customer / Client
-                    </p>
-                    <p className="text-sm mt-1">
-                      {deal.client_company_name || deal.client_name || "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Contact</p>
-                    <p className="text-sm mt-1">{deal.contact_name || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Probability
-                    </p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.probability != null ? `${deal.probability}%` : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Deal value
-                    </p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.value != null
-                        ? formatCurrency(deal.value, deal.currency)
-                        : "—"}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Status</p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.status || "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">
-                    Expected close date
+                    Customer / Client
                   </p>
                   <p className="text-sm mt-1">
-                    {formatDate(deal.expected_close_date) || "—"}
+                    {deal.client_company_name || deal.client_name || "—"}
                   </p>
                 </div>
-                {deal.description && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm font-medium text-gray-500 mb-2">
-                      Description
-                    </p>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
-                        {deal.description}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="qualification" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Qualification</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Current stage
-                    </p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.stage || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Probability
-                    </p>
-                    <p className="text-sm mt-1 font-semibold text-slate-900">
-                      {deal.probability != null ? `${deal.probability}%` : "—"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Primary contact
-                    </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Contact</p>
+                  {deal.contact_id && deal.contact_name ? (
+                    <Link
+                      href={`/contacts/${deal.contact_id}`}
+                      className="text-sm mt-1 text-primary hover:underline inline-block"
+                    >
+                      {deal.contact_name}
+                    </Link>
+                  ) : (
                     <p className="text-sm mt-1">{deal.contact_name || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Customer / client
-                    </p>
-                    <p className="text-sm mt-1">
-                      {deal.client_company_name || deal.client_name || "—"}
-                    </p>
-                  </div>
+                  )}
                 </div>
-
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Phone</p>
+                  {deal.contact_phone ? (
+                    <a
+                      href={telHref(deal.contact_phone)}
+                      className="text-sm mt-1 hover:underline inline-block"
+                    >
+                      {deal.contact_phone}
+                    </a>
+                  ) : (
+                    <p className="text-sm mt-1">—</p>
+                  )}
+                </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">
-                    Target close date
+                    Probability
+                  </p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.probability != null ? `${deal.probability}%` : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Deal value
+                  </p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.value != null
+                      ? formatCurrency(deal.value, deal.currency)
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  Expected close date
+                </p>
+                <p className="text-sm mt-1">
+                  {formatDate(deal.expected_close_date) || "—"}
+                </p>
+              </div>
+              {deal.description && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Description
+                  </p>
+                  <div className="prose prose-sm max-w-none">
+                    <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                      {deal.description}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="qualification" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Qualification</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Current stage
+                  </p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.stage || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Probability
+                  </p>
+                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                    {deal.probability != null ? `${deal.probability}%` : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Primary contact
+                  </p>
+                  {deal.contact_id && deal.contact_name ? (
+                    <Link
+                      href={`/contacts/${deal.contact_id}`}
+                      className="text-sm mt-1 text-primary hover:underline inline-block"
+                    >
+                      {deal.contact_name}
+                    </Link>
+                  ) : (
+                    <p className="text-sm mt-1">{deal.contact_name || "—"}</p>
+                  )}
+                  {deal.contact_phone && (
+                    <a
+                      href={telHref(deal.contact_phone)}
+                      className="text-sm mt-1 text-muted-foreground hover:underline block"
+                    >
+                      {deal.contact_phone}
+                    </a>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Customer / client
                   </p>
                   <p className="text-sm mt-1">
-                    {formatDate(deal.expected_close_date)}
+                    {deal.client_company_name || deal.client_name || "—"}
                   </p>
                 </div>
+              </div>
 
-                <div className="rounded-md border bg-gray-50 p-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Notes for qualification
-                  </p>
-                  <p className="text-sm mt-2 text-slate-700">
-                    {deal.description?.trim() ||
-                      "No qualification notes added yet."}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  Target close date
+                </p>
+                <p className="text-sm mt-1">
+                  {formatDate(deal.expected_close_date)}
+                </p>
+              </div>
 
-          <TabsContent value="activities" className="space-y-4">
-            <DealActivities deal={deal} />
-          </TabsContent>
-        </Tabs>
+              <div className="rounded-md border bg-gray-50 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Notes for qualification
+                </p>
+                <p className="text-sm mt-2 text-slate-700">
+                  {deal.description?.trim() ||
+                    "No qualification notes added yet."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="activities" className="space-y-4">
+          <DealActivities deal={deal} />
+        </TabsContent>
+      </Tabs>
 
       <DealFormSheet
         open={sheetOpen}

@@ -41,14 +41,11 @@ import { RefreshCw, Edit, Trash2, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/page-shell";
 
+const telHref = (phone: string) =>
+  `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
 
 function dealDisplayTitle(deal: Deal) {
-  return (
-    deal.title ||
-    deal.client_name ||
-    deal.client_company_name ||
-    "Deal"
-  );
+  return deal.title || deal.client_name || deal.client_company_name || "Deal";
 }
 
 function dealToCollectionItem(deal: Deal): CollectionItem {
@@ -77,13 +74,34 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
         const deal = byId.get(Number(item.id));
         return deal ? dealDisplayTitle(deal) : "";
       },
-      cell: (item) => byId.get(Number(item.id)) ? dealDisplayTitle(byId.get(Number(item.id))!) : "—",
+      cell: (item) =>
+        byId.get(Number(item.id))
+          ? dealDisplayTitle(byId.get(Number(item.id))!)
+          : "—",
     },
     {
       id: "contact",
       header: "Contact",
       sortValue: (item) => byId.get(Number(item.id))?.contact_name ?? "",
       cell: (item) => byId.get(Number(item.id))?.contact_name || "—",
+    },
+    {
+      id: "phone",
+      header: "Phone",
+      sortValue: (item) => byId.get(Number(item.id))?.contact_phone ?? "",
+      cell: (item) => {
+        const phone = byId.get(Number(item.id))?.contact_phone;
+        if (!phone) return "—";
+        return (
+          <a
+            href={telHref(phone)}
+            className="hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {phone}
+          </a>
+        );
+      },
     },
     {
       id: "stage",
@@ -166,6 +184,20 @@ const DealCard = ({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Contact:</span>
             <span>{deal.contact_name || "N/A"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Phone:</span>
+            {deal.contact_phone ? (
+              <a
+                href={telHref(deal.contact_phone)}
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {deal.contact_phone}
+              </a>
+            ) : (
+              <span>N/A</span>
+            )}
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Probability:</span>
@@ -279,6 +311,17 @@ const DealKanbanCard = ({
       </div>
       <div className="text-xs text-muted-foreground">
         <div className="truncate">{deal.contact_name || "No contact"}</div>
+        {deal.contact_phone && (
+          <div className="truncate mt-0.5">
+            <a
+              href={telHref(deal.contact_phone)}
+              className="hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {deal.contact_phone}
+            </a>
+          </div>
+        )}
         <div className="mt-1">{deal.probability}% probability</div>
       </div>
     </CardContent>
@@ -326,7 +369,10 @@ export default function DealsPage() {
       ? stagesSorted.map((s) => s.name.toLowerCase())
       : defaultStageNames;
 
-  const [viewMode, setViewMode] = useCollectionViewMode("deals_view_mode", "card");
+  const [viewMode, setViewMode] = useCollectionViewMode(
+    "deals_view_mode",
+    "card",
+  );
 
   const toggleDealSelection = (dealId: number) => {
     setSelectedDeals((prev) =>
@@ -389,7 +435,10 @@ export default function DealsPage() {
     return `${count} deal${count !== 1 ? "s" : ""} · ${valueStr}`;
   };
 
-  const collectionItems = useMemo(() => deals.map(dealToCollectionItem), [deals]);
+  const collectionItems = useMemo(
+    () => deals.map(dealToCollectionItem),
+    [deals],
+  );
 
   const dealById = useMemo(() => new Map(deals.map((d) => [d.id, d])), [deals]);
 
@@ -429,7 +478,10 @@ export default function DealsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDealKanbanMove = async (item: CollectionItem, toColumnId: string) => {
+  const handleDealKanbanMove = async (
+    item: CollectionItem,
+    toColumnId: string,
+  ) => {
     const deal = dealById.get(Number(item.id));
     if (!deal) return;
 
@@ -545,137 +597,144 @@ export default function DealsPage() {
   return (
     <PageShell fill className="bg-background text-foreground">
       <div className="mb-6 flex shrink-0 items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">{deals.length} deals</p>
-          </div>
-          <CollectionPageToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            newAction={{
-              label: "New Deal",
-              onClick: handleCreateNew,
-              menuItems: [
-                {
-                  label: "Import",
-                  onClick: () => setImportSheetOpen(true),
-                  icon: <FileDown className="h-4 w-4" />,
-                },
-              ],
-            }}
-          >
-            <Button onClick={fetchDeals} variant="outline" size="sm" disabled={loading}>
-              <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </CollectionPageToolbar>
+        <div>
+          <p className="text-muted-foreground">{deals.length} deals</p>
         </div>
-
-        {selectedDeals.length > 0 && (
-          <div className="mb-6 flex shrink-0 items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
-            <span className="text-sm font-medium">
-              {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"}{" "}
-              selected
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isBulkDeleting}
-                className="border-destructive/30 bg-background text-destructive hover:bg-destructive/10 hover:border-destructive/50"
-                onClick={() => setBulkDeleteOpen(true)}
-              >
-                Delete Selected
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete deals</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete {selectedDeals.length} selected
-                deal
-                {selectedDeals.length === 1 ? "" : "s"}? This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setBulkDeleteOpen(false)}
-                disabled={isBulkDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleBulkDelete}
-                disabled={isBulkDeleting}
-              >
-                {isBulkDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {error && (
-          <div className="shrink-0 py-8 text-center text-destructive">{error}</div>
-        )}
-
-        {!error && deals.length > 0 && (
-          <div
-            className={cn(
-              "min-h-0",
-              viewMode === "kanban" && "flex flex-1 flex-col",
-            )}
+        <CollectionPageToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          newAction={{
+            label: "New Deal",
+            onClick: handleCreateNew,
+            menuItems: [
+              {
+                label: "Import",
+                onClick: () => setImportSheetOpen(true),
+                icon: <FileDown className="h-4 w-4" />,
+              },
+            ],
+          }}
+        >
+          <Button
+            onClick={fetchDeals}
+            variant="outline"
+            size="sm"
+            disabled={loading}
           >
-            {renderDeals(viewMode)}
+            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </CollectionPageToolbar>
+      </div>
+
+      {selectedDeals.length > 0 && (
+        <div className="mb-6 flex shrink-0 items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
+          <span className="text-sm font-medium">
+            {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"}{" "}
+            selected
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkDeleting}
+              className="border-destructive/30 bg-background text-destructive hover:bg-destructive/10 hover:border-destructive/50"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              Delete Selected
+            </Button>
           </div>
-        )}
+        </div>
+      )}
 
-        {!loading && !error && deals.length === 0 && (
-            <div className="text-center py-16">
-              <h3 className="text-xl mb-2">No deals yet</h3>
-              <p className="text-muted-foreground">Create your first deal above.</p>
-          </div>
-        )}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete deals</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedDeals.length} selected
+              deal
+              {selectedDeals.length === 1 ? "" : "s"}? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteOpen(false)}
+              disabled={isBulkDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+            >
+              {isBulkDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <DealFormSheet
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          onSuccess={handleFormSuccess}
-          deal={editingDeal ?? null}
-        />
+      {error && (
+        <div className="shrink-0 py-8 text-center text-destructive">
+          {error}
+        </div>
+      )}
 
-        <DealImportSheet
-          open={importSheetOpen}
-          onOpenChange={setImportSheetOpen}
-          onSuccess={handleFormSuccess}
-        />
+      {!error && deals.length > 0 && (
+        <div
+          className={cn(
+            "min-h-0",
+            viewMode === "kanban" && "flex flex-1 flex-col",
+          )}
+        >
+          {renderDeals(viewMode)}
+        </div>
+      )}
 
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete deal</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this deal? This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {!loading && !error && deals.length === 0 && (
+        <div className="text-center py-16">
+          <h3 className="text-xl mb-2">No deals yet</h3>
+          <p className="text-muted-foreground">Create your first deal above.</p>
+        </div>
+      )}
+
+      <DealFormSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onSuccess={handleFormSuccess}
+        deal={editingDeal ?? null}
+      />
+
+      <DealImportSheet
+        open={importSheetOpen}
+        onOpenChange={setImportSheetOpen}
+        onSuccess={handleFormSuccess}
+      />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete deal</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this deal? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
