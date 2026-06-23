@@ -196,7 +196,7 @@ export default function EditTaskPage() {
     );
   }
 
-  if (error || !task) {
+  if (error || !task || !projectId || !taskId) {
     return (
       <div className="min-h-screen p-8 flex items-center justify-center">
         <Card className="max-w-md w-full">
