@@ -4,6 +4,17 @@ Developers: add a new `##` section **at the top** of the list below (directly un
 
 ---
 
+## 0.2.0 — 2026-06-24
+
+- Sales: dashboard with pipeline metrics, stage funnel, and activity feed; CRM for deals, contacts, companies, customers, and activities with list, card, and kanban views
+- Projects: delivery dashboard (tasks, workload, status charts) and project pages with task boards and GitHub integration
+- Workspace: employee dashboard with clock-in/out, work mode, and personal attendance history
+- HR: headcount and attendance dashboard; employee directory and skill matrix under HR
+- Accounts: sales invoices with kanban by payment status and invoice detail view
+- Settings: expanded sections for currency, invoice company profile, sales stages, project statuses, product types, workspace skills, and integrations (GitHub, Zoho Books)
+- Home dashboard: module overview cards with quick links into Sales, Projects, Accounts, HR, and attendance
+- App launcher: header grid of built-in modules plus custom app shortcuts
+
 ## 0.1.2 — 2026-05-03
 
 - About dialog shows the three newest entries from `src/data/changenotes.md`
