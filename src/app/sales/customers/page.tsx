@@ -2,7 +2,7 @@
 
 import { PageShell } from "@/components/page-shell";
 import { cn } from "@/lib/utils";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { customersApi, type Customer } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -20,11 +20,14 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Search, Plus } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
 
 const LIST_LIMIT = 2000;
 
@@ -253,43 +256,28 @@ export default function SalesCustomersPage() {
     "kyc_view_mode",
     "list",
   );
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const collectionFilters = useCollectionPageFilters(
+    "customers",
+    getCollectionFilterDefinitions("customers"),
+  );
+  const {
+    items: customers,
+    total,
+    loading,
+    error,
+    reload: fetchCustomers,
+    setItems: setCustomers,
+  } = useCollectionData(
+    customersApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { limit: LIST_LIMIT },
+  );
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await customersApi.getAll({
-        search: debouncedSearch || undefined,
-        limit: LIST_LIMIT,
-        offset: 0,
-      });
-      setCustomers(response.data);
-      setTotal(response.total);
-      setSelectedCustomerIds([]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load customers");
-      setCustomers([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    setSelectedCustomerIds([]);
+  }, [collectionFilters.apiParamsKey]);
 
   useEffect(() => {
     setTitle("KYC");
@@ -340,7 +328,9 @@ export default function SalesCustomersPage() {
 
   const listDescription = loading
     ? "Loading…"
-    : `${customers.length} shown${total > customers.length ? ` of ${total}` : ""}`;
+    : `${total} customer${total === 1 ? "" : "s"}${
+        collectionFilters.isFiltering ? " (filtered)" : ""
+      }`;
 
   const renderCustomers = (mode: CollectionViewMode) => {
     if (mode === "list") {
@@ -411,16 +401,6 @@ export default function SalesCustomersPage() {
             }}
             className="w-full lg:w-auto"
           >
-            <div className="relative min-w-0 flex-1 sm:w-72">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search name, code, GSTIN, email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-                aria-label="Search customers"
-              />
-            </div>
             <Button
               type="button"
               variant="outline"
@@ -435,6 +415,27 @@ export default function SalesCustomersPage() {
             </Button>
           </CollectionPageToolbar>
         </div>
+
+        <CollectionFilterControls
+          className="mb-4"
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search name, code, GSTIN, email…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
+        />
 
         {error && (
           <div

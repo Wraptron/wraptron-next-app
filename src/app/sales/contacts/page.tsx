@@ -2,7 +2,7 @@
 
 import { PageShell } from "@/components/page-shell";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { contactsApi, type Contact } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
@@ -19,6 +19,10 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionPaginatedData } from "@/hooks/use-collection-paginated-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -381,11 +385,25 @@ export default function ContactsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setTitle } = usePageTitle();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
-  const [backgroundError, setBackgroundError] = useState<string | null>(null);
+  const collectionFilters = useCollectionPageFilters(
+    "contacts",
+    getCollectionFilterDefinitions("contacts"),
+  );
+  const {
+    items: contacts,
+    total,
+    loading,
+    loadingMore,
+    error,
+    backgroundError,
+    reload: fetchContacts,
+    setItems: setContacts,
+  } = useCollectionPaginatedData(
+    contactsApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { pageSize: CONTACTS_PAGE_SIZE },
+  );
   const [viewMode, setViewMode] = useCollectionViewMode("contacts_view_mode", "list");
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [importSheetOpen, setImportSheetOpen] = useState(false);
@@ -393,7 +411,10 @@ export default function ContactsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
-  const activeRequestRef = useRef(0);
+
+  useEffect(() => {
+    setSelectedContactIds([]);
+  }, [collectionFilters.apiParamsKey]);
 
   // Open edit sheet when URL has ?edit=id (e.g. from contact detail page)
   useEffect(() => {
@@ -410,71 +431,6 @@ export default function ContactsPage() {
       })
       .catch(() => {});
   }, [searchParams, router]);
-
-  const formatLoadError = (err: unknown) => {
-    const message =
-      err instanceof Error ? err.message : "Failed to fetch contacts";
-    const lower = message.toLowerCase();
-    if (lower.includes("timeout") || lower.includes("timed out")) {
-      return "Request timed out. Showing partial data where available. Please retry.";
-    }
-    return message;
-  };
-
-  const fetchContacts = async () => {
-    const requestId = ++activeRequestRef.current;
-    setLoading(true);
-    setBackgroundLoading(false);
-    setError(null);
-    setBackgroundError(null);
-
-    try {
-      // Fast first paint: fetch first page, then progressively load the rest.
-      const first = await contactsApi.getAll({
-        limit: CONTACTS_PAGE_SIZE,
-        offset: 0,
-      });
-      if (requestId !== activeRequestRef.current) return;
-
-      setContacts(first.data);
-      setLoading(false);
-
-      const total = first.total ?? first.data.length;
-      if (total > first.data.length) {
-        setBackgroundLoading(true);
-        for (
-          let offset = first.data.length;
-          offset < total;
-          offset += CONTACTS_PAGE_SIZE
-        ) {
-          try {
-            const next = await contactsApi.getAll({
-              limit: CONTACTS_PAGE_SIZE,
-              offset,
-            });
-            if (requestId !== activeRequestRef.current) return;
-            setContacts((prev) => [...prev, ...next.data]);
-          } catch (bgErr) {
-            if (requestId !== activeRequestRef.current) return;
-            setBackgroundError(formatLoadError(bgErr));
-            break;
-          }
-        }
-      }
-    } catch (err) {
-      if (requestId !== activeRequestRef.current) return;
-      setError(formatLoadError(err));
-    } finally {
-      if (requestId === activeRequestRef.current) {
-        setLoading(false);
-        setBackgroundLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
 
   useEffect(() => {
     setTitle("Contacts");
@@ -648,57 +604,71 @@ export default function ContactsPage() {
     );
   };
 
+  const countLabel = loading
+    ? "Loading…"
+    : `${contacts.length}${total > contacts.length ? ` of ${total}` : ""} contact${
+        total === 1 ? "" : "s"
+      }${collectionFilters.isFiltering ? " (filtered)" : ""}`;
+
   const showEmpty = !loading && !error && contacts.length === 0;
 
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center mb-6">
-          <div className="hidden md:block">
-            <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
-            <p className="text-muted-foreground mt-1">
-              {contacts.length} contacts
-            </p>
-            {backgroundLoading && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Loading more contacts...
-              </p>
-            )}
-            {backgroundError && (
-              <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
-                {backgroundError}
-              </p>
-            )}
-          </div>
-
-          <CollectionPageToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            newAction={{
-              label: "New Contact",
-              onClick: handleCreate,
-              menuItems: [
-                {
-                  label: "Import",
-                  onClick: () => setImportSheetOpen(true),
-                  icon: <FileDown className="h-4 w-4" />,
-                },
-              ],
-            }}
-            className="w-full md:w-auto"
-          >
-            <p className="text-sm text-muted-foreground md:hidden">
-              {contacts.length} contacts
-              {backgroundLoading && (
-                <span className="mt-0.5 block text-xs">Loading more…</span>
+        <div className="mb-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
+              <p className="mt-1 text-muted-foreground">{countLabel}</p>
+              {loadingMore && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Loading more contacts…
+                </p>
               )}
               {backgroundError && (
-                <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-500">
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
                   {backgroundError}
-                </span>
+                </p>
               )}
-            </p>
-          </CollectionPageToolbar>
+            </div>
+
+            <CollectionPageToolbar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              newAction={{
+                label: "New Contact",
+                onClick: handleCreate,
+                menuItems: [
+                  {
+                    label: "Import",
+                    onClick: () => setImportSheetOpen(true),
+                    icon: <FileDown className="h-4 w-4" />,
+                  },
+                ],
+              }}
+              className="w-full md:w-auto"
+            />
+          </div>
+
+          <CollectionFilterControls
+            definitions={collectionFilters.definitions}
+            search={collectionFilters.search}
+            onSearchChange={collectionFilters.setSearch}
+            searchPlaceholder="Search contacts…"
+            facets={collectionFilters.facets}
+            onFacetChange={collectionFilters.setFacetValues}
+            numbers={collectionFilters.numbers}
+            onNumberRangeChange={collectionFilters.setNumberRange}
+            dates={collectionFilters.dates}
+            onDateRangeChange={collectionFilters.setDateRange}
+            resource={collectionFilters.resource}
+            filterState={collectionFilters.filterState}
+            onApplySavedView={collectionFilters.applyFilterState}
+            onClearAll={collectionFilters.clearFilters}
+            isFiltering={collectionFilters.isFiltering}
+            getOptions={collectionFilters.getOptions}
+            loadOptions={collectionFilters.loadOptions}
+          />
         </div>
 
         {error && (

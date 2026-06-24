@@ -282,13 +282,23 @@ export default function DealDetailPage() {
                   </p>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Expected close date
-                </p>
-                <p className="text-sm mt-1">
-                  {formatDate(deal.expected_close_date) || "—"}
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Expected close date
+                  </p>
+                  <p className="text-sm mt-1">
+                    {formatDate(deal.expected_close_date) || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Closed date
+                  </p>
+                  <p className="text-sm mt-1">
+                    {formatDate(deal.actual_close_date) || "—"}
+                  </p>
+                </div>
               </div>
               {deal.description && (
                 <div className="pt-4 border-t">

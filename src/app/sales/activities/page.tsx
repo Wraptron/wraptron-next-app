@@ -1,7 +1,7 @@
 "use client";
 
 import { PageShell } from "@/components/page-shell";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { activitiesApi, type SalesActivity } from "@/lib/api";
 import {
@@ -17,9 +17,12 @@ import {
   CollectionPageToolbar,
   useCollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Activity, CheckSquare, Phone, RefreshCw, StickyNote } from "lucide-react";
 import { statusBadgeClass } from "@/lib/status-colors";
 
@@ -124,46 +127,27 @@ export default function SalesActivitiesPage() {
     "sales_activities_view_mode",
     "list",
   );
-  const [activities, setActivities] = useState<SalesActivity[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const collectionFilters = useCollectionPageFilters(
+    "activities",
+    getCollectionFilterDefinitions("activities"),
+  );
+  const {
+    items: activities,
+    total,
+    loading,
+    error,
+    reload: fetchActivities,
+  } = useCollectionData(
+    activitiesApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { limit: 500 },
+  );
 
   useEffect(() => {
     setTitle("Activities");
     return () => setTitle(null);
   }, [setTitle]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  const fetchActivities = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await activitiesApi.getAll({
-        search: debouncedSearch || undefined,
-        limit: 500,
-        offset: 0,
-      });
-      setActivities(res.data ?? []);
-      setTotal(res.total ?? 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch activities");
-      setActivities([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
 
   const items = useMemo(() => activities.map(activityToItem), [activities]);
   const columns = useMemo(() => buildColumns(activities), [activities]);
@@ -173,26 +157,45 @@ export default function SalesActivitiesPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Sales activities</h1>
-            <p className="text-sm text-muted-foreground">{total} activities</p>
+            <p className="text-sm text-muted-foreground">
+              {loading
+                ? "Loading…"
+                : `${total} activit${total === 1 ? "y" : "ies"}${
+                    collectionFilters.isFiltering ? " (filtered)" : ""
+                  }`}
+            </p>
           </div>
           <CollectionPageToolbar
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             showViewSwitcher
           >
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search subject or notes..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-[240px]"
-              />
-              <Button variant="outline" size="sm" onClick={fetchActivities}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={fetchActivities}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
           </CollectionPageToolbar>
         </div>
+
+        <CollectionFilterControls
+          className="mb-4"
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search subject or notes…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
+        />
 
         {error ? (
           <p className="mb-4 text-sm text-destructive">{error}</p>

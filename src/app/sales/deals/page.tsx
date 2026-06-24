@@ -24,6 +24,13 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import {
+  getCollectionFilterDefinitions,
+  withFilterOptions,
+} from "@/lib/collection-filter-definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -332,9 +339,6 @@ export default function DealsPage() {
   const router = useRouter();
   const { setTitle } = usePageTitle();
   const { formatCurrency } = useCurrency();
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
@@ -374,6 +378,59 @@ export default function DealsPage() {
     "card",
   );
 
+  const stageOptions = useMemo(
+    () =>
+      stagesSorted.length > 0
+        ? stagesSorted.map((s) => ({
+            value: s.name.toLowerCase(),
+            label: s.name,
+          }))
+        : stageNames.map((key) => ({
+            value: key,
+            label: sentenceCase(key),
+          })),
+    [stagesSorted, stageNames],
+  );
+
+  const filterDefinitions = useMemo(
+    () =>
+      withFilterOptions(getCollectionFilterDefinitions("deals"), {
+        stage: stageOptions,
+      }),
+    [stageOptions],
+  );
+
+  const {
+    search,
+    setSearch,
+    facets,
+    setFacetValues,
+    numbers,
+    setNumberRange,
+    dates,
+    setDateRange,
+    filterState,
+    applyFilterState,
+    clearFilters,
+    apiParams,
+    apiParamsKey,
+    isFiltering,
+    getOptions,
+    loadOptions,
+    definitions,
+  } = useCollectionPageFilters("deals", filterDefinitions);
+
+  const {
+    items: deals,
+    total,
+    loading,
+    error,
+    reload: fetchDeals,
+    setItems: setDeals,
+  } = useCollectionData(dealsApi.getAll, apiParamsKey, apiParams, {
+    limit: 2000,
+  });
+
   const toggleDealSelection = (dealId: number) => {
     setSelectedDeals((prev) =>
       prev.includes(dealId)
@@ -397,23 +454,6 @@ export default function DealsPage() {
       setIsBulkDeleting(false);
     }
   };
-
-  const fetchDeals = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await dealsApi.getAll();
-      setDeals(response.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch deals");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDeals();
-  }, []);
 
   useEffect(() => {
     salesStagesApi
@@ -494,7 +534,12 @@ export default function DealsPage() {
     );
 
     try {
-      await dealsApi.update(Number(deal.id), { stage: newStage });
+      const updated = await dealsApi.update(Number(deal.id), {
+        stage: newStage,
+      });
+      setDeals((prev) =>
+        prev.map((d) => (d.id === deal.id ? { ...d, ...updated } : d)),
+      );
     } catch (err) {
       setDeals((prev) =>
         prev.map((d) => (d.id === deal.id ? { ...d, stage: oldStage } : d)),
@@ -519,6 +564,8 @@ export default function DealsPage() {
           getRowHref={(item) => `/sales/deals/${item.id}`}
           onRowClick={(item) => router.push(`/sales/deals/${item.id}`)}
           emptyMessage="No deals found."
+          hasActiveFilters={isFiltering}
+          filteredEmptyMessage="No deals match your filters."
           loadingMessage="Loading deals…"
         />
       );
@@ -554,9 +601,19 @@ export default function DealsPage() {
               />
             );
           }}
-          emptyMessage="No deals found."
+          emptyMessage={
+            isFiltering ? "No deals match your filters." : "No deals found."
+          }
           loadingMessage="Loading deals…"
         />
+      );
+    }
+
+    if (deals.length === 0) {
+      return (
+        <div className="flex h-48 items-center justify-center rounded-md border border-border bg-card text-sm text-muted-foreground">
+          {isFiltering ? "No deals match your filters." : "No deals found."}
+        </div>
       );
     }
 
@@ -596,34 +653,64 @@ export default function DealsPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-      <div className="mb-6 flex shrink-0 items-center justify-between">
-        <div>
-          <p className="text-muted-foreground">{deals.length} deals</p>
-        </div>
-        <CollectionPageToolbar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          newAction={{
-            label: "New Deal",
-            onClick: handleCreateNew,
-            menuItems: [
-              {
-                label: "Import",
-                onClick: () => setImportSheetOpen(true),
-                icon: <FileDown className="h-4 w-4" />,
-              },
-            ],
-          }}
-        >
-          <Button
-            onClick={fetchDeals}
-            variant="outline"
-            size="sm"
-            disabled={loading}
+      <div className="mb-4 flex shrink-0 flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-muted-foreground">
+              {loading
+                ? "Loading…"
+                : `${total} deal${total !== 1 ? "s" : ""}${
+                    isFiltering ? " (filtered)" : ""
+                  }`}
+            </p>
+          </div>
+          <CollectionPageToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            newAction={{
+              label: "New Deal",
+              onClick: handleCreateNew,
+              menuItems: [
+                {
+                  label: "Import",
+                  onClick: () => setImportSheetOpen(true),
+                  icon: <FileDown className="h-4 w-4" />,
+                },
+              ],
+            }}
           >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-        </CollectionPageToolbar>
+            <Button
+              onClick={fetchDeals}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`size-4 ${loading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </CollectionPageToolbar>
+        </div>
+
+        <CollectionFilterControls
+          resource="deals"
+          filterState={filterState}
+          onApplySavedView={applyFilterState}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search deals…"
+          isFiltering={isFiltering}
+          onClearAll={clearFilters}
+          definitions={definitions}
+          facets={facets}
+          onFacetChange={setFacetValues}
+          numbers={numbers}
+          onNumberRangeChange={setNumberRange}
+          dates={dates}
+          onDateRangeChange={setDateRange}
+          getOptions={getOptions}
+          loadOptions={loadOptions}
+        />
       </div>
 
       {selectedDeals.length > 0 && (

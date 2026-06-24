@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
@@ -17,11 +17,14 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { productsApi, type Product } from "@/lib/api";
 import { statusBadgeClass, kanbanColumnHeaderClass } from "@/lib/status-colors";
 import { PageShell } from "@/components/page-shell";
@@ -198,42 +201,28 @@ export default function ProductsPage() {
     "products_view_mode",
     "list",
   );
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const collectionFilters = useCollectionPageFilters(
+    "products",
+    getCollectionFilterDefinitions("products"),
+  );
+  const {
+    items: products,
+    total,
+    loading,
+    error,
+    reload: fetchProducts,
+  } = useCollectionData(
+    productsApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { limit: 500 },
+  );
   const [productSheetOpen, setProductSheetOpen] = useState(false);
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await productsApi.getAll({
-        limit: 200,
-        ...(search.trim() ? { search: search.trim() } : {}),
-      });
-      setProducts(res.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch");
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
 
   useEffect(() => {
     setTitle("Products");
     return () => setTitle(null);
   }, [setTitle]);
-
-  useEffect(() => {
-    productsApi
-      .getAll({ limit: 200 })
-      .then((res) => setProducts(res.data))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to fetch"),
-      )
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     const scrollToHash = () => {
@@ -270,7 +259,9 @@ export default function ProductsPage() {
 
   const listDescription = loading
     ? "Loading…"
-    : `${products.length} product${products.length !== 1 ? "s" : ""}`;
+    : `${total} product${total !== 1 ? "s" : ""}${
+        collectionFilters.isFiltering ? " (filtered)" : ""
+      }`;
 
   const renderProducts = (mode: CollectionViewMode) => {
     if (mode === "kanban") {
@@ -308,10 +299,12 @@ export default function ProductsPage() {
         onRowClick={(item) => router.push(getProductHref(item))}
         emptyTitle="No products yet"
         emptyDescription={
-          search.trim()
-            ? "No products match your search."
+          collectionFilters.isFiltering
+            ? "No products match your filters."
             : "Create your first product to get started."
         }
+        hasActiveFilters={collectionFilters.isFiltering}
+        filteredEmptyMessage="No products match your filters."
         emptyMessage="No products found."
         loadingMessage="Loading products…"
       />
@@ -337,22 +330,6 @@ export default function ProductsPage() {
               }}
               className="w-full lg:w-auto"
             >
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  fetchProducts();
-                }}
-                className="relative min-w-0 flex-1 sm:w-72"
-              >
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                  aria-label="Search products"
-                />
-              </form>
               <Button
                 type="button"
                 variant="outline"
@@ -367,6 +344,26 @@ export default function ProductsPage() {
               </Button>
             </CollectionPageToolbar>
           </div>
+
+          <CollectionFilterControls
+            definitions={collectionFilters.definitions}
+            search={collectionFilters.search}
+            onSearchChange={collectionFilters.setSearch}
+            searchPlaceholder="Search products…"
+            facets={collectionFilters.facets}
+            onFacetChange={collectionFilters.setFacetValues}
+            numbers={collectionFilters.numbers}
+            onNumberRangeChange={collectionFilters.setNumberRange}
+            dates={collectionFilters.dates}
+            onDateRangeChange={collectionFilters.setDateRange}
+            resource={collectionFilters.resource}
+            filterState={collectionFilters.filterState}
+            onApplySavedView={collectionFilters.applyFilterState}
+            onClearAll={collectionFilters.clearFilters}
+            isFiltering={collectionFilters.isFiltering}
+            getOptions={collectionFilters.getOptions}
+            loadOptions={collectionFilters.loadOptions}
+          />
 
           {error && (
             <div

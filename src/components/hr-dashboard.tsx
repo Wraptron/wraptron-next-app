@@ -44,7 +44,7 @@ const PERIOD_OPTIONS: { value: HrDashboardPeriod; label: string }[] = [
 const timeLoggedChartConfig = {
   hours_logged: {
     label: "Hours logged",
-    color: "hsl(var(--chart-1, 220 70% 50%))",
+    color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
 

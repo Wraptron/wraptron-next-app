@@ -43,28 +43,28 @@ const PERIOD_OPTIONS: { value: ProjectDashboardPeriod; label: string }[] = [
 const projectsByMemberChartConfig = {
   project_count: {
     label: "Projects",
-    color: "hsl(var(--chart-1, 220 70% 50%))",
+    color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
 
 const memberTasksChartConfig = {
   tasks_done: {
     label: "Completed",
-    color: "hsl(var(--chart-2, 150 55% 45%))",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
 const activeProjectsChartConfig = {
   project_count: {
     label: "Projects",
-    color: "hsl(var(--chart-4, 280 65% 60%))",
+    color: "var(--chart-3)",
   },
 } satisfies ChartConfig;
 
 const workloadChartConfig = {
   open_tasks: {
     label: "Open tasks",
-    color: "hsl(var(--chart-5, 12 76% 61%))",
+    color: "var(--chart-4)",
   },
 } satisfies ChartConfig;
 

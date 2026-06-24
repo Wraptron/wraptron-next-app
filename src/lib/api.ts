@@ -118,6 +118,24 @@ async function fetchApi<T>(
   return response.json();
 }
 
+export type CollectionListQueryParams = {
+  search?: string;
+  limit?: number;
+  offset?: number;
+  [key: string]: string | number | boolean | undefined;
+};
+
+function appendListQueryParams(
+  searchParams: URLSearchParams,
+  params?: CollectionListQueryParams,
+) {
+  if (!params) return;
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    searchParams.append(key, String(value));
+  }
+}
+
 // ============================================================================
 // Authentication Types and API
 // ============================================================================
@@ -707,17 +725,11 @@ export interface CustomersResponse {
 }
 
 export const customersApi = {
-  getAll: async (params?: {
-    search?: string;
-    state?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<CustomersResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<CustomersResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.state) searchParams.append("state", params.state);
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<CustomersResponse>(
@@ -905,21 +917,11 @@ export interface ProductsResponse {
 }
 
 export const productsApi = {
-  getAll: async (params?: {
-    search?: string;
-    status?: string;
-    materialType?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<ProductsResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<ProductsResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.status) searchParams.append("status", params.status);
-    if (params?.materialType) {
-      searchParams.append("materialType", params.materialType);
-    }
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<ProductsResponse>(
@@ -1345,23 +1347,11 @@ export interface ContactsResponse {
 }
 
 export const contactsApi = {
-  getAll: async (params?: {
-    search?: string;
-    company_id?: number;
-    status?: string;
-    is_primary?: boolean;
-    limit?: number;
-    offset?: number;
-  }): Promise<ContactsResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<ContactsResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.company_id)
-      searchParams.append("company_id", params.company_id.toString());
-    if (params?.status) searchParams.append("status", params.status);
-    if (params?.is_primary)
-      searchParams.append("is_primary", params.is_primary.toString());
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<ContactsResponse>(
@@ -1538,22 +1528,11 @@ export interface CompanyStats {
 }
 
 export const companiesApi = {
-  getAll: async (params?: {
-    search?: string;
-    status?: string;
-    industry?: string;
-    company_size?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<CompaniesResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<CompaniesResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.status) searchParams.append("status", params.status);
-    if (params?.industry) searchParams.append("industry", params.industry);
-    if (params?.company_size)
-      searchParams.append("company_size", params.company_size);
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<CompaniesResponse>(
@@ -1681,6 +1660,7 @@ export type SalesDashboardPeriod =
 export interface SalesDashboardFunnelStage {
   stage: string;
   deal_count: number;
+  total_value: number;
 }
 
 export interface SalesDashboardActivity extends SalesActivity {}
@@ -1767,30 +1747,11 @@ export interface CreateDealActivityInput {
 }
 
 export const dealsApi = {
-  getAll: async (params?: {
-    search?: string;
-    company_id?: number;
-    contact_id?: number;
-    stage?: string;
-    status?: string;
-    owner_id?: number;
-    source?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<DealsResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<DealsResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.company_id)
-      searchParams.append("company_id", params.company_id.toString());
-    if (params?.contact_id)
-      searchParams.append("contact_id", params.contact_id.toString());
-    if (params?.stage) searchParams.append("stage", params.stage);
-    if (params?.status) searchParams.append("status", params.status);
-    if (params?.owner_id)
-      searchParams.append("owner_id", params.owner_id.toString());
-    if (params?.source) searchParams.append("source", params.source);
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<DealsResponse>(`/api/deals${query ? `?${query}` : ""}`);
@@ -1879,23 +1840,76 @@ export const dealActivitiesApi = {
 };
 
 export const activitiesApi = {
-  getAll: async (params?: {
-    search?: string;
-    type?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<SalesActivitiesResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<SalesActivitiesResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.type) searchParams.append("type", params.type);
-    if (params?.status) searchParams.append("status", params.status);
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
 
     const query = searchParams.toString();
     return fetchApi<SalesActivitiesResponse>(
       `/api/activities${query ? `?${query}` : ""}`,
+    );
+  },
+};
+
+export const collectionFiltersApi = {
+  getOptions: async (
+    resource: string,
+    field: string,
+  ): Promise<{ options: Array<{ value: string; label: string }> }> => {
+    const searchParams = new URLSearchParams({ resource, field });
+    return fetchApi<{ options: Array<{ value: string; label: string }> }>(
+      `/api/collection-filters/options?${searchParams.toString()}`,
+    );
+  },
+};
+
+export interface CollectionSavedViewFilterState {
+  search?: string;
+  facets?: Record<string, string[]>;
+  numbers?: Record<string, { min?: string; max?: string }>;
+  dates?: Record<string, { from?: string; to?: string }>;
+}
+
+export interface CollectionSavedViewRecord {
+  id: number;
+  user_id: number;
+  resource: string;
+  name: string;
+  filter_state: CollectionSavedViewFilterState;
+  created_at: string;
+  updated_at: string;
+}
+
+export const collectionSavedViewsApi = {
+  list: async (
+    resource: string,
+  ): Promise<{ data: CollectionSavedViewRecord[] }> => {
+    const searchParams = new URLSearchParams({ resource });
+    return fetchApi<{ data: CollectionSavedViewRecord[] }>(
+      `/api/collection-saved-views?${searchParams.toString()}`,
+    );
+  },
+
+  save: async (payload: {
+    resource: string;
+    name: string;
+    filter_state: CollectionSavedViewFilterState;
+  }): Promise<{ data: CollectionSavedViewRecord }> => {
+    return fetchApi<{ data: CollectionSavedViewRecord }>(
+      "/api/collection-saved-views",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  },
+
+  remove: async (id: number): Promise<{ success: boolean }> => {
+    return fetchApi<{ success: boolean }>(
+      `/api/collection-saved-views/${id}`,
+      { method: "DELETE" },
     );
   },
 };
@@ -2216,15 +2230,12 @@ export const invoiceSettingsApi = {
 };
 
 export const invoicesApi = {
-  getAll: async (params?: {
-    search?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<InvoicesResponse> => {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<InvoicesResponse> => {
     const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append("search", params.search);
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    appendListQueryParams(searchParams, params);
+
     const query = searchParams.toString();
     return fetchApi<InvoicesResponse>(
       `/api/invoices${query ? `?${query}` : ""}`,

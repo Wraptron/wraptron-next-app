@@ -34,6 +34,10 @@ export type CollectionColumn = {
   sortValue?: (
     item: CollectionItem,
   ) => string | number | Date | null | undefined;
+  /** Raw value used when filtering this column. Falls back to sort/cell output. */
+  filterValue?: (
+    item: CollectionItem,
+  ) => string | number | Date | null | undefined;
   /** Defaults to true except for action columns. */
   sortable?: boolean;
 };
@@ -123,6 +127,12 @@ interface CollectionViewProps {
   emptyTitle?: React.ReactNode;
   emptyDescription?: React.ReactNode;
   emptyMessage?: React.ReactNode;
+  /** Shown when items exist but filters exclude every row. */
+  filteredEmptyTitle?: React.ReactNode;
+  filteredEmptyDescription?: React.ReactNode;
+  filteredEmptyMessage?: React.ReactNode;
+  /** Pass true when parent filters are active (for empty-state copy). */
+  hasActiveFilters?: boolean;
   loading?: boolean;
   loadingMessage?: React.ReactNode;
   className?: string;
@@ -202,6 +212,10 @@ export function CollectionView({
   emptyTitle = "No items yet",
   emptyDescription = "Create a new item to get started.",
   emptyMessage,
+  filteredEmptyTitle = "No matches",
+  filteredEmptyDescription = "Try adjusting your search or filters.",
+  filteredEmptyMessage,
+  hasActiveFilters = false,
   loading = false,
   loadingMessage = "Loading…",
   className,
@@ -400,16 +414,31 @@ export function CollectionView({
                 colSpan={colSpan}
                 className="h-24 text-center text-muted-foreground"
               >
-                {emptyMessage ?? (
-                  <div>
-                    <p className="font-medium text-foreground">{emptyTitle}</p>
-                    {emptyDescription && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {emptyDescription}
-                      </p>
-                    )}
-                  </div>
-                )}
+                {hasActiveFilters
+                  ? (filteredEmptyMessage ?? (
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {filteredEmptyTitle}
+                        </p>
+                        {filteredEmptyDescription && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {filteredEmptyDescription}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  : (emptyMessage ?? (
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {emptyTitle}
+                        </p>
+                        {emptyDescription && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {emptyDescription}
+                          </p>
+                        )}
+                      </div>
+                    ))}
               </TableCell>
             </TableRow>
           ) : (

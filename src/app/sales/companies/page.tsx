@@ -18,6 +18,10 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -219,31 +223,28 @@ const CompanyCard = ({
 export default function CompaniesPage() {
   const { setTitle } = usePageTitle();
   const [viewMode, setViewMode] = useCollectionViewMode("companies_view_mode", "list");
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const collectionFilters = useCollectionPageFilters(
+    "companies",
+    getCollectionFilterDefinitions("companies"),
+  );
+  const {
+    items: companies,
+    total,
+    loading,
+    error,
+    reload: fetchCompanies,
+    setItems: setCompanies,
+  } = useCollectionData(
+    companiesApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { limit: 2000 },
+  );
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<number[]>([]);
-
-  const fetchCompanies = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await companiesApi.getAll();
-      setCompanies(response.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch companies");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
 
   useEffect(() => {
     setTitle("Companies");
@@ -390,7 +391,11 @@ export default function CompaniesPage() {
           <div>
             <h1 className="text-2xl font-bold">Companies</h1>
             <p className="mt-1 text-muted-foreground">
-              {companies.length} companies
+              {loading
+                ? "Loading…"
+                : `${total} compan${total === 1 ? "y" : "ies"}${
+                    collectionFilters.isFiltering ? " (filtered)" : ""
+                  }`}
             </p>
           </div>
           <CollectionPageToolbar
@@ -412,6 +417,27 @@ export default function CompaniesPage() {
             </Button>
           </CollectionPageToolbar>
         </div>
+
+        <CollectionFilterControls
+          className="mb-6"
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search companies…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
+        />
 
         {error && (
           <div className="mb-4 py-8 text-center text-destructive">{error}</div>

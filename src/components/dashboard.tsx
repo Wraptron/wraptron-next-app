@@ -157,7 +157,7 @@ const FALLBACK_MODULES: DashboardModule[] = [
     chartConfig: {
       deals: {
         label: "Deals",
-        color: "hsl(var(--chart-1, 220 70% 50%))",
+        color: "var(--chart-1)",
       },
     },
   },
@@ -182,7 +182,7 @@ const FALLBACK_MODULES: DashboardModule[] = [
     chartConfig: {
       tasks: {
         label: "Tasks",
-        color: "hsl(var(--chart-2, 150 55% 45%))",
+        color: "var(--chart-2)",
       },
     },
   },
@@ -207,7 +207,7 @@ const FALLBACK_MODULES: DashboardModule[] = [
     chartConfig: {
       revenue: {
         label: "Revenue",
-        color: "hsl(var(--chart-3, 30 90% 55%))",
+        color: "var(--chart-3)",
       },
     },
   },

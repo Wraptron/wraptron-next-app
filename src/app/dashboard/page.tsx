@@ -24,7 +24,7 @@ const DASHBOARD_MODULES: DashboardModule[] = [
       { label: "W6", deals: 12 },
     ],
     chartConfig: {
-      deals: { label: "Deals", color: "#3b82f6" },
+      deals: { label: "Deals", color: "var(--chart-1)" },
     },
   },
   {
@@ -46,7 +46,7 @@ const DASHBOARD_MODULES: DashboardModule[] = [
       { label: "W6", completed: 43 },
     ],
     chartConfig: {
-      completed: { label: "Completed", color: "#10b981" },
+      completed: { label: "Completed", color: "var(--chart-2)" },
     },
   },
   {
@@ -68,7 +68,7 @@ const DASHBOARD_MODULES: DashboardModule[] = [
       { label: "W6", revenue: 24900 },
     ],
     chartConfig: {
-      revenue: { label: "Revenue", color: "#f59e0b" },
+      revenue: { label: "Revenue", color: "var(--chart-3)" },
     },
   },
 ];

@@ -20,10 +20,13 @@ import {
   useCollectionViewMode,
   type CollectionViewMode,
 } from "@/components/collection-page-toolbar";
+import { CollectionFilterControls } from "@/components/collection-filters";
+import { useCollectionPageFilters } from "@/components/collection-page-filters";
+import { useCollectionData } from "@/hooks/use-collection-data";
+import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Eye, RefreshCw, Trash2 } from "lucide-react";
 
 const LIST_LIMIT = 500;
 
@@ -349,12 +352,22 @@ export default function AccountsInvoicesPage() {
     "accounts_invoices_view_mode",
     "list",
   );
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const collectionFilters = useCollectionPageFilters(
+    "invoices",
+    getCollectionFilterDefinitions("invoices"),
+  );
+  const {
+    items: invoices,
+    total,
+    loading,
+    error,
+    reload: fetchInvoices,
+  } = useCollectionData(
+    invoicesApi.getAll,
+    collectionFilters.apiParamsKey,
+    collectionFilters.apiParams,
+    { limit: LIST_LIMIT },
+  );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -367,33 +380,8 @@ export default function AccountsInvoicesPage() {
   }, [setTitle]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const list = await invoicesApi.getAll({
-        search: debouncedSearch || undefined,
-        limit: LIST_LIMIT,
-      });
-      setInvoices(list.data);
-      setTotal(list.total);
-      setSelectedIds([]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load invoices");
-      setInvoices([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+    setSelectedIds([]);
+  }, [collectionFilters.apiParamsKey]);
 
   const collectionItems = useMemo(
     () => invoices.map(invoiceToCollectionItem),
@@ -423,7 +411,10 @@ export default function AccountsInvoicesPage() {
       setSelected(null);
       await fetchInvoices();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete invoice");
+      console.error("Failed to delete invoice:", err);
+      alert(
+        err instanceof Error ? err.message : "Failed to delete invoice",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -436,7 +427,9 @@ export default function AccountsInvoicesPage() {
 
   const listDescription = loading
     ? "Loading…"
-    : `${invoices.length} shown${total > invoices.length ? ` of ${total}` : ""}`;
+    : `${total} invoice${total === 1 ? "" : "s"}${
+        collectionFilters.isFiltering ? " (filtered)" : ""
+      }`;
 
   const renderInvoices = (mode: CollectionViewMode) => {
     if (mode === "list") {
@@ -542,16 +535,6 @@ export default function AccountsInvoicesPage() {
             }}
             className="w-full lg:w-auto"
           >
-            <div className="relative min-w-0 flex-1 sm:w-72">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search invoice # or customer…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-                aria-label="Search invoices"
-              />
-            </div>
             <Button
               type="button"
               variant="outline"
@@ -564,6 +547,27 @@ export default function AccountsInvoicesPage() {
             </Button>
           </CollectionPageToolbar>
         </div>
+
+        <CollectionFilterControls
+          className="mb-4"
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search invoice # or customer…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
+        />
 
         {error && (
           <div
