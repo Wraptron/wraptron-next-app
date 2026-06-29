@@ -22,32 +22,10 @@ import { useCurrency } from "@/contexts/currency-context";
 import { dealsApi, type Deal } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { ArrowLeft, Edit, Loader2, Trash2 } from "lucide-react";
-
-const getStageColor = (stage?: string) => {
-  const key = stage?.toLowerCase() || "";
-  const colors: Record<string, string> = {
-    "new lead": "bg-gray-100 text-gray-800",
-    qualified: "bg-blue-100 text-blue-800",
-    "requirement gathered": "bg-slate-100 text-slate-800",
-    "solution proposed": "bg-yellow-100 text-yellow-800",
-    "negotiation/objection handling": "bg-orange-100 text-orange-800",
-    "proposal accepted": "bg-emerald-100 text-emerald-800",
-    "project implementation": "bg-sky-100 text-sky-800",
-    "next step - project implementation": "bg-sky-100 text-sky-800",
-    "maintenance - project delivered": "bg-green-100 text-green-800",
-  };
-  return colors[key] || "bg-gray-100 text-gray-800";
-};
-
-const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    open: "bg-green-100 text-green-800",
-    won: "bg-blue-100 text-blue-800",
-    lost: "bg-red-100 text-red-800",
-    closed: "bg-gray-100 text-gray-800",
-  };
-  return colors[status?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
-};
+import {
+  dealStageBadgeClass,
+  dealStatusBadgeClass,
+} from "@/lib/status-colors";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "Not set";
@@ -125,18 +103,18 @@ export default function DealDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !deal) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
-            <p className="text-red-600 mb-4">{error || "Deal not found"}</p>
+            <p className="text-destructive mb-4">{error || "Deal not found"}</p>
             <Link href="/sales/deals">
               <Button variant="outline">Back to Deals</Button>
             </Link>
@@ -157,13 +135,13 @@ export default function DealDetailPage() {
         </Link>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Badge className={getStageColor(deal.stage)}>
+            <Badge className={dealStageBadgeClass(deal.stage)}>
               {deal.stage || "—"}
             </Badge>
-            <Badge className={getStatusColor(deal.status)}>
+            <Badge className={dealStatusBadgeClass(deal.status)}>
               {deal.status || "—"}
             </Badge>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               Created {formatDate(deal.created_at)}
             </span>
           </div>
@@ -179,7 +157,7 @@ export default function DealDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -206,29 +184,29 @@ export default function DealDetailPage() {
               <CardTitle>Deal information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-xl border border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-sky-50/40 px-4 py-3.5 shadow-sm ring-1 ring-violet-100/70">
-                <p className="text-xs font-semibold uppercase tracking-wider text-violet-800/85">
+              <div className="rounded-xl border border-violet-200/90 bg-gradient-to-br from-violet-50 via-white to-sky-50/40 px-4 py-3.5 shadow-sm ring-1 ring-violet-100/70 dark:border-violet-800/40 dark:from-violet-950/40 dark:via-card dark:to-sky-950/20 dark:ring-violet-900/30">
+                <p className="text-xs font-semibold uppercase tracking-wider text-violet-800/85 dark:text-violet-300/85">
                   Deal name
                 </p>
-                <p className="mt-1.5 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+                <p className="mt-1.5 text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-snug">
                   {deal.title?.trim() || "Untitled deal"}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Stage</p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm font-medium text-muted-foreground">Stage</p>
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.stage || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Status</p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.status || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Customer / Client
                   </p>
                   <p className="text-sm mt-1">
@@ -238,7 +216,7 @@ export default function DealDetailPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Contact</p>
+                  <p className="text-sm font-medium text-muted-foreground">Contact</p>
                   {deal.contact_id && deal.contact_name ? (
                     <Link
                       href={`/contacts/${deal.contact_id}`}
@@ -251,7 +229,7 @@ export default function DealDetailPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Phone</p>
+                  <p className="text-sm font-medium text-muted-foreground">Phone</p>
                   {deal.contact_phone ? (
                     <a
                       href={telHref(deal.contact_phone)}
@@ -264,18 +242,18 @@ export default function DealDetailPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Probability
                   </p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.probability != null ? `${deal.probability}%` : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Deal value
                   </p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.value != null
                       ? formatCurrency(deal.value, deal.currency)
                       : "—"}
@@ -284,7 +262,7 @@ export default function DealDetailPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Expected close date
                   </p>
                   <p className="text-sm mt-1">
@@ -292,7 +270,7 @@ export default function DealDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Closed date
                   </p>
                   <p className="text-sm mt-1">
@@ -301,12 +279,12 @@ export default function DealDetailPage() {
                 </div>
               </div>
               {deal.description && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium text-gray-500 mb-2">
+                <div className="pt-4 border-t border-border">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
                     Description
                   </p>
-                  <div className="prose prose-sm max-w-none">
-                    <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-4 rounded">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <pre className="whitespace-pre-wrap font-sans text-sm bg-muted text-foreground p-4 rounded">
                       {deal.description}
                     </pre>
                   </div>
@@ -324,18 +302,18 @@ export default function DealDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Current stage
                   </p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.stage || "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Probability
                   </p>
-                  <p className="text-sm mt-1 font-semibold text-slate-900">
+                  <p className="text-sm mt-1 font-semibold text-foreground">
                     {deal.probability != null ? `${deal.probability}%` : "—"}
                   </p>
                 </div>
@@ -343,7 +321,7 @@ export default function DealDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Primary contact
                   </p>
                   {deal.contact_id && deal.contact_name ? (
@@ -366,7 +344,7 @@ export default function DealDetailPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Customer / client
                   </p>
                   <p className="text-sm mt-1">
@@ -376,7 +354,7 @@ export default function DealDetailPage() {
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Target close date
                 </p>
                 <p className="text-sm mt-1">
@@ -384,11 +362,11 @@ export default function DealDetailPage() {
                 </p>
               </div>
 
-              <div className="rounded-md border bg-gray-50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              <div className="rounded-md border border-border bg-muted p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Notes for qualification
                 </p>
-                <p className="text-sm mt-2 text-slate-700">
+                <p className="text-sm mt-2 text-foreground">
                   {deal.description?.trim() ||
                     "No qualification notes added yet."}
                 </p>

@@ -2,6 +2,12 @@
  * Navigable app routes for global search (pages + sections).
  * Keep in sync with sidebar and major `app/` routes.
  */
+import {
+  canAccessStaffRoutes,
+  isStaffOnlyPath,
+  normalizeRole,
+} from "./nav-access";
+
 export interface AppSearchRoute {
   href: string;
   label: string;
@@ -125,10 +131,28 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
   {
     href: "/accounts/invoices",
     label: "Invoices",
-    keywords: "billing",
+    keywords: "billing sales",
+    section: "Accounts",
+  },
+  {
+    href: "/accounts/bills/new",
+    label: "New expense bill",
+    keywords: "vendor purchase zoho",
+    section: "Accounts",
+  },
+  {
+    href: "/accounts/bills",
+    label: "Expense bills",
+    keywords: "vendor purchases expenses zoho",
     section: "Accounts",
   },
   { href: "/invoices/new", label: "New invoice", section: "Accounts" },
+  {
+    href: "/accounts/dashboard",
+    label: "Accounts dashboard",
+    keywords: "profit loss cash flow financial reports accounting",
+    section: "Accounts",
+  },
   {
     href: "/accounts",
     label: "Accounts",
@@ -248,7 +272,12 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
   { href: "/payments", label: "Payments", section: "Main" },
   { href: "/content", label: "Content", section: "Main" },
   { href: "/library", label: "Library", section: "Main" },
-  { href: "/studio", label: "Studio", section: "Main" },
+  {
+    href: "/studio",
+    label: "Studio",
+    keywords: "pricing calculator estimate quote",
+    section: "Main",
+  },
   {
     href: "/admin/users",
     label: "User management",
@@ -262,11 +291,15 @@ const SUGGESTED_LIMIT = 16;
 
 export function filterAppSearchRoutes(
   query: string,
-  options: { isAdmin: boolean },
+  options: { role?: string | null },
 ): AppSearchRoute[] {
-  const visible = APP_SEARCH_ROUTES.filter(
-    (r) => !r.adminOnly || options.isAdmin,
-  );
+  const isAdmin = normalizeRole(options.role) === "admin";
+  const staffAccess = canAccessStaffRoutes(options.role);
+  const visible = APP_SEARCH_ROUTES.filter((r) => {
+    if (r.adminOnly && !isAdmin) return false;
+    if (!staffAccess && isStaffOnlyPath(r.href)) return false;
+    return true;
+  });
   const q = query.trim().toLowerCase();
   if (!q) {
     return visible.slice(0, SUGGESTED_LIMIT);

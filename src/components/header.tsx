@@ -27,6 +27,7 @@ import { usePageTitle } from "@/contexts/page-title-context";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
 import { AppLauncherGrid } from "@/components/app-launcher-grid";
+import { canAccessStaffRoutes } from "@/lib/nav-access";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
@@ -110,23 +111,25 @@ export default function TopNavbar() {
             </Link>
           </div>
           {/* App launcher */}
-          <DropdownMenu open={appsMenuOpen} onOpenChange={setAppsMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                <Grip className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-3">
-              <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
-                Apps
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="my-2" />
-              <AppLauncherGrid
-                variant="compact"
-                onNavigate={() => setAppsMenuOpen(false)}
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canAccessStaffRoutes(user?.role) && (
+            <DropdownMenu open={appsMenuOpen} onOpenChange={setAppsMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                  <Grip className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-3">
+                <DropdownMenuLabel className="px-2 py-1.5 text-sm font-semibold">
+                  Apps
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-2" />
+                <AppLauncherGrid
+                  variant="compact"
+                  onNavigate={() => setAppsMenuOpen(false)}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

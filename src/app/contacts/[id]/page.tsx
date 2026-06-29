@@ -17,7 +17,9 @@ const getStatusColor = (status?: string) => {
     inactive: "bg-muted text-muted-foreground",
     archived: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
   };
-  return colors[status?.toLowerCase() || ""] || "bg-muted text-muted-foreground";
+  return (
+    colors[status?.toLowerCase() || ""] || "bg-muted text-muted-foreground"
+  );
 };
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
@@ -25,9 +27,39 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex justify-between gap-4 border-b border-border py-2 last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="max-w-[60%] text-right text-sm font-medium">{value}</span>
+      <span className="max-w-[60%] text-right text-sm font-medium">
+        {value}
+      </span>
     </div>
   );
+}
+
+function contactCompanyId(contact: Contact): number | null {
+  return contact.company_id ?? contact.companies_associated?.[0] ?? null;
+}
+
+function contactCompanyName(contact: Contact): string | null {
+  const name = contact.client_company_name || contact.company;
+  return name?.trim() || null;
+}
+
+function CompanyLink({ contact }: { contact: Contact }) {
+  const companyId = contactCompanyId(contact);
+  const companyName = contactCompanyName(contact);
+  if (!companyName) return null;
+
+  if (companyId) {
+    return (
+      <Link
+        href={`/sales/companies/${companyId}`}
+        className="text-primary hover:underline"
+      >
+        {companyName}
+      </Link>
+    );
+  }
+
+  return <span>{companyName}</span>;
 }
 
 const telHref = (phone: string) =>
@@ -87,8 +119,9 @@ export default function ContactDetailPage() {
   }
 
   const displayName =
-    [contact.prefix, contact.first_name, contact.last_name].filter(Boolean).join(" ") ||
-    "Unnamed";
+    [contact.prefix, contact.first_name, contact.last_name]
+      .filter(Boolean)
+      .join(" ") || "Unnamed";
   const dial = (contact.mobile || contact.phone || "").trim();
   const mail = contact.email?.trim();
 
@@ -141,9 +174,21 @@ export default function ContactDetailPage() {
                 )}
               </div>
             </div>
-            {(contact.job_title || contact.company) && (
+            {(contact.job_title || contactCompanyName(contact)) && (
               <p className="mt-1 text-sm text-muted-foreground">
-                {[contact.job_title, contact.company].filter(Boolean).join(" · ")}
+                {contact.job_title ? (
+                  <>
+                    {contact.job_title}
+                    {contactCompanyName(contact) ? (
+                      <>
+                        {" · "}
+                        <CompanyLink contact={contact} />
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  <CompanyLink contact={contact} />
+                )}
               </p>
             )}
           </CardHeader>
@@ -151,10 +196,14 @@ export default function ContactDetailPage() {
             <DetailRow label="Email" value={contact.email} />
             <DetailRow label="Phone" value={contact.phone} />
             <DetailRow label="Mobile" value={contact.mobile} />
-            <DetailRow
-              label="Company"
-              value={contact.company || contact.client_company_name}
-            />
+            {contactCompanyName(contact) ? (
+              <div className="flex justify-between gap-4 border-b border-border py-2 last:border-0">
+                <span className="text-sm text-muted-foreground">Company</span>
+                <span className="max-w-[60%] text-right text-sm font-medium">
+                  <CompanyLink contact={contact} />
+                </span>
+              </div>
+            ) : null}
             <DetailRow label="Address" value={contact.address} />
             <DetailRow label="City" value={contact.city} />
             <DetailRow label="State" value={contact.state} />

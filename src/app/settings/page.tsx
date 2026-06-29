@@ -15,6 +15,7 @@ import {
   type InvoiceSettings,
 } from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
+import { SettingsPricingCalculator } from "@/components/settings-pricing-calculator";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { SettingsUserManagement } from "@/components/settings-user-management";
 import { SettingsZohoIntegrations } from "@/components/settings-zoho-integrations";
@@ -807,6 +808,18 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>}
+
+        {showApps && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Studio</h2>
+              <p className="text-sm text-muted-foreground">
+                Pricing calculator rates and multipliers.
+              </p>
+            </div>
+            <SettingsPricingCalculator />
+          </>
+        )}
 
         {showApps && (
           <>

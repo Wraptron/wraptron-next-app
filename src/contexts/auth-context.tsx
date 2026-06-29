@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { authApi, setAuthToken, type User } from "@/lib/api";
+import { defaultPostLoginPath } from "@/lib/nav-access";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 
@@ -43,9 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = typeof window !== "undefined"
-        ? localStorage.getItem("auth_token")
-        : null;
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("auth_token")
+          : null;
 
       if (!token) {
         setUser(null);
@@ -66,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setAuthToken(null);
       } else {
-        console.log("⚠️ Auth check failed but keeping existing session (network error)");
+        console.log(
+          "⚠️ Auth check failed but keeping existing session (network error)",
+        );
         // Keep the user logged in for network errors
       }
       // Don't redirect here - let ProtectedRoute handle it
@@ -80,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login({ email, password });
       setAuthToken(response.token);
       setUser(response.user);
-      router.push("/");
+      router.push(defaultPostLoginPath(response.user.role));
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -106,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setAuthToken(response.token);
       setUser(response.user);
-      router.push("/");
+      router.push(defaultPostLoginPath(response.user.role));
     } catch (error) {
       console.error("Signup failed:", error);
       throw error;

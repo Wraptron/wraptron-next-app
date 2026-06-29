@@ -23,7 +23,13 @@ import { useCollectionData } from "@/hooks/use-collection-data";
 import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Activity, CheckSquare, Phone, RefreshCw, StickyNote } from "lucide-react";
+import {
+  Activity,
+  CheckSquare,
+  Phone,
+  RefreshCw,
+  StickyNote,
+} from "lucide-react";
 import { statusBadgeClass } from "@/lib/status-colors";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
@@ -54,7 +60,9 @@ function activityToItem(a: SalesActivity): CollectionItem {
         <Badge variant="outline" className={statusBadgeClass(a.type)}>
           {a.type}
         </Badge>
-        <span className="text-xs text-muted-foreground">{formatDateTime(a.activity_date)}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDateTime(a.activity_date)}
+        </span>
       </div>
     ),
   };
@@ -154,56 +162,54 @@ export default function SalesActivitiesPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Sales activities</h1>
-            <p className="text-sm text-muted-foreground">
-              {loading
-                ? "Loading…"
-                : `${total} activit${total === 1 ? "y" : "ies"}${
-                    collectionFilters.isFiltering ? " (filtered)" : ""
-                  }`}
-            </p>
-          </div>
-          <CollectionPageToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            showViewSwitcher
-          >
-            <Button variant="outline" size="sm" onClick={fetchActivities}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </CollectionPageToolbar>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Sales activities</h1>
+          <p className="text-sm text-muted-foreground">
+            {loading
+              ? "Loading…"
+              : `${total} activit${total === 1 ? "y" : "ies"}${
+                  collectionFilters.isFiltering ? " (filtered)" : ""
+                }`}
+          </p>
         </div>
+        <CollectionPageToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showViewSwitcher
+        >
+          <Button variant="outline" size="sm" onClick={fetchActivities}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </CollectionPageToolbar>
+      </div>
 
-        <CollectionFilterControls
-          className="mb-4"
-          definitions={collectionFilters.definitions}
-          search={collectionFilters.search}
-          onSearchChange={collectionFilters.setSearch}
-          searchPlaceholder="Search subject or notes…"
-          facets={collectionFilters.facets}
-          onFacetChange={collectionFilters.setFacetValues}
-          numbers={collectionFilters.numbers}
-          onNumberRangeChange={collectionFilters.setNumberRange}
-          dates={collectionFilters.dates}
-          onDateRangeChange={collectionFilters.setDateRange}
-          resource={collectionFilters.resource}
-          filterState={collectionFilters.filterState}
-          onApplySavedView={collectionFilters.applyFilterState}
-          onClearAll={collectionFilters.clearFilters}
-          isFiltering={collectionFilters.isFiltering}
-          getOptions={collectionFilters.getOptions}
-          loadOptions={collectionFilters.loadOptions}
-        />
+      <CollectionFilterControls
+        className="mb-4"
+        definitions={collectionFilters.definitions}
+        search={collectionFilters.search}
+        onSearchChange={collectionFilters.setSearch}
+        searchPlaceholder="Search subject or notes…"
+        facets={collectionFilters.facets}
+        onFacetChange={collectionFilters.setFacetValues}
+        numbers={collectionFilters.numbers}
+        onNumberRangeChange={collectionFilters.setNumberRange}
+        dates={collectionFilters.dates}
+        onDateRangeChange={collectionFilters.setDateRange}
+        resource={collectionFilters.resource}
+        filterState={collectionFilters.filterState}
+        onApplySavedView={collectionFilters.applyFilterState}
+        onClearAll={collectionFilters.clearFilters}
+        isFiltering={collectionFilters.isFiltering}
+        getOptions={collectionFilters.getOptions}
+        loadOptions={collectionFilters.loadOptions}
+      />
 
-        {error ? (
-          <p className="mb-4 text-sm text-destructive">{error}</p>
-        ) : null}
+      {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 
-        {viewMode === "kanban" ? (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <CollectionKanbanView
+      {viewMode === "kanban" ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <CollectionKanbanView
             items={items}
             columns={KANBAN_COLUMNS}
             groupBy={(item) => {
@@ -214,56 +220,62 @@ export default function SalesActivitiesPage() {
             loading={loading}
             emptyMessage="No activities found."
           />
-          </div>
-        ) : viewMode === "card" ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activities.map((a) => (
-              <div key={a.id} className="rounded-md border border-border bg-card p-4">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="font-medium">{a.subject || "Untitled activity"}</p>
-                  <Badge className={statusBadgeClass(a.type)}>{a.type}</Badge>
-                </div>
-                <p className="mb-2 text-xs text-muted-foreground">{formatDateTime(a.activity_date)}</p>
-                <p className="line-clamp-3 text-sm text-muted-foreground">
-                  {a.description || a.outcome || "—"}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>{a.status}</span>
-                  {a.company_name ? <span>• {a.company_name}</span> : null}
-                  {a.deal_title ? <span>• {a.deal_title}</span> : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <CollectionView
-            items={items}
-            columns={columns}
-            loading={loading}
-            emptyTitle="No activities yet"
-            emptyDescription="Activities created from deals and contacts will appear here."
-          />
-        )}
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Badge variant="outline" className="gap-1">
-            <CheckSquare className="h-3.5 w-3.5" />
-            Tasks
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Phone className="h-3.5 w-3.5" />
-            Calls
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <StickyNote className="h-3.5 w-3.5" />
-            Notes
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Activity className="h-3.5 w-3.5" />
-            Meetings / WhatsApp
-          </Badge>
         </div>
-      </PageShell>
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {activities.map((a) => (
+            <div
+              key={a.id}
+              className="rounded-md border border-border bg-card p-4"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="font-medium">
+                  {a.subject || "Untitled activity"}
+                </p>
+                <Badge className={statusBadgeClass(a.type)}>{a.type}</Badge>
+              </div>
+              <p className="mb-2 text-xs text-muted-foreground">
+                {formatDateTime(a.activity_date)}
+              </p>
+              <p className="line-clamp-3 text-sm text-muted-foreground">
+                {a.description || a.outcome || "—"}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span>{a.status}</span>
+                {a.company_name ? <span>• {a.company_name}</span> : null}
+                {a.deal_title ? <span>• {a.deal_title}</span> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <CollectionView
+          items={items}
+          columns={columns}
+          loading={loading}
+          emptyTitle="No activities yet"
+          emptyDescription="Activities created from deals and contacts will appear here."
+        />
+      )}
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Badge variant="outline" className="gap-1">
+          <CheckSquare className="h-3.5 w-3.5" />
+          Tasks
+        </Badge>
+        <Badge variant="outline" className="gap-1">
+          <Phone className="h-3.5 w-3.5" />
+          Calls
+        </Badge>
+        <Badge variant="outline" className="gap-1">
+          <StickyNote className="h-3.5 w-3.5" />
+          Notes
+        </Badge>
+        <Badge variant="outline" className="gap-1">
+          <Activity className="h-3.5 w-3.5" />
+          Meetings / WhatsApp
+        </Badge>
+      </div>
+    </PageShell>
   );
 }
-

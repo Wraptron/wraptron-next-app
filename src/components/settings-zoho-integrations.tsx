@@ -273,9 +273,9 @@ export function SettingsZohoIntegrations() {
         setError(result.message ?? result.error ?? "Zoho sync failed.");
         return;
       }
-      const { customers, products, invoices } = result.stats;
+      const { customers, products, invoices, bills } = result.stats;
       setSuccessMessage(
-        `Sync complete — customers: ${customers.created} created, ${customers.updated} updated; products: ${products.created} created, ${products.updated} updated; invoices: ${invoices.created} created, ${invoices.updated} updated.`,
+        `Sync complete — customers: ${customers.created} created, ${customers.updated} updated; products: ${products.created} created, ${products.updated} updated; invoices: ${invoices.created} created, ${invoices.updated} updated; bills: ${bills.created} created, ${bills.updated} updated.`,
       );
       await fetchConnections();
     } catch (err) {

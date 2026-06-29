@@ -82,15 +82,23 @@ function MetricCard({
   description,
   icon: Icon,
   loading,
+  href,
 }: {
   title: string;
   value: string;
   description?: string;
   icon: React.ComponentType<{ className?: string }>;
   loading?: boolean;
+  href?: string;
 }) {
-  return (
-    <Card className="border-border/80">
+  const content = (
+    <Card
+      className={
+        href
+          ? "border-border/80 transition-colors hover:border-primary/40 hover:bg-muted/30"
+          : "border-border/80"
+      }
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="space-y-1">
           <CardDescription>{title}</CardDescription>
@@ -106,6 +114,14 @@ function MetricCard({
         </div>
       </CardHeader>
     </Card>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {content}
+    </Link>
   );
 }
 
@@ -307,6 +323,7 @@ export function ProjectDashboard() {
           description="Open tasks past due date"
           icon={AlertTriangle}
           loading={loading}
+          href="/projects/tasks?overdue=true"
         />
       </section>
 

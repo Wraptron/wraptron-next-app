@@ -46,7 +46,9 @@ export type CollectionFilterControlsProps = {
   onDateRangeChange?: (fieldId: string, range: DateRangeValue) => void;
   onClearAll: () => void;
   isFiltering?: boolean;
-  getOptions: (definition: CollectionFilterDefinition) => CollectionFacetOption[];
+  getOptions: (
+    definition: CollectionFilterDefinition,
+  ) => CollectionFacetOption[];
   loadOptions: (fieldId: string) => Promise<CollectionFacetOption[]>;
   resource?: CollectionFilterResource;
   filterState?: CollectionFilterState;
@@ -97,9 +99,7 @@ function NumberRangeInputs({
         inputMode="decimal"
         placeholder="Min"
         value={value.min ?? ""}
-        onChange={(event) =>
-          onChange({ ...value, min: event.target.value })
-        }
+        onChange={(event) => onChange({ ...value, min: event.target.value })}
         className="h-8"
         aria-label="Minimum value"
       />
@@ -108,9 +108,7 @@ function NumberRangeInputs({
         inputMode="decimal"
         placeholder="Max"
         value={value.max ?? ""}
-        onChange={(event) =>
-          onChange({ ...value, max: event.target.value })
-        }
+        onChange={(event) => onChange({ ...value, max: event.target.value })}
         className="h-8"
         aria-label="Maximum value"
       />
@@ -140,18 +138,14 @@ function DateRangeInputs({
       <Input
         type="date"
         value={value.from ?? ""}
-        onChange={(event) =>
-          onChange({ ...value, from: event.target.value })
-        }
+        onChange={(event) => onChange({ ...value, from: event.target.value })}
         className="h-8"
         aria-label="From date"
       />
       <Input
         type="date"
         value={value.to ?? ""}
-        onChange={(event) =>
-          onChange({ ...value, to: event.target.value })
-        }
+        onChange={(event) => onChange({ ...value, to: event.target.value })}
         className="h-8"
         aria-label="To date"
       />
@@ -462,8 +456,7 @@ export function CollectionFilterControls({
     if (!panelOpen) setPanelFilterQuery("");
   }, [panelOpen]);
 
-  const showSavedViews =
-    resource && filterState && onApplySavedView;
+  const showSavedViews = resource && filterState && onApplySavedView;
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -593,11 +586,7 @@ export function CollectionFilterControls({
           ) : null}
           {activeChips.map((chip) => (
             <Badge
-              key={
-                chip.kind === "facet"
-                  ? `${chip.id}-${chip.value}`
-                  : chip.id
-              }
+              key={chip.kind === "facet" ? `${chip.id}-${chip.value}` : chip.id}
               variant="secondary"
               className="gap-1 pr-1"
             >

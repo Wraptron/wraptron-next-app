@@ -32,12 +32,36 @@ import { cn } from "@/lib/utils";
 import { ProductFormSheet } from "@/components/product-form-sheet";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
-  { id: "draft", label: "Draft", headerClassName: kanbanColumnHeaderClass("draft") },
-  { id: "pending", label: "Pending", headerClassName: kanbanColumnHeaderClass("pending") },
-  { id: "active", label: "Active", headerClassName: kanbanColumnHeaderClass("active") },
-  { id: "completed", label: "Completed", headerClassName: kanbanColumnHeaderClass("completed") },
-  { id: "inactive", label: "Inactive", headerClassName: kanbanColumnHeaderClass("inactive") },
-  { id: "other", label: "Other", headerClassName: kanbanColumnHeaderClass("other") },
+  {
+    id: "draft",
+    label: "Draft",
+    headerClassName: kanbanColumnHeaderClass("draft"),
+  },
+  {
+    id: "pending",
+    label: "Pending",
+    headerClassName: kanbanColumnHeaderClass("pending"),
+  },
+  {
+    id: "active",
+    label: "Active",
+    headerClassName: kanbanColumnHeaderClass("active"),
+  },
+  {
+    id: "completed",
+    label: "Completed",
+    headerClassName: kanbanColumnHeaderClass("completed"),
+  },
+  {
+    id: "inactive",
+    label: "Inactive",
+    headerClassName: kanbanColumnHeaderClass("inactive"),
+  },
+  {
+    id: "other",
+    label: "Other",
+    headerClassName: kanbanColumnHeaderClass("other"),
+  },
 ];
 
 const KANBAN_COLUMN_IDS = new Set(KANBAN_COLUMNS.map((c) => c.id));
@@ -55,9 +79,7 @@ function productToCollectionItem(product: Product): CollectionItem {
     id: product.id,
     title: product.part_name,
     description: product.product_description?.trim() || undefined,
-    meta: (
-      <span className="font-mono text-xs">{product.part_code}</span>
-    ),
+    meta: <span className="font-mono text-xs">{product.part_code}</span>,
   };
 }
 
@@ -87,9 +109,7 @@ function buildProductTableColumns(products: Product[]): CollectionColumn[] {
       cell: (item) => {
         const product = byId.get(Number(item.id));
         return (
-          <span className="text-foreground">
-            {product?.part_name ?? "—"}
-          </span>
+          <span className="text-foreground">{product?.part_name ?? "—"}</span>
         );
       },
     },
@@ -168,7 +188,9 @@ function ProductKanbanCard({ product }: { product: Product }) {
           {product.status || "No status"}
         </Badge>
         <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-          <div className="font-mono text-foreground/80">{product.part_code}</div>
+          <div className="font-mono text-foreground/80">
+            {product.part_code}
+          </div>
           {product.product_description?.trim() ? (
             <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
               {product.product_description}
@@ -254,8 +276,7 @@ export default function ProductsPage() {
     [products],
   );
 
-  const getProductHref = (item: CollectionItem) =>
-    `/products/${item.id}`;
+  const getProductHref = (item: CollectionItem) => `/products/${item.id}`;
 
   const listDescription = loading
     ? "Loading…"
@@ -313,84 +334,87 @@ export default function ProductsPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <section id="interface" className="scroll-mt-24 flex min-h-0 flex-1 flex-col space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Products</h1>
-              <p className="mt-1 text-muted-foreground">{listDescription}</p>
-            </div>
-
-            <CollectionPageToolbar
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              newAction={{
-                label: "New product",
-                onClick: () => setProductSheetOpen(true),
-                ariaLabel: "Create new product",
-              }}
-              className="w-full lg:w-auto"
-            >
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fetchProducts()}
-                disabled={loading}
-                aria-label="Refresh products"
-              >
-                <RefreshCw
-                  className={`size-4 ${loading ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </CollectionPageToolbar>
+      <section
+        id="interface"
+        className="scroll-mt-24 flex min-h-0 flex-1 flex-col space-y-6"
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Products</h1>
+            <p className="mt-1 text-muted-foreground">{listDescription}</p>
           </div>
 
-          <CollectionFilterControls
-            definitions={collectionFilters.definitions}
-            search={collectionFilters.search}
-            onSearchChange={collectionFilters.setSearch}
-            searchPlaceholder="Search products…"
-            facets={collectionFilters.facets}
-            onFacetChange={collectionFilters.setFacetValues}
-            numbers={collectionFilters.numbers}
-            onNumberRangeChange={collectionFilters.setNumberRange}
-            dates={collectionFilters.dates}
-            onDateRangeChange={collectionFilters.setDateRange}
-            resource={collectionFilters.resource}
-            filterState={collectionFilters.filterState}
-            onApplySavedView={collectionFilters.applyFilterState}
-            onClearAll={collectionFilters.clearFilters}
-            isFiltering={collectionFilters.isFiltering}
-            getOptions={collectionFilters.getOptions}
-            loadOptions={collectionFilters.loadOptions}
-          />
-
-          {error && (
-            <div
-              role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          <CollectionPageToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            newAction={{
+              label: "New product",
+              onClick: () => setProductSheetOpen(true),
+              ariaLabel: "Create new product",
+            }}
+            className="w-full lg:w-auto"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fetchProducts()}
+              disabled={loading}
+              aria-label="Refresh products"
             >
-              {error}
-            </div>
-          )}
+              <RefreshCw
+                className={`size-4 ${loading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </CollectionPageToolbar>
+        </div>
 
-          {!error && (
-            <div
-              className={cn(
-                "min-h-0",
-                viewMode === "kanban" && "flex flex-1 flex-col",
-              )}
-            >
-              {renderProducts(viewMode)}
-            </div>
-          )}
-        </section>
-
-        <ProductFormSheet
-          open={productSheetOpen}
-          onOpenChange={setProductSheetOpen}
-          onSuccess={fetchProducts}
+        <CollectionFilterControls
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search products…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
         />
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        )}
+
+        {!error && (
+          <div
+            className={cn(
+              "min-h-0",
+              viewMode === "kanban" && "flex flex-1 flex-col",
+            )}
+          >
+            {renderProducts(viewMode)}
+          </div>
+        )}
+      </section>
+
+      <ProductFormSheet
+        open={productSheetOpen}
+        onOpenChange={setProductSheetOpen}
+        onSuccess={fetchProducts}
+      />
     </PageShell>
   );
 }

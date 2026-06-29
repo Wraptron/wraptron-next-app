@@ -23,6 +23,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  filterStaffOnlyModules,
+  filterStaffOnlyQuickLinks,
+} from "@/lib/nav-access";
 import {
   EMPLOYEES_BASE_PATH,
   HR_SKILL_MATRIX_PATH,
@@ -222,6 +227,16 @@ export function Dashboard({
   modules = FALLBACK_MODULES,
   className,
 }: DashboardProps) {
+  const { user } = useAuth();
+  const visibleQuickLinks = React.useMemo(
+    () => filterStaffOnlyQuickLinks(quickLinks, user?.role),
+    [quickLinks, user?.role],
+  );
+  const visibleModules = React.useMemo(
+    () => filterStaffOnlyModules(modules, user?.role),
+    [modules, user?.role],
+  );
+
   return (
     <div
       className={cn(
@@ -250,7 +265,7 @@ export function Dashboard({
               <section aria-label="Shortcuts">
                 <h2 className="sr-only">Shortcuts</h2>
                 <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {quickLinks.map((item) => {
+                  {visibleQuickLinks.map((item) => {
                     const Icon = item.icon;
                     return (
                       <li key={item.href}>
@@ -297,7 +312,7 @@ export function Dashboard({
                   </h2>
                 </div>
                 <ul className="grid gap-4 xl:grid-cols-3">
-                  {modules.map((module) => (
+                  {visibleModules.map((module) => (
                     <li key={module.id}>
                       <Card className="h-full border-border/80">
                         <CardHeader className="space-y-2">

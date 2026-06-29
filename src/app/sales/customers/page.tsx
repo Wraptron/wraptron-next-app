@@ -157,7 +157,8 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "gst_type",
       header: "GST type",
-      sortValue: (item) => byId.get(Number(item.id))?.gst_registration_type ?? "",
+      sortValue: (item) =>
+        byId.get(Number(item.id))?.gst_registration_type ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.gst_registration_type) return "—";
@@ -180,7 +181,8 @@ function buildCustomerTableColumns(customers: Customer[]): CollectionColumn[] {
     {
       id: "city",
       header: "City",
-      sortValue: (item) => byId.get(Number(item.id))?.billing_address_city ?? "",
+      sortValue: (item) =>
+        byId.get(Number(item.id))?.billing_address_city ?? "",
       cell: (item) => {
         const c = byId.get(Number(item.id));
         return c?.billing_address_city ?? "—";
@@ -385,99 +387,99 @@ export default function SalesCustomersPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">KYC</h1>
-            <p className="mt-1 text-muted-foreground">{listDescription}</p>
-          </div>
-
-          <CollectionPageToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            newAction={{
-              label: "New KYC",
-              href: "/customer-onboarding",
-              ariaLabel: "Start new KYC onboarding",
-            }}
-            className="w-full lg:w-auto"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fetchCustomers()}
-              disabled={loading}
-              aria-label="Refresh customers"
-            >
-              <RefreshCw
-                className={`size-4 ${loading ? "animate-spin" : ""}`}
-              />
-            </Button>
-          </CollectionPageToolbar>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">KYC</h1>
+          <p className="mt-1 text-muted-foreground">{listDescription}</p>
         </div>
 
-        <CollectionFilterControls
-          className="mb-4"
-          definitions={collectionFilters.definitions}
-          search={collectionFilters.search}
-          onSearchChange={collectionFilters.setSearch}
-          searchPlaceholder="Search name, code, GSTIN, email…"
-          facets={collectionFilters.facets}
-          onFacetChange={collectionFilters.setFacetValues}
-          numbers={collectionFilters.numbers}
-          onNumberRangeChange={collectionFilters.setNumberRange}
-          dates={collectionFilters.dates}
-          onDateRangeChange={collectionFilters.setDateRange}
-          resource={collectionFilters.resource}
-          filterState={collectionFilters.filterState}
-          onApplySavedView={collectionFilters.applyFilterState}
-          onClearAll={collectionFilters.clearFilters}
-          isFiltering={collectionFilters.isFiltering}
-          getOptions={collectionFilters.getOptions}
-          loadOptions={collectionFilters.loadOptions}
-        />
-
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        <CollectionPageToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          newAction={{
+            label: "New KYC",
+            href: "/customer-onboarding",
+            ariaLabel: "Start new KYC onboarding",
+          }}
+          className="w-full lg:w-auto"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fetchCustomers()}
+            disabled={loading}
+            aria-label="Refresh customers"
           >
-            {error}
-          </div>
-        )}
+            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </CollectionPageToolbar>
+      </div>
 
-        {viewMode === "list" && !error && renderCustomers("list")}
+      <CollectionFilterControls
+        className="mb-4"
+        definitions={collectionFilters.definitions}
+        search={collectionFilters.search}
+        onSearchChange={collectionFilters.setSearch}
+        searchPlaceholder="Search name, code, GSTIN, email…"
+        facets={collectionFilters.facets}
+        onFacetChange={collectionFilters.setFacetValues}
+        numbers={collectionFilters.numbers}
+        onNumberRangeChange={collectionFilters.setNumberRange}
+        dates={collectionFilters.dates}
+        onDateRangeChange={collectionFilters.setDateRange}
+        resource={collectionFilters.resource}
+        filterState={collectionFilters.filterState}
+        onApplySavedView={collectionFilters.applyFilterState}
+        onClearAll={collectionFilters.clearFilters}
+        isFiltering={collectionFilters.isFiltering}
+        getOptions={collectionFilters.getOptions}
+        loadOptions={collectionFilters.loadOptions}
+      />
 
-        {viewMode === "kanban" && !error && (
-          <div className="flex min-h-0 flex-1 flex-col">{renderCustomers("kanban")}</div>
-        )}
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      )}
 
-        {viewMode === "card" && loading && customers.length === 0 && (
-          <div className="py-10 text-center text-sm text-muted-foreground">
-            Loading customers…
-          </div>
-        )}
+      {viewMode === "list" && !error && renderCustomers("list")}
 
-        {viewMode === "card" && showEmpty && (
-          <div className="rounded-lg border border-dashed bg-card py-16 text-center">
-            <h3 className="text-xl font-medium">No customers found</h3>
-            <p className="mt-2 text-muted-foreground">
-              Try adjusting your search or start a new KYC onboarding.
-            </p>
-            <Button variant="default" className="mt-6" asChild>
-              <Link href="/customer-onboarding">
-                <Plus className="mr-2 size-4" />
-                Start KYC onboarding
-              </Link>
-            </Button>
-          </div>
-        )}
+      {viewMode === "kanban" && !error && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {renderCustomers("kanban")}
+        </div>
+      )}
 
-        {viewMode === "card" &&
-          !showEmpty &&
-          !error &&
-          customers.length > 0 &&
-          renderCustomers("card")}
-      </PageShell>
+      {viewMode === "card" && loading && customers.length === 0 && (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          Loading customers…
+        </div>
+      )}
+
+      {viewMode === "card" && showEmpty && (
+        <div className="rounded-lg border border-dashed bg-card py-16 text-center">
+          <h3 className="text-xl font-medium">No customers found</h3>
+          <p className="mt-2 text-muted-foreground">
+            Try adjusting your search or start a new KYC onboarding.
+          </p>
+          <Button variant="default" className="mt-6" asChild>
+            <Link href="/customer-onboarding">
+              <Plus className="mr-2 size-4" />
+              Start KYC onboarding
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {viewMode === "card" &&
+        !showEmpty &&
+        !error &&
+        customers.length > 0 &&
+        renderCustomers("card")}
+    </PageShell>
   );
 }

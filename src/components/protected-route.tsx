@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  canAccessStaffRoutes,
+  isStaffOnlyPath,
+} from "@/lib/nav-access";
 import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
@@ -12,7 +16,7 @@ interface ProtectedRouteProps {
 const PUBLIC_ROUTES = ["/login", "/signup", "/customer-onboarding"];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -25,8 +29,19 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       if (!isPublicRoute) {
         router.push("/login");
       }
+      return;
     }
-  }, [isAuthenticated, loading, pathname, router]);
+
+    if (
+      !loading &&
+      isAuthenticated &&
+      pathname &&
+      !canAccessStaffRoutes(user?.role) &&
+      isStaffOnlyPath(pathname)
+    ) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, loading, pathname, router, user?.role]);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -44,6 +59,19 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   );
 
   if (!isAuthenticated && !isPublicRoute) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (
+    isAuthenticated &&
+    pathname &&
+    !canAccessStaffRoutes(user?.role) &&
+    isStaffOnlyPath(pathname)
+  ) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />

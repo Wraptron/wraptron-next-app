@@ -1,9 +1,5 @@
-import Toolbar from "@/components/toolbar";
+import { PricingCalculator } from "@/components/studio/pricing-calculator";
 
-export default function Studio() {
-  return (
-    <div>
-      <Toolbar />
-    </div>
-  );
+export default function StudioPage() {
+  return <PricingCalculator />;
 }

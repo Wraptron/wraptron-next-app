@@ -3,9 +3,10 @@
 import { PageShell } from "@/components/page-shell";
 import { cn } from "@/lib/utils";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
-import { invoicesApi, type Invoice } from "@/lib/api";
+import { billsApi, type Bill } from "@/lib/api";
 import {
   CollectionView,
   type CollectionColumn,
@@ -50,6 +51,19 @@ const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
 
 const CLOSED_STATUSES = new Set(["paid", "void"]);
 
+const money = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  return value.slice(0, 10);
+}
+
 function todayDateString(): string {
   const today = new Date();
   const year = today.getFullYear();
@@ -72,30 +86,17 @@ function daysBetween(from: string, to: string): number {
   return Math.round((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
 }
 
-const money = (value: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-
-function formatDate(value?: string) {
-  if (!value) return "—";
-  return value.slice(0, 10);
-}
-
-function invoiceStatusKey(invoice: Invoice): string | null {
-  const status = invoice.status?.trim().toLowerCase();
+function billStatusKey(bill: Bill): string | null {
+  const status = bill.status?.trim().toLowerCase();
   return status || null;
 }
 
-function invoiceDueBucket(invoice: Invoice): string {
-  const status = invoiceStatusKey(invoice);
+function billDueBucket(bill: Bill): string {
+  const status = billStatusKey(bill);
   if (status === "draft") return "draft";
   if (status && CLOSED_STATUSES.has(status)) return "paid";
 
-  const dueDate = parseDateOnly(invoice.due_date);
+  const dueDate = parseDateOnly(bill.due_date);
   if (!dueDate) return "no_due";
 
   const today = todayDateString();
@@ -115,8 +116,8 @@ function statusBadgeLabel(status: string): string {
     .join(" ");
 }
 
-function dueBadge(invoice: Invoice) {
-  const status = invoiceStatusKey(invoice);
+function dueBadge(bill: Bill) {
+  const status = billStatusKey(bill);
   if (status === "paid") {
     return (
       <Badge className="bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
@@ -140,8 +141,13 @@ function dueBadge(invoice: Invoice) {
   if (status === "overdue") {
     return <Badge variant="destructive">Overdue</Badge>;
   }
-  if (status === "sent" || status === "viewed" || status === "unpaid") {
-    const bucket = invoiceDueBucket(invoice);
+  if (
+    status === "open" ||
+    status === "unpaid" ||
+    status === "sent" ||
+    status === "viewed"
+  ) {
+    const bucket = billDueBucket(bill);
     if (bucket === "overdue") {
       return <Badge variant="destructive">Overdue</Badge>;
     }
@@ -155,7 +161,7 @@ function dueBadge(invoice: Invoice) {
     return <Badge variant="secondary">{statusBadgeLabel(status)}</Badge>;
   }
 
-  const bucket = invoiceDueBucket(invoice);
+  const bucket = billDueBucket(bill);
   if (bucket === "overdue") {
     return <Badge variant="destructive">Overdue</Badge>;
   }
@@ -172,63 +178,63 @@ function dueBadge(invoice: Invoice) {
   return <Badge variant="secondary">Upcoming</Badge>;
 }
 
-function invoiceToCollectionItem(invoice: Invoice): CollectionItem {
+function billToCollectionItem(bill: Bill): CollectionItem {
   return {
-    id: invoice.id,
-    title: invoice.invoice_number,
-    description: invoice.customer_name,
-    meta: money(Number(invoice.total || 0)),
+    id: bill.id,
+    title: bill.bill_number,
+    description: bill.vendor_name,
+    meta: money(Number(bill.total || 0)),
   };
 }
 
-function buildInvoiceColumns(
-  invoices: Invoice[],
-  onView: (invoice: Invoice) => void,
-  onDelete: (invoice: Invoice) => void,
+function buildBillColumns(
+  bills: Bill[],
+  onView: (bill: Bill) => void,
+  onDelete: (bill: Bill) => void,
 ): CollectionColumn[] {
-  const byId = new Map(invoices.map((inv) => [inv.id, inv]));
+  const byId = new Map(bills.map((bill) => [bill.id, bill]));
 
   return [
     {
-      id: "invoice_number",
-      header: "Invoice #",
+      id: "bill_number",
+      header: "Bill #",
       headerClassName: "w-[140px]",
-      sortValue: (item) => byId.get(Number(item.id))?.invoice_number ?? "",
+      sortValue: (item) => byId.get(Number(item.id))?.bill_number ?? "",
       cell: (item) => {
-        const inv = byId.get(Number(item.id));
+        const bill = byId.get(Number(item.id));
         return (
           <span className="font-mono text-sm font-medium">
-            {inv?.invoice_number ?? "—"}
+            {bill?.bill_number ?? "—"}
           </span>
         );
       },
     },
     {
-      id: "customer_name",
-      header: "Customer",
+      id: "vendor_name",
+      header: "Vendor",
       headerClassName: "w-[220px]",
-      sortValue: (item) => byId.get(Number(item.id))?.customer_name ?? "",
-      cell: (item) => byId.get(Number(item.id))?.customer_name ?? "—",
+      sortValue: (item) => byId.get(Number(item.id))?.vendor_name ?? "",
+      cell: (item) => byId.get(Number(item.id))?.vendor_name ?? "—",
     },
     {
-      id: "invoice_date",
-      header: "Invoice date",
+      id: "bill_date",
+      header: "Bill date",
       sortValue: (item) => {
-        const date = byId.get(Number(item.id))?.invoice_date;
+        const date = byId.get(Number(item.id))?.bill_date;
         return date ? new Date(date) : "";
       },
-      cell: (item) => formatDate(byId.get(Number(item.id))?.invoice_date),
+      cell: (item) => formatDate(byId.get(Number(item.id))?.bill_date),
     },
     {
       id: "status",
       header: "Status",
       sortValue: (item) => {
-        const inv = byId.get(Number(item.id));
-        return inv ? (invoiceStatusKey(inv) ?? "") : "";
+        const bill = byId.get(Number(item.id));
+        return bill ? (billStatusKey(bill) ?? "") : "";
       },
       cell: (item) => {
-        const inv = byId.get(Number(item.id));
-        return inv ? dueBadge(inv) : "—";
+        const bill = byId.get(Number(item.id));
+        return bill ? dueBadge(bill) : "—";
       },
     },
     {
@@ -245,8 +251,8 @@ function buildInvoiceColumns(
       header: "Total",
       sortValue: (item) => Number(byId.get(Number(item.id))?.total || 0),
       cell: (item) => {
-        const inv = byId.get(Number(item.id));
-        return inv ? money(Number(inv.total || 0)) : "—";
+        const bill = byId.get(Number(item.id));
+        return bill ? money(Number(bill.total || 0)) : "—";
       },
     },
     {
@@ -262,8 +268,8 @@ function buildInvoiceColumns(
       headerClassName: "text-right w-[100px]",
       sortable: false,
       cell: (item) => {
-        const inv = byId.get(Number(item.id));
-        if (!inv) return null;
+        const bill = byId.get(Number(item.id));
+        if (!bill) return null;
         return (
           <div
             className="flex justify-end gap-1"
@@ -272,8 +278,8 @@ function buildInvoiceColumns(
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onView(inv)}
-              aria-label={`View ${inv.invoice_number}`}
+              onClick={() => onView(bill)}
+              aria-label={`View ${bill.bill_number}`}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -281,8 +287,8 @@ function buildInvoiceColumns(
               variant="outline"
               size="sm"
               className="text-destructive hover:text-destructive"
-              onClick={() => onDelete(inv)}
-              aria-label={`Delete ${inv.invoice_number}`}
+              onClick={() => onDelete(bill)}
+              aria-label={`Delete ${bill.bill_number}`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -293,12 +299,12 @@ function buildInvoiceColumns(
   ];
 }
 
-function InvoiceCard({
-  invoice,
+function BillCard({
+  bill,
   onView,
   onDelete,
 }: {
-  invoice: Invoice;
+  bill: Bill;
   onView: () => void;
   onDelete: () => void;
 }) {
@@ -308,29 +314,29 @@ function InvoiceCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <CardTitle className="truncate font-mono text-base">
-              {invoice.invoice_number}
+              {bill.bill_number}
             </CardTitle>
             <p className="mt-1 truncate text-sm text-muted-foreground">
-              {invoice.customer_name}
+              {bill.vendor_name}
             </p>
           </div>
-          {dueBadge(invoice)}
+          {dueBadge(bill)}
         </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total</span>
           <span className="font-semibold">
-            {money(Number(invoice.total || 0))}
+            {money(Number(bill.total || 0))}
           </span>
         </div>
         <div className="flex justify-between text-muted-foreground">
-          <span>Invoice date</span>
-          <span>{formatDate(invoice.invoice_date)}</span>
+          <span>Bill date</span>
+          <span>{formatDate(bill.bill_date)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
           <span>Due date</span>
-          <span>{formatDate(invoice.due_date)}</span>
+          <span>{formatDate(bill.due_date)}</span>
         </div>
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" size="sm" onClick={onView}>
@@ -351,37 +357,36 @@ function InvoiceCard({
   );
 }
 
-export default function AccountsInvoicesPage() {
+export default function AccountsBillsPage() {
   const router = useRouter();
   const { setTitle } = usePageTitle();
   const [viewMode, setViewMode] = useCollectionViewMode(
-    "accounts_invoices_view_mode",
+    "accounts_bills_view_mode",
     "list",
   );
   const collectionFilters = useCollectionPageFilters(
-    "invoices",
-    getCollectionFilterDefinitions("invoices"),
+    "bills",
+    getCollectionFilterDefinitions("bills"),
   );
   const {
-    items: invoices,
+    items: bills,
     total,
     loading,
     error,
-    reload: fetchInvoices,
+    reload: fetchBills,
   } = useCollectionData(
-    invoicesApi.getAll,
+    billsApi.getAll,
     collectionFilters.apiParamsKey,
     collectionFilters.apiParams,
     { limit: LIST_LIMIT },
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [selected, setSelected] = useState<Bill | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    setTitle("Invoices");
+    setTitle("Expense bills");
     return () => setTitle(null);
   }, [setTitle]);
 
@@ -390,21 +395,24 @@ export default function AccountsInvoicesPage() {
   }, [collectionFilters.apiParamsKey]);
 
   const collectionItems = useMemo(
-    () => invoices.map(invoiceToCollectionItem),
-    [invoices],
+    () => bills.map(billToCollectionItem),
+    [bills],
   );
 
-  const invoiceById = useMemo(
-    () => new Map(invoices.map((inv) => [inv.id, inv])),
-    [invoices],
+  const billById = useMemo(
+    () => new Map(bills.map((bill) => [bill.id, bill])),
+    [bills],
   );
 
-  const openView = (invoice: Invoice) => {
-    router.push(`/accounts/invoices/${invoice.id}`);
-  };
+  const openView = useCallback(
+    (bill: Bill) => {
+      router.push(`/accounts/bills/${bill.id}`);
+    },
+    [router],
+  );
 
-  const openDelete = (invoice: Invoice) => {
-    setSelected(invoice);
+  const openDelete = (bill: Bill) => {
+    setSelected(bill);
     setDeleteOpen(true);
   };
 
@@ -412,50 +420,50 @@ export default function AccountsInvoicesPage() {
     if (!selected) return;
     setActionLoading(true);
     try {
-      await invoicesApi.delete(selected.id);
+      await billsApi.delete(selected.id);
       setDeleteOpen(false);
       setSelected(null);
-      await fetchInvoices();
+      await fetchBills();
     } catch (err) {
-      console.error("Failed to delete invoice:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete invoice");
+      console.error("Failed to delete bill:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete bill");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const invoiceTableColumns = useMemo(
-    () => buildInvoiceColumns(invoices, openView, openDelete),
-    [invoices],
+  const billTableColumns = useMemo(
+    () => buildBillColumns(bills, openView, openDelete),
+    [bills, openView],
   );
 
   const listDescription = loading
     ? "Loading…"
-    : `${total} invoice${total === 1 ? "" : "s"}${
+    : `${total} bill${total === 1 ? "" : "s"}${
         collectionFilters.isFiltering ? " (filtered)" : ""
       }`;
 
-  const renderInvoices = (mode: CollectionViewMode) => {
+  const renderBills = (mode: CollectionViewMode) => {
     if (mode === "list") {
       return (
         <CollectionView
           loading={loading}
           items={collectionItems}
-          columns={invoiceTableColumns}
-          primaryColumnId="invoice_number"
+          columns={billTableColumns}
+          primaryColumnId="bill_number"
           selectable
           selectedIds={selectedIds}
           onSelectedIdsChange={(ids) =>
             setSelectedIds(ids.map((id) => Number(id)))
           }
           onRowClick={(item) => {
-            const inv = invoiceById.get(Number(item.id));
-            if (inv) openView(inv);
+            const bill = billById.get(Number(item.id));
+            if (bill) openView(bill);
           }}
-          emptyTitle="No invoices yet"
-          emptyDescription="Create an invoice or sync from Zoho Books."
-          emptyMessage="No invoices found."
-          loadingMessage="Loading invoices…"
+          emptyTitle="No expense bills yet"
+          emptyDescription="Create a bill or sync from Zoho Books in Settings → Integrations."
+          emptyMessage="No bills found."
+          loadingMessage="Loading bills…"
         />
       );
     }
@@ -467,65 +475,65 @@ export default function AccountsInvoicesPage() {
           items={collectionItems}
           columns={KANBAN_COLUMNS}
           groupBy={(item) => {
-            const inv = invoiceById.get(Number(item.id));
-            return inv ? invoiceDueBucket(inv) : "no_due";
+            const bill = billById.get(Number(item.id));
+            return bill ? billDueBucket(bill) : "no_due";
           }}
           getColumnSubtext={(_columnId, columnItems) => {
             const count = columnItems.length;
-            return `${count} invoice${count !== 1 ? "s" : ""}`;
+            return `${count} bill${count !== 1 ? "s" : ""}`;
           }}
           renderCard={(item) => {
-            const inv = invoiceById.get(Number(item.id));
-            if (!inv) return null;
+            const bill = billById.get(Number(item.id));
+            if (!bill) return null;
             return (
               <Card
                 className="cursor-pointer border border-border bg-card shadow-none transition-shadow hover:shadow-md"
-                onClick={() => openView(inv)}
+                onClick={() => openView(bill)}
               >
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="font-mono text-sm font-semibold">
-                      {inv.invoice_number}
+                      {bill.bill_number}
                     </h4>
-                    {dueBadge(inv)}
+                    {dueBadge(bill)}
                   </div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {inv.customer_name}
+                    {bill.vendor_name}
                   </p>
                   <p className="mt-2 text-sm font-medium">
-                    {money(Number(inv.total || 0))}
+                    {money(Number(bill.total || 0))}
                   </p>
                 </CardContent>
               </Card>
             );
           }}
-          emptyMessage="No invoices found."
-          loadingMessage="Loading invoices…"
+          emptyMessage="No bills found."
+          loadingMessage="Loading bills…"
         />
       );
     }
 
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {invoices.map((invoice) => (
-          <InvoiceCard
-            key={invoice.id}
-            invoice={invoice}
-            onView={() => openView(invoice)}
-            onDelete={() => openDelete(invoice)}
+        {bills.map((bill) => (
+          <BillCard
+            key={bill.id}
+            bill={bill}
+            onView={() => openView(bill)}
+            onDelete={() => openDelete(bill)}
           />
         ))}
       </div>
     );
   };
 
-  const showEmpty = !loading && !error && invoices.length === 0;
+  const showEmpty = !loading && !error && bills.length === 0;
 
   return (
     <PageShell fill className="bg-background text-foreground">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Invoices</h1>
+          <h1 className="text-2xl font-bold">Expense bills</h1>
           <p className="mt-1 text-muted-foreground">{listDescription}</p>
         </div>
 
@@ -533,9 +541,9 @@ export default function AccountsInvoicesPage() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           newAction={{
-            label: "New Invoice",
-            href: "/invoices/new",
-            ariaLabel: "Create new invoice",
+            label: "New bill",
+            href: "/accounts/bills/new",
+            ariaLabel: "Create new expense bill",
           }}
           className="w-full lg:w-auto"
         >
@@ -543,9 +551,9 @@ export default function AccountsInvoicesPage() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => fetchInvoices()}
+            onClick={() => fetchBills()}
             disabled={loading}
-            aria-label="Refresh invoices"
+            aria-label="Refresh bills"
           >
             <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
@@ -557,7 +565,7 @@ export default function AccountsInvoicesPage() {
         definitions={collectionFilters.definitions}
         search={collectionFilters.search}
         onSearchChange={collectionFilters.setSearch}
-        searchPlaceholder="Search invoice # or customer…"
+        searchPlaceholder="Search bill # or vendor…"
         facets={collectionFilters.facets}
         onFacetChange={collectionFilters.setFacetValues}
         numbers={collectionFilters.numbers}
@@ -589,30 +597,33 @@ export default function AccountsInvoicesPage() {
             viewMode === "kanban" && "flex flex-1 flex-col",
           )}
         >
-          {renderInvoices(viewMode)}
+          {renderBills(viewMode)}
         </div>
       )}
 
       {showEmpty && viewMode !== "list" && (
         <div className="mt-8 text-center text-muted-foreground">
-          <p>No invoices yet.</p>
-          <Button
-            className="mt-4"
-            variant="outline"
-            onClick={() => router.push("/invoices/new")}
-          >
-            Create your first invoice
-          </Button>
+          <p>No expense bills yet.</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/accounts/bills/new">Create bill</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/settings?section=integrations">
+                Sync from Zoho Books
+              </Link>
+            </Button>
+          </div>
         </div>
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete invoice</DialogTitle>
+            <DialogTitle>Delete bill</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selected?.invoice_number}? This
-              action cannot be undone.
+              Are you sure you want to delete {selected?.bill_number}? This
+              removes the local copy only; the bill remains in Zoho Books.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

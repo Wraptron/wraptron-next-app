@@ -11,7 +11,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Download, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { contactsApi, type CreateContactInput } from "@/lib/api";
+import {
+  contactsApi,
+  CONTACT_IMPORT_BATCH_SIZE,
+  type ContactImportResult,
+  type CreateContactInput,
+} from "@/lib/api";
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
 
 const TEMPLATE_HEADERS = [
   "prefix",
@@ -108,11 +121,12 @@ function toBoolean(value?: string): boolean | undefined {
 function rowToContactInput(row: Record<string, string>): CreateContactInput {
   const firstName =
     row.first_name || row.firstname || row["first name"] || "Imported";
+  const email = row.email?.trim();
   return {
     prefix: row.prefix || undefined,
     first_name: firstName,
     last_name: row.last_name || row.lastname || undefined,
-    email: row.email || undefined,
+    email: email || undefined,
     phone: row.phone || undefined,
     mobile: row.mobile || undefined,
     job_title: row.job_title || row.title || undefined,
@@ -136,9 +150,12 @@ export function ContactImportSheet({
   onSuccess,
 }: ContactImportSheetProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [fileKey, setFileKey] = useState(0);
   const [importResult, setImportResult] = useState<{
     created: number;
+    updated: number;
     failed: number;
     errors: string[];
   } | null>(null);
@@ -149,10 +166,8 @@ export function ContactImportSheet({
       if (!file) return;
       setImportResult(null);
       setUploading(true);
-
-      const errors: string[] = [];
-      let created = 0;
-      let failed = 0;
+      setProgress(0);
+      setProgressLabel("");
 
       try {
         const text = await file.text();
@@ -160,33 +175,47 @@ export function ContactImportSheet({
         if (rows.length === 0) {
           setImportResult({
             created: 0,
+            updated: 0,
             failed: 0,
             errors: ["No data rows in file or invalid CSV."],
           });
           return;
         }
 
-        for (let i = 0; i < rows.length; i++) {
-          try {
-            const input = rowToContactInput(rows[i]);
-            await contactsApi.create(input);
-            created++;
-          } catch (err) {
-            failed++;
-            const msg = err instanceof Error ? err.message : String(err);
-            errors.push(`Row ${i + 2}: ${msg}`);
-            if (errors.length >= 5) {
-              errors.push(`... and ${rows.length - i - 1} more`);
-              break;
-            }
+        const contacts = rows.map(rowToContactInput);
+        const batches = chunkArray(contacts, CONTACT_IMPORT_BATCH_SIZE);
+        const merged: ContactImportResult = {
+          created: 0,
+          updated: 0,
+          failed: 0,
+          errors: [],
+        };
+
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          const processedBefore = i * CONTACT_IMPORT_BATCH_SIZE;
+          setProgressLabel(
+            `Importing rows ${processedBefore + 1}–${processedBefore + batch.length} of ${contacts.length}`,
+          );
+          setProgress(Math.round((i / batches.length) * 100));
+
+          const result = await contactsApi.import(batch);
+          merged.created += result.created;
+          merged.updated += result.updated;
+          merged.failed += result.failed;
+          for (const error of result.errors) {
+            if (merged.errors.length < 8) merged.errors.push(error);
           }
         }
 
-        setImportResult({ created, failed, errors });
-        if (created > 0) onSuccess();
+        setProgress(100);
+        setProgressLabel(`Finished importing ${contacts.length} rows`);
+        setImportResult(merged);
+        if (merged.created > 0 || merged.updated > 0) onSuccess();
       } catch (err) {
         setImportResult({
           created: 0,
+          updated: 0,
           failed: 0,
           errors: [err instanceof Error ? err.message : "Failed to parse file"],
         });
@@ -202,6 +231,8 @@ export function ContactImportSheet({
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setImportResult(null);
+      setProgress(0);
+      setProgressLabel("");
       setFileKey((k) => k + 1);
     }
     onOpenChange(next);
@@ -214,7 +245,9 @@ export function ContactImportSheet({
           <SheetTitle>Import contacts</SheetTitle>
           <SheetDescription>
             Download the CSV template, fill in your contacts, then upload the
-            file to import.
+            file to import. Email is used as the unique identifier — existing
+            contacts are updated. A company is created automatically when the
+            company column is filled, and the contact is linked to it.
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-6 py-6">
@@ -242,21 +275,44 @@ export function ContactImportSheet({
               disabled={uploading}
             />
             {uploading && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Importing...
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {progressLabel || "Importing..."}
+                </p>
+                <div
+                  className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress}
+                  aria-label="Contact import progress"
+                >
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{progress}%</p>
+              </div>
             )}
           </div>
 
           {importResult && (
             <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 {importResult.created > 0 && (
                   <span className="flex items-center gap-1 text-green-700">
                     <CheckCircle2 className="h-4 w-4" />
                     {importResult.created} contact
                     {importResult.created !== 1 ? "s" : ""} created
+                  </span>
+                )}
+                {importResult.updated > 0 && (
+                  <span className="flex items-center gap-1 text-green-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {importResult.updated} contact
+                    {importResult.updated !== 1 ? "s" : ""} updated
                   </span>
                 )}
                 {importResult.failed > 0 && (

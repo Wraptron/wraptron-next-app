@@ -6,8 +6,10 @@ export type CollectionFilterResource =
   | "companies"
   | "products"
   | "invoices"
+  | "bills"
   | "customers"
-  | "activities";
+  | "activities"
+  | "tasks";
 
 export type CollectionFilterFieldType =
   | "enum"
@@ -186,6 +188,16 @@ export const COLLECTION_FILTER_DEFINITIONS: Record<
     num("subtotal", "Subtotal"),
     num("balance_due", "Balance due"),
   ],
+  bills: [
+    def("status", "Status", { pinned: true }),
+    def("payment_terms", "Payment terms", { pinned: true }),
+    def("place_of_supply", "Place of supply"),
+    date("bill_date", "Bill date"),
+    date("due_date", "Due date"),
+    num("total", "Total"),
+    num("subtotal", "Subtotal"),
+    num("balance_due", "Balance due"),
+  ],
   customers: [
     def("gst_registration_type", "GST registration", { pinned: true }),
     def("signup_type", "Signup type", { pinned: true }),
@@ -202,6 +214,37 @@ export const COLLECTION_FILTER_DEFINITIONS: Record<
     date("activity_date", "Activity date"),
     date("due_date", "Due date"),
     num("duration_minutes", "Duration (min)"),
+  ],
+  tasks: [
+    def("status", "Status", {
+      pinned: true,
+      options: [
+        { value: "pending", label: "Todo" },
+        { value: "in_progress", label: "In progress" },
+        { value: "done", label: "Done" },
+        { value: "blocked", label: "Blocked" },
+      ],
+    }),
+    def("project_id", "Project", { pinned: true }),
+    def("assigned_employee_id", "Assignee", { pinned: true }),
+    def("priority", "Priority", {
+      pinned: true,
+      options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" },
+        { value: "critical", label: "Critical" },
+      ],
+    }),
+    bool("is_recurring", "Recurring"),
+    bool("overdue", "Overdue"),
+    def("billable", "Billable", {
+      options: [
+        { value: "billable", label: "Billable" },
+        { value: "non_billable", label: "Non billable" },
+      ],
+    }),
+    date("end_date", "Deadline"),
   ],
 };
 

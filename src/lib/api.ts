@@ -29,14 +29,15 @@ export function setAuthToken(token: string | null): void {
 
 async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit,
+  options?: RequestInit & { timeoutMs?: number },
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
+  const { timeoutMs = 30000, ...fetchOptions } = options ?? {};
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string> | undefined),
+    ...(fetchOptions.headers as Record<string, string> | undefined),
   };
 
   // Add auth token if available
@@ -46,12 +47,12 @@ async function fetchApi<T>(
 
   // Add timeout and better error handling
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
   try {
     response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
       signal: controller.signal,
     });
@@ -1346,6 +1347,15 @@ export interface ContactsResponse {
   offset: number;
 }
 
+export interface ContactImportResult {
+  created: number;
+  updated: number;
+  failed: number;
+  errors: string[];
+}
+
+export const CONTACT_IMPORT_BATCH_SIZE = 50;
+
 export const contactsApi = {
   getAll: async (
     params?: CollectionListQueryParams,
@@ -1367,6 +1377,16 @@ export const contactsApi = {
     return fetchApi<Contact>("/api/contacts", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  },
+
+  import: async (
+    contacts: CreateContactInput[],
+  ): Promise<ContactImportResult> => {
+    return fetchApi<ContactImportResult>("/api/contacts/import", {
+      method: "POST",
+      body: JSON.stringify({ contacts }),
+      timeoutMs: 120_000,
     });
   },
 
@@ -1675,6 +1695,8 @@ export interface SalesDashboardData {
   pipeline_value: number;
   closed_deals_value: number;
   active_deals: number;
+  active_employees: number;
+  revenue_per_employee: number;
   funnel: SalesDashboardFunnelStage[];
   recent_activities: SalesDashboardActivity[];
   revenue_trend: SalesDashboardRevenueTrendPoint[];
@@ -1907,10 +1929,9 @@ export const collectionSavedViewsApi = {
   },
 
   remove: async (id: number): Promise<{ success: boolean }> => {
-    return fetchApi<{ success: boolean }>(
-      `/api/collection-saved-views/${id}`,
-      { method: "DELETE" },
-    );
+    return fetchApi<{ success: boolean }>(`/api/collection-saved-views/${id}`, {
+      method: "DELETE",
+    });
   },
 };
 
@@ -2212,6 +2233,69 @@ export interface InvoicesResponse {
   offset: number;
 }
 
+export type AccountsDashboardPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
+
+export interface FinancialReportLine {
+  id: string;
+  label: string;
+  amount: number;
+  children?: FinancialReportLine[];
+  is_total?: boolean;
+  is_header?: boolean;
+}
+
+export interface AccountsDashboardData {
+  period: AccountsDashboardPeriod;
+  revenue: number;
+  net_income: number;
+  cash_collected: number;
+  outstanding_receivables: number;
+  invoice_count: number;
+  profit_and_loss: FinancialReportLine[];
+  cash_flow: FinancialReportLine[];
+}
+
+export const accountsApi = {
+  getDashboard: async (
+    period: AccountsDashboardPeriod = "month",
+  ): Promise<AccountsDashboardData> => {
+    return fetchApi<AccountsDashboardData>(
+      `/api/accounts/dashboard?period=${encodeURIComponent(period)}`,
+    );
+  },
+};
+
+export interface PricingCalculatorConfigResponse {
+  id: number;
+  config: import("./pricing-calculator").PricingCalculatorConfig;
+  created_at: string;
+  updated_at: string;
+}
+
+export const pricingCalculatorApi = {
+  getConfig: async (): Promise<PricingCalculatorConfigResponse> => {
+    return fetchApi<PricingCalculatorConfigResponse>(
+      "/api/pricing-calculator/config",
+    );
+  },
+  updateConfig: async (
+    config: import("./pricing-calculator").PricingCalculatorConfig,
+  ): Promise<PricingCalculatorConfigResponse> => {
+    return fetchApi<PricingCalculatorConfigResponse>(
+      "/api/pricing-calculator/config",
+      {
+        method: "PUT",
+        body: JSON.stringify({ config }),
+      },
+    );
+  },
+};
+
 export const invoiceSettingsApi = {
   get: async (): Promise<InvoiceSettings | null> => {
     return fetchApi<InvoiceSettings | null>("/api/invoice-settings");
@@ -2258,6 +2342,106 @@ export const invoicesApi = {
   },
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/invoices/${id}`, { method: "DELETE" });
+  },
+};
+
+export interface BillItem {
+  id?: number;
+  bill_id?: number;
+  item_description: string;
+  hsn: string;
+  quantity: number;
+  rate: number;
+  amount?: number;
+  gst_rate?: number;
+  cgst_amount?: number;
+  sgst_amount?: number;
+  line_total?: number;
+}
+
+export interface Bill {
+  id: number;
+  user_id: number;
+  bill_number: string;
+  vendor_name: string;
+  vendor_address: string;
+  vendor_gst: string;
+  payment_terms: string;
+  place_of_supply: string;
+  bill_date: string;
+  due_date?: string;
+  status?: string | null;
+  balance_due?: number | null;
+  subtotal: number;
+  cgst_total: number;
+  sgst_total: number;
+  total: number;
+  zoho_bill_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  items?: BillItem[];
+}
+
+export interface CreateBillInput {
+  vendor_name: string;
+  vendor_address: string;
+  vendor_gst: string;
+  payment_terms?: string;
+  place_of_supply?: string;
+  bill_date?: string;
+  due_date?: string;
+  zoho_vendor_id?: string;
+  items: Array<{
+    item_description: string;
+    hsn: string;
+    quantity: number;
+    rate: number;
+    gst_rate: number;
+  }>;
+}
+
+export interface BillZohoSyncResult {
+  synced: boolean;
+  error: string | null;
+}
+
+export interface CreateBillResponse extends Bill {
+  zoho_sync?: BillZohoSyncResult;
+}
+
+export interface BillsResponse {
+  data: Bill[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const billsApi = {
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<BillsResponse> => {
+    const searchParams = new URLSearchParams();
+    appendListQueryParams(searchParams, params);
+
+    const query = searchParams.toString();
+    return fetchApi<BillsResponse>(`/api/bills${query ? `?${query}` : ""}`);
+  },
+  getById: async (id: number): Promise<Bill> => {
+    return fetchApi<Bill>(`/api/bills/${id}`);
+  },
+  create: async (data: CreateBillInput): Promise<CreateBillResponse> => {
+    return fetchApi<CreateBillResponse>("/api/bills", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  pushToZoho: async (id: number): Promise<CreateBillResponse> => {
+    return fetchApi<CreateBillResponse>(`/api/bills/${id}/push-zoho`, {
+      method: "POST",
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/bills/${id}`, { method: "DELETE" });
   },
 };
 
@@ -2940,6 +3124,7 @@ export interface ZohoSyncStats {
   customers: ZohoSyncEntityStats;
   products: ZohoSyncEntityStats;
   invoices: ZohoSyncEntityStats;
+  bills: ZohoSyncEntityStats;
 }
 
 export interface ZohoSyncResponse {
@@ -2959,6 +3144,18 @@ export interface ZohoOAuthConfigResponse {
   accounts_domain: string;
   scopes: string;
   redirect_uri?: string;
+}
+
+export interface ZohoVendor {
+  id: string;
+  name: string;
+  gst_no?: string | null;
+  address?: string | null;
+}
+
+export interface ZohoVendorsResponse {
+  data: ZohoVendor[];
+  total: number;
 }
 
 export const zohoApi = {
@@ -3034,6 +3231,10 @@ export const zohoApi = {
     return fetchApi<ZohoSyncResponse>(`/api/zoho/connections/${id}/sync`, {
       method: "POST",
     });
+  },
+
+  getVendors: async (): Promise<ZohoVendorsResponse> => {
+    return fetchApi<ZohoVendorsResponse>("/api/zoho/vendors");
   },
 };
 

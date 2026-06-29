@@ -2,6 +2,7 @@
 
 import { PageShell } from "@/components/page-shell";
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { companiesApi, type Company } from "@/lib/api";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
@@ -77,7 +78,11 @@ function buildCompanyTableColumns(
       },
       cell: (item) => {
         const c = byId.get(Number(item.id));
-        return <span className="font-medium">{c?.company_name || c?.name || "—"}</span>;
+        return (
+          <span className="font-medium">
+            {c?.company_name || c?.name || "—"}
+          </span>
+        );
       },
     },
     {
@@ -117,9 +122,7 @@ function buildCompanyTableColumns(
       cell: (item) => {
         const c = byId.get(Number(item.id));
         if (!c?.status) return "—";
-        return (
-          <Badge className={statusBadgeClass(c.status)}>{c.status}</Badge>
-        );
+        return <Badge className={statusBadgeClass(c.status)}>{c.status}</Badge>;
       },
     },
     {
@@ -147,14 +150,19 @@ function buildCompanyTableColumns(
 
 const CompanyCard = ({
   company,
+  onClick,
   onEdit,
   onDelete,
 }: {
   company: Company;
+  onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) => (
-  <Card className="transition-shadow hover:shadow-md">
+  <Card
+    className="cursor-pointer transition-shadow hover:shadow-md"
+    onClick={onClick}
+  >
     <CardHeader>
       <div className="flex items-start justify-between">
         <div>
@@ -221,8 +229,13 @@ const CompanyCard = ({
 );
 
 export default function CompaniesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { setTitle } = usePageTitle();
-  const [viewMode, setViewMode] = useCollectionViewMode("companies_view_mode", "list");
+  const [viewMode, setViewMode] = useCollectionViewMode(
+    "companies_view_mode",
+    "list",
+  );
   const collectionFilters = useCollectionPageFilters(
     "companies",
     getCollectionFilterDefinitions("companies"),
@@ -250,6 +263,21 @@ export default function CompaniesPage() {
     setTitle("Companies");
     return () => setTitle(null);
   }, [setTitle]);
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId) return;
+    const id = parseInt(editId, 10);
+    if (isNaN(id)) return;
+    companiesApi
+      .getById(id)
+      .then((c) => {
+        setEditingCompany(c);
+        setFormDialogOpen(true);
+        router.replace("/sales/companies", { scroll: false });
+      })
+      .catch(() => {});
+  }, [searchParams, router]);
 
   const handleCreate = () => {
     setEditingCompany(undefined);
@@ -312,9 +340,7 @@ export default function CompaniesPage() {
 
     const previousStatus = company.status;
     setCompanies((prev) =>
-      prev.map((c) =>
-        c.company_id === id ? { ...c, status: toColumnId } : c,
-      ),
+      prev.map((c) => (c.company_id === id ? { ...c, status: toColumnId } : c)),
     );
 
     try {
@@ -342,6 +368,8 @@ export default function CompaniesPage() {
           onSelectedIdsChange={(ids) =>
             setSelectedCompanyIds(ids.map((id) => Number(id)))
           }
+          getRowHref={(item) => `/sales/companies/${item.id}`}
+          onRowClick={(item) => router.push(`/sales/companies/${item.id}`)}
           emptyMessage="No companies found."
           loadingMessage="Loading companies…"
         />
@@ -363,6 +391,7 @@ export default function CompaniesPage() {
             return `${count} compan${count !== 1 ? "ies" : "y"}`;
           }}
           onItemMove={handleCompanyKanbanMove}
+          getRowHref={(item) => `/sales/companies/${item.id}`}
           emptyMessage="No companies found."
           loadingMessage="Loading companies…"
         />
@@ -375,6 +404,7 @@ export default function CompaniesPage() {
           <CompanyCard
             key={company.company_id}
             company={company}
+            onClick={() => router.push(`/sales/companies/${company.company_id}`)}
             onEdit={() => handleEdit(company)}
             onDelete={() => handleDelete(company)}
           />
@@ -387,128 +417,133 @@ export default function CompaniesPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Companies</h1>
-            <p className="mt-1 text-muted-foreground">
-              {loading
-                ? "Loading…"
-                : `${total} compan${total === 1 ? "y" : "ies"}${
-                    collectionFilters.isFiltering ? " (filtered)" : ""
-                  }`}
-            </p>
-          </div>
-          <CollectionPageToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            newAction={{
-              label: "New Company",
-              onClick: handleCreate,
-            }}
-          >
-            <Button
-              onClick={fetchCompanies}
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              aria-label="Refresh companies"
-            >
-              <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </CollectionPageToolbar>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Companies</h1>
+          <p className="mt-1 text-muted-foreground">
+            {loading
+              ? "Loading…"
+              : `${total} compan${total === 1 ? "y" : "ies"}${
+                  collectionFilters.isFiltering ? " (filtered)" : ""
+                }`}
+          </p>
         </div>
+        <CollectionPageToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          newAction={{
+            label: "New Company",
+            onClick: handleCreate,
+          }}
+        >
+          <Button
+            onClick={fetchCompanies}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            aria-label="Refresh companies"
+          >
+            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </CollectionPageToolbar>
+      </div>
 
-        <CollectionFilterControls
-          className="mb-6"
-          definitions={collectionFilters.definitions}
-          search={collectionFilters.search}
-          onSearchChange={collectionFilters.setSearch}
-          searchPlaceholder="Search companies…"
-          facets={collectionFilters.facets}
-          onFacetChange={collectionFilters.setFacetValues}
-          numbers={collectionFilters.numbers}
-          onNumberRangeChange={collectionFilters.setNumberRange}
-          dates={collectionFilters.dates}
-          onDateRangeChange={collectionFilters.setDateRange}
-          resource={collectionFilters.resource}
-          filterState={collectionFilters.filterState}
-          onApplySavedView={collectionFilters.applyFilterState}
-          onClearAll={collectionFilters.clearFilters}
-          isFiltering={collectionFilters.isFiltering}
-          getOptions={collectionFilters.getOptions}
-          loadOptions={collectionFilters.loadOptions}
-        />
+      <CollectionFilterControls
+        className="mb-6"
+        definitions={collectionFilters.definitions}
+        search={collectionFilters.search}
+        onSearchChange={collectionFilters.setSearch}
+        searchPlaceholder="Search companies…"
+        facets={collectionFilters.facets}
+        onFacetChange={collectionFilters.setFacetValues}
+        numbers={collectionFilters.numbers}
+        onNumberRangeChange={collectionFilters.setNumberRange}
+        dates={collectionFilters.dates}
+        onDateRangeChange={collectionFilters.setDateRange}
+        resource={collectionFilters.resource}
+        filterState={collectionFilters.filterState}
+        onApplySavedView={collectionFilters.applyFilterState}
+        onClearAll={collectionFilters.clearFilters}
+        isFiltering={collectionFilters.isFiltering}
+        getOptions={collectionFilters.getOptions}
+        loadOptions={collectionFilters.loadOptions}
+      />
 
-        {error && (
-          <div className="mb-4 py-8 text-center text-destructive">{error}</div>
-        )}
+      {error && (
+        <div className="mb-4 py-8 text-center text-destructive">{error}</div>
+      )}
 
-        {viewMode === "list" && !error && renderCompanies("list")}
-        {viewMode === "kanban" && !error && (
-          <div className="flex min-h-0 flex-1 flex-col">{renderCompanies("kanban")}</div>
-        )}
+      {viewMode === "list" && !error && renderCompanies("list")}
+      {viewMode === "kanban" && !error && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {renderCompanies("kanban")}
+        </div>
+      )}
 
-        {viewMode === "card" && loading && companies.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">Loading…</div>
-        )}
+      {viewMode === "card" && loading && companies.length === 0 && (
+        <div className="py-8 text-center text-muted-foreground">Loading…</div>
+      )}
 
-        {viewMode === "card" && showEmpty && (
-          <div className="rounded-lg border border-dashed py-16 text-center">
-            <h3 className="text-xl font-medium">No companies yet</h3>
-            <p className="mt-2 text-muted-foreground">
-              Create your first company to get started.
-            </p>
-            <Button variant="default" className="mt-6" onClick={handleCreate}>
-              <Plus className="mr-2 size-4" />
-              Create Company
+      {viewMode === "card" && showEmpty && (
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <h3 className="text-xl font-medium">No companies yet</h3>
+          <p className="mt-2 text-muted-foreground">
+            Create your first company to get started.
+          </p>
+          <Button variant="default" className="mt-6" onClick={handleCreate}>
+            <Plus className="mr-2 size-4" />
+            Create Company
+          </Button>
+        </div>
+      )}
+
+      {viewMode === "card" &&
+        !showEmpty &&
+        !error &&
+        companies.length > 0 &&
+        renderCompanies("card")}
+
+      <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCompany ? "Edit Company" : "New Company"}
+            </DialogTitle>
+          </DialogHeader>
+          <CompanyForm
+            company={editingCompany}
+            onSuccess={handleFormSuccess}
+            onCancel={() => {
+              setFormDialogOpen(false);
+              setEditingCompany(undefined);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Company</DialogTitle>
+          </DialogHeader>
+          <p className="py-4">
+            Are you sure you want to delete{" "}
+            {companyToDelete?.company_name || companyToDelete?.name}? This
+            action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
             </Button>
           </div>
-        )}
-
-        {viewMode === "card" &&
-          !showEmpty &&
-          !error &&
-          companies.length > 0 &&
-          renderCompanies("card")}
-
-        <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCompany ? "Edit Company" : "New Company"}
-              </DialogTitle>
-            </DialogHeader>
-            <CompanyForm
-              company={editingCompany}
-              onSuccess={handleFormSuccess}
-              onCancel={() => {
-                setFormDialogOpen(false);
-                setEditingCompany(undefined);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Company</DialogTitle>
-            </DialogHeader>
-            <p className="py-4">
-              Are you sure you want to delete{" "}
-              {companyToDelete?.company_name || companyToDelete?.name}? This
-              action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </PageShell>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }

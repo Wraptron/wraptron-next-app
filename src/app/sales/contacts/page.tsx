@@ -113,7 +113,10 @@ function buildContactTableColumns(
       sortValue: (item) => {
         const c = byId.get(Number(item.id));
         if (!c) return "";
-        return [c.prefix, c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+        return [c.prefix, c.first_name, c.last_name]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
       },
       cell: (item) => {
         const c = byId.get(Number(item.id));
@@ -201,7 +204,10 @@ function buildContactTableColumns(
         const c = byId.get(Number(item.id));
         if (!c) return null;
         return (
-          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex justify-end"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ContactQuickActions contact={c} size="table" />
           </div>
         );
@@ -216,10 +222,20 @@ function buildContactTableColumns(
         if (!c) return null;
         return (
           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="sm" onClick={() => onEdit(c)} title="Edit">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(c)}
+              title="Edit"
+            >
               <Edit className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onDelete(c)} title="Delete">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(c)}
+              title="Delete"
+            >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -404,7 +420,10 @@ export default function ContactsPage() {
     collectionFilters.apiParams,
     { pageSize: CONTACTS_PAGE_SIZE },
   );
-  const [viewMode, setViewMode] = useCollectionViewMode("contacts_view_mode", "list");
+  const [viewMode, setViewMode] = useCollectionViewMode(
+    "contacts_view_mode",
+    "list",
+  );
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -501,9 +520,7 @@ export default function ContactsPage() {
         await contactsApi.update(id, { status: toColumnId });
       } catch (err) {
         setContacts((prev) =>
-          prev.map((c) =>
-            c.id === id ? { ...c, status: previousStatus } : c,
-          ),
+          prev.map((c) => (c.id === id ? { ...c, status: previousStatus } : c)),
         );
         console.error("Failed to update contact status:", err);
       }
@@ -519,17 +536,34 @@ export default function ContactsPage() {
         <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
           <CardContent className="p-3">
             <div className="mb-2 flex items-start justify-between">
-              <h4 className="text-sm font-semibold">{contactDisplayName(contact)}</h4>
-              <div className="ml-2 flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEdit(contact)}>
+              <h4 className="text-sm font-semibold">
+                {contactDisplayName(contact)}
+              </h4>
+              <div
+                className="ml-2 flex shrink-0 gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => handleEdit(contact)}
+                >
                   <Edit className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDelete(contact)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => handleDelete(contact)}
+                >
                   <Trash2 className="h-3 w-3 text-destructive" />
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">{contact.email || "No email"}</p>
+            <p className="text-xs text-muted-foreground">
+              {contact.email || "No email"}
+            </p>
             {contact.phone && (
               <p className="text-xs text-muted-foreground">{contact.phone}</p>
             )}
@@ -612,172 +646,168 @@ export default function ContactsPage() {
 
   const showEmpty = !loading && !error && contacts.length === 0;
 
-
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="mb-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
-              <p className="mt-1 text-muted-foreground">{countLabel}</p>
-              {loadingMore && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Loading more contacts…
-                </p>
-              )}
-              {backgroundError && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
-                  {backgroundError}
-                </p>
-              )}
-            </div>
-
-            <CollectionPageToolbar
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              newAction={{
-                label: "New Contact",
-                onClick: handleCreate,
-                menuItems: [
-                  {
-                    label: "Import",
-                    onClick: () => setImportSheetOpen(true),
-                    icon: <FileDown className="h-4 w-4" />,
-                  },
-                ],
-              }}
-              className="w-full md:w-auto"
-            />
+      <div className="mb-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
+            <p className="mt-1 text-muted-foreground">{countLabel}</p>
+            {loadingMore && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Loading more contacts…
+              </p>
+            )}
+            {backgroundError && (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
+                {backgroundError}
+              </p>
+            )}
           </div>
 
-          <CollectionFilterControls
-            definitions={collectionFilters.definitions}
-            search={collectionFilters.search}
-            onSearchChange={collectionFilters.setSearch}
-            searchPlaceholder="Search contacts…"
-            facets={collectionFilters.facets}
-            onFacetChange={collectionFilters.setFacetValues}
-            numbers={collectionFilters.numbers}
-            onNumberRangeChange={collectionFilters.setNumberRange}
-            dates={collectionFilters.dates}
-            onDateRangeChange={collectionFilters.setDateRange}
-            resource={collectionFilters.resource}
-            filterState={collectionFilters.filterState}
-            onApplySavedView={collectionFilters.applyFilterState}
-            onClearAll={collectionFilters.clearFilters}
-            isFiltering={collectionFilters.isFiltering}
-            getOptions={collectionFilters.getOptions}
-            loadOptions={collectionFilters.loadOptions}
+          <CollectionPageToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            newAction={{
+              label: "New Contact",
+              onClick: handleCreate,
+              menuItems: [
+                {
+                  label: "Import",
+                  onClick: () => setImportSheetOpen(true),
+                  icon: <FileDown className="h-4 w-4" />,
+                },
+              ],
+            }}
+            className="w-full md:w-auto"
           />
         </div>
 
-        {error && (
-          <div className="mb-4 py-8 text-center text-destructive">{error}</div>
-        )}
+        <CollectionFilterControls
+          definitions={collectionFilters.definitions}
+          search={collectionFilters.search}
+          onSearchChange={collectionFilters.setSearch}
+          searchPlaceholder="Search contacts…"
+          facets={collectionFilters.facets}
+          onFacetChange={collectionFilters.setFacetValues}
+          numbers={collectionFilters.numbers}
+          onNumberRangeChange={collectionFilters.setNumberRange}
+          dates={collectionFilters.dates}
+          onDateRangeChange={collectionFilters.setDateRange}
+          resource={collectionFilters.resource}
+          filterState={collectionFilters.filterState}
+          onApplySavedView={collectionFilters.applyFilterState}
+          onClearAll={collectionFilters.clearFilters}
+          isFiltering={collectionFilters.isFiltering}
+          getOptions={collectionFilters.getOptions}
+          loadOptions={collectionFilters.loadOptions}
+        />
+      </div>
 
-        {!showEmpty && !error && (
-          <>
-            <div className="md:hidden rounded-md border border-border bg-card divide-y divide-border">
-              {contacts.map((contact) => {
-                const name = contactDisplayName(contact);
-                const company = contactCompanyLine(contact);
-                return (
-                  <div
-                    key={contact.id}
-                    className="flex items-center gap-3 p-4"
+      {error && (
+        <div className="mb-4 py-8 text-center text-destructive">{error}</div>
+      )}
+
+      {!showEmpty && !error && (
+        <>
+          <div className="md:hidden rounded-md border border-border bg-card divide-y divide-border">
+            {contacts.map((contact) => {
+              const name = contactDisplayName(contact);
+              const company = contactCompanyLine(contact);
+              return (
+                <div key={contact.id} className="flex items-center gap-3 p-4">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => router.push(`/contacts/${contact.id}`)}
                   >
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => router.push(`/contacts/${contact.id}`)}
-                    >
-                      <div className="truncate font-medium text-foreground">
-                        {name}
-                      </div>
-                      {company ? (
-                        <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                          {company}
-                        </div>
-                      ) : null}
-                    </button>
-                    <div
-                      className="shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ContactQuickActions
-                        contact={contact}
-                        size="table"
-                        className="gap-2 justify-end"
-                      />
+                    <div className="truncate font-medium text-foreground">
+                      {name}
                     </div>
+                    {company ? (
+                      <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                        {company}
+                      </div>
+                    ) : null}
+                  </button>
+                  <div
+                    className="shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ContactQuickActions
+                      contact={contact}
+                      size="table"
+                      className="gap-2 justify-end"
+                    />
                   </div>
-                );
-              })}
-            </div>
-            <div
-              className={cn(
-                "hidden md:block",
-                viewMode === "kanban" && "flex min-h-0 flex-1 flex-col",
-              )}
-            >
-              {renderContacts(viewMode)}
-            </div>
-          </>
-        )}
+                </div>
+              );
+            })}
+          </div>
+          <div
+            className={cn(
+              "hidden md:block",
+              viewMode === "kanban" && "flex min-h-0 flex-1 flex-col",
+            )}
+          >
+            {renderContacts(viewMode)}
+          </div>
+        </>
+      )}
 
-        {showEmpty && (
-          <div className="rounded-lg border border-dashed py-16 text-center">
-            <h3 className="text-xl font-medium">No contacts yet</h3>
-            <p className="mt-2 text-muted-foreground">
-              Create your first contact to get started.
-            </p>
-            <Button variant="default" className="mt-6" onClick={handleCreate}>
-              <Plus className="mr-2 size-4" />
-              Create Contact
+      {showEmpty && (
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <h3 className="text-xl font-medium">No contacts yet</h3>
+          <p className="mt-2 text-muted-foreground">
+            Create your first contact to get started.
+          </p>
+          <Button variant="default" className="mt-6" onClick={handleCreate}>
+            <Plus className="mr-2 size-4" />
+            Create Contact
+          </Button>
+        </div>
+      )}
+
+      <ContactFormSheet
+        open={formDialogOpen}
+        onOpenChange={setFormDialogOpen}
+        onSuccess={handleFormSuccess}
+        contact={editingContact}
+      />
+      <ContactImportSheet
+        open={importSheetOpen}
+        onOpenChange={setImportSheetOpen}
+        onSuccess={handleFormSuccess}
+      />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Contact</DialogTitle>
+          </DialogHeader>
+          <p className="py-4">
+            Are you sure you want to delete{" "}
+            {contactToDelete && (
+              <>
+                {contactToDelete.prefix && `${contactToDelete.prefix} `}
+                {contactToDelete.first_name} {contactToDelete.last_name || ""}
+              </>
+            )}
+            ? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
             </Button>
           </div>
-        )}
-
-        <ContactFormSheet
-          open={formDialogOpen}
-          onOpenChange={setFormDialogOpen}
-          onSuccess={handleFormSuccess}
-          contact={editingContact}
-        />
-        <ContactImportSheet
-          open={importSheetOpen}
-          onOpenChange={setImportSheetOpen}
-          onSuccess={handleFormSuccess}
-        />
-
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Contact</DialogTitle>
-            </DialogHeader>
-            <p className="py-4">
-              Are you sure you want to delete{" "}
-              {contactToDelete && (
-                <>
-                  {contactToDelete.prefix && `${contactToDelete.prefix} `}
-                  {contactToDelete.first_name} {contactToDelete.last_name || ""}
-                </>
-              )}
-              ? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                Delete
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </PageShell>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }

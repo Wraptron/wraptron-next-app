@@ -1,3 +1,5 @@
-export default function Accounts() {
-  return null;
+import { redirect } from "next/navigation";
+
+export default function AccountsPage() {
+  redirect("/accounts/dashboard");
 }

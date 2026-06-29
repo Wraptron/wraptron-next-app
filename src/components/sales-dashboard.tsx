@@ -404,7 +404,7 @@ export function SalesDashboard() {
 
       <section
         aria-label="Sales metrics"
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4"
       >
         <MetricCard
           title="Pipeline value"
@@ -421,12 +421,18 @@ export function SalesDashboard() {
           loading={loading}
         />
         <MetricCard
+          title="Revenue per employee"
+          value={formatCurrency(dashboard?.revenue_per_employee ?? 0)}
+          description={`Closed-won revenue ÷ active employees · ${periodLabel.toLowerCase()}`}
+          icon={Users}
+          loading={loading}
+        />
+        <MetricCard
           title="Active deals"
           value={(dashboard?.active_deals ?? 0).toLocaleString()}
           description={`Deals updated ${periodLabel.toLowerCase()}`}
           icon={Target}
           loading={loading}
-          className="sm:col-span-2 lg:col-span-1"
         />
       </section>
 

@@ -226,8 +226,7 @@ export function CollectionView({
   primaryColumnId,
   getRowHref,
 }: CollectionViewProps) {
-  const columns =
-    columnsProp ?? buildDefaultColumns(items, columnLabels);
+  const columns = columnsProp ?? buildDefaultColumns(items, columnLabels);
   const resolvedPrimaryColumnId = primaryColumnId ?? columns[0]?.id;
   const selectionEnabled = selectable || !!onSelectedIdsChange;
   const colSpan = columns.length + (selectionEnabled ? 1 : 0);
@@ -265,8 +264,7 @@ export function CollectionView({
     });
   };
 
-  const allSelected =
-    items.length > 0 && selectedIds.length === items.length;
+  const allSelected = items.length > 0 && selectedIds.length === items.length;
   const someSelected =
     selectedIds.length > 0 && selectedIds.length < items.length;
   const headerChecked: boolean | "indeterminate" = allSelected
@@ -311,9 +309,7 @@ export function CollectionView({
     }
 
     if (isPrimary) {
-      return (
-        <span className="font-medium">{renderCellValue(value)}</span>
-      );
+      return <span className="font-medium">{renderCellValue(value)}</span>;
     }
 
     return renderCellValue(value);
@@ -354,7 +350,8 @@ export function CollectionView({
             {columns.map((column) => {
               const sortable = isColumnSortable(column);
               const isActive = sortConfig?.columnId === column.id;
-              const isRightAligned = column.headerClassName?.includes("text-right");
+              const isRightAligned =
+                column.headerClassName?.includes("text-right");
 
               return (
                 <TableHead
@@ -364,9 +361,7 @@ export function CollectionView({
                     sortable &&
                       "group cursor-pointer select-none transition-colors hover:bg-muted/50",
                   )}
-                  onClick={
-                    sortable ? () => handleSort(column) : undefined
-                  }
+                  onClick={sortable ? () => handleSort(column) : undefined}
                   aria-sort={
                     sortable && isActive
                       ? sortConfig.direction === "asc"
@@ -448,12 +443,11 @@ export function CollectionView({
                 <TableRow
                   key={item.id}
                   className={cn(
-                    (onRowClick || getRowHref) && "cursor-pointer hover:bg-muted/50",
+                    (onRowClick || getRowHref) &&
+                      "cursor-pointer hover:bg-muted/50",
                     isSelected && "bg-accent",
                   )}
-                  onClick={
-                    onRowClick ? () => onRowClick(item) : undefined
-                  }
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
                 >
                   {selectionEnabled && (
                     <TableCell
@@ -469,10 +463,7 @@ export function CollectionView({
                     </TableCell>
                   )}
                   {columns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className={column.className}
-                    >
+                    <TableCell key={column.id} className={column.className}>
                       {renderDataCell(item, column)}
                     </TableCell>
                   ))}

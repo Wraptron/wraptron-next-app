@@ -51,6 +51,8 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
+import { useAuth } from "@/contexts/auth-context";
+import { filterByStaffAccess } from "@/lib/nav-access";
 
 interface MenuItem {
   id: string;
@@ -308,6 +310,12 @@ const SETTINGS_MENU_ITEMS: MenuItem[] = [
 
 const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
   {
+    id: "accounts-dashboard",
+    label: "Dashboard",
+    icon: ChartPie,
+    href: "/accounts/dashboard",
+  },
+  {
     id: "sales-invoices",
     label: "Sales Invoices",
     icon: FileText,
@@ -338,6 +346,7 @@ const FEEDBACK_MAILTO = `mailto:dev@wraptron.com?subject=${encodeURIComponent("W
 export default function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [activeItem, setActiveItem] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -377,7 +386,10 @@ export default function SideNav() {
     };
   }, [aboutOpen]);
 
-  const allMenuItems = MAIN_MENU_ITEMS;
+  const allMenuItems = useMemo(
+    () => filterByStaffAccess(MAIN_MENU_ITEMS, user?.role),
+    [user?.role],
+  );
 
   // When on /projects, show Projects and Tasks in sidebar
   const isProjectsPage = pathname?.startsWith("/projects");
@@ -544,15 +556,9 @@ export default function SideNav() {
           }
         }
       }
-      // If on /accounts but no specific sub-route, default to first item
+      // If on /accounts but no specific sub-route, default to dashboard
       if (pathname === "/accounts") {
-        const firstItem = ACCOUNTS_MENU_ITEMS[0];
-        if (firstItem?.children?.[0]) {
-          setActiveItem(firstItem.children[0].id);
-          setExpandedItems((prev) => new Set(prev).add(firstItem.id));
-        } else if (firstItem) {
-          setActiveItem(firstItem.id);
-        }
+        setActiveItem(ACCOUNTS_MENU_ITEMS[0]?.id || "");
       }
       return;
     }

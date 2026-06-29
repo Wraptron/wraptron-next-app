@@ -47,6 +47,10 @@ import { DealImportSheet } from "@/components/deal-import-sheet";
 import { RefreshCw, Edit, Trash2, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/page-shell";
+import {
+  dealStageBadgeClass,
+  dealStatusBadgeClass,
+} from "@/lib/status-colors";
 
 const telHref = (phone: string) =>
   `tel:${phone.replace(/[^\d+]/g, "") || phone.trim()}`;
@@ -55,21 +59,34 @@ function dealDisplayTitle(deal: Deal) {
   return deal.title || deal.client_name || deal.client_company_name || "Deal";
 }
 
-function dealToCollectionItem(deal: Deal): CollectionItem {
+function formatDealValue(
+  deal: Deal,
+  formatCurrency: (value?: number, currencyOverride?: string) => string,
+): string {
+  return deal.value != null ? formatCurrency(deal.value, deal.currency) : "—";
+}
+
+function dealToCollectionItem(
+  deal: Deal,
+  formatCurrency: (value?: number, currencyOverride?: string) => string,
+): CollectionItem {
   return {
     id: deal.id,
     title: dealDisplayTitle(deal),
     description: deal.contact_name || "No contact",
-    meta: `${deal.probability ?? 0}% probability`,
+    meta: formatDealValue(deal, formatCurrency),
     actions: deal.status ? (
-      <Badge variant="outline" className="text-[10px] px-1 py-0">
+      <Badge className={cn(dealStatusBadgeClass(deal.status), "text-[10px] px-1 py-0")}>
         {deal.status}
       </Badge>
     ) : undefined,
   };
 }
 
-function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
+function buildDealTableColumns(
+  deals: Deal[],
+  formatCurrency: (value?: number, currencyOverride?: string) => string,
+): CollectionColumn[] {
   const byId = new Map(deals.map((d) => [d.id, d]));
 
   return [
@@ -91,6 +108,17 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
       header: "Contact",
       sortValue: (item) => byId.get(Number(item.id))?.contact_name ?? "",
       cell: (item) => byId.get(Number(item.id))?.contact_name || "—",
+    },
+    {
+      id: "value",
+      header: "Value",
+      headerClassName: "text-right",
+      className: "text-right tabular-nums font-medium",
+      sortValue: (item) => byId.get(Number(item.id))?.value ?? 0,
+      cell: (item) => {
+        const deal = byId.get(Number(item.id));
+        return deal ? formatDealValue(deal, formatCurrency) : "—";
+      },
     },
     {
       id: "phone",
@@ -117,7 +145,7 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
       cell: (item) => {
         const deal = byId.get(Number(item.id));
         if (!deal?.stage) return "—";
-        return <Badge variant="outline">{deal.stage}</Badge>;
+        return <Badge className={dealStageBadgeClass(deal.stage)}>{deal.stage}</Badge>;
       },
     },
     {
@@ -127,7 +155,7 @@ function buildDealTableColumns(deals: Deal[]): CollectionColumn[] {
       cell: (item) => {
         const deal = byId.get(Number(item.id));
         if (!deal?.status) return "—";
-        return <Badge variant="outline">{deal.status}</Badge>;
+        return <Badge className={dealStatusBadgeClass(deal.status)}>{deal.status}</Badge>;
       },
     },
     {
@@ -147,11 +175,13 @@ const sentenceCase = (s: string) =>
 
 const DealCard = ({
   deal,
+  formatCurrency,
   onEdit,
   onDelete,
   onCardClick,
 }: {
   deal: Deal;
+  formatCurrency: (value?: number, currencyOverride?: string) => string;
   onEdit?: () => void;
   onDelete?: () => void;
   onCardClick?: () => void;
@@ -182,12 +212,22 @@ const DealCard = ({
           </div>
         </div>
         <div className="flex gap-2 mt-2">
-          <Badge variant="outline">{deal.stage || "No stage"}</Badge>
-          <Badge variant="outline">{deal.status || "No status"}</Badge>
+          <Badge className={dealStageBadgeClass(deal.stage)}>
+            {deal.stage || "No stage"}
+          </Badge>
+          <Badge className={dealStatusBadgeClass(deal.status)}>
+            {deal.status || "No status"}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Value:</span>
+            <span className="font-medium tabular-nums">
+              {formatDealValue(deal, formatCurrency)}
+            </span>
+          </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Contact:</span>
             <span>{deal.contact_name || "N/A"}</span>
@@ -248,11 +288,13 @@ const DealCard = ({
 
 const DealKanbanCard = ({
   deal,
+  formatCurrency,
   onEdit,
   onDelete,
   onCardClick,
 }: {
   deal: Deal;
+  formatCurrency: (value?: number, currencyOverride?: string) => string;
   onEdit?: () => void;
   onDelete?: () => void;
   onCardClick?: () => void;
@@ -312,9 +354,12 @@ const DealKanbanCard = ({
         </div>
       </div>
       <div className="flex justify-between items-center mb-2">
-        <Badge variant="outline" className="text-[10px] px-1 py-0">
+        <Badge className={cn(dealStatusBadgeClass(deal.status), "text-[10px] px-1 py-0")}>
           {deal.status}
         </Badge>
+        <span className="text-xs font-medium tabular-nums">
+          {formatDealValue(deal, formatCurrency)}
+        </span>
       </div>
       <div className="text-xs text-muted-foreground">
         <div className="truncate">{deal.contact_name || "No contact"}</div>
@@ -476,13 +521,16 @@ export default function DealsPage() {
   };
 
   const collectionItems = useMemo(
-    () => deals.map(dealToCollectionItem),
-    [deals],
+    () => deals.map((deal) => dealToCollectionItem(deal, formatCurrency)),
+    [deals, formatCurrency],
   );
 
   const dealById = useMemo(() => new Map(deals.map((d) => [d.id, d])), [deals]);
 
-  const dealTableColumns = useMemo(() => buildDealTableColumns(deals), [deals]);
+  const dealTableColumns = useMemo(
+    () => buildDealTableColumns(deals, formatCurrency),
+    [deals, formatCurrency],
+  );
 
   const dealKanbanColumns = useMemo((): CollectionKanbanColumn[] => {
     const cols =
@@ -595,6 +643,7 @@ export default function DealsPage() {
             return (
               <DealKanbanCard
                 deal={deal}
+                formatCurrency={formatCurrency}
                 onEdit={() => handleEdit(deal)}
                 onDelete={() => handleDelete(deal)}
                 onCardClick={() => router.push(`/sales/deals/${deal.id}`)}
@@ -623,6 +672,7 @@ export default function DealsPage() {
           <DealCard
             key={deal.id}
             deal={deal}
+            formatCurrency={formatCurrency}
             onEdit={() => handleEdit(deal)}
             onDelete={() => handleDelete(deal)}
             onCardClick={() => router.push(`/sales/deals/${deal.id}`)}

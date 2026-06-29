@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { userAppsApi, type UserApp } from "@/lib/api";
+import { filterByStaffAccess } from "@/lib/nav-access";
 import {
   Dialog,
   DialogContent,
@@ -159,7 +160,10 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
   const lucideIconClass = isCompact ? "w-6 h-6" : "w-8 h-8";
   const userFaviconIconClass = isCompact ? "w-6 h-6" : "w-7 h-7";
 
-  const builtinApps = useMemo(() => BUILTIN_APPS, []);
+  const builtinApps = useMemo(
+    () => filterByStaffAccess(BUILTIN_APPS, user?.role),
+    [user?.role],
+  );
 
   const loadUserApps = useCallback(async () => {
     if (!user) {

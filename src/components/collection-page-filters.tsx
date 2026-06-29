@@ -14,7 +14,9 @@ export type CollectionPageFiltersProps = {
   definitions?: CollectionFilterDefinition[];
   searchPlaceholder?: string;
   className?: string;
-  children?: (filters: ReturnType<typeof useCollectionPageFilters>) => React.ReactNode;
+  children?: (
+    filters: ReturnType<typeof useCollectionPageFilters>,
+  ) => React.ReactNode;
 };
 
 export function CollectionPageFilters({
@@ -24,7 +26,8 @@ export function CollectionPageFilters({
   className,
   children,
 }: CollectionPageFiltersProps) {
-  const definitions = definitionsProp ?? getCollectionFilterDefinitions(resource);
+  const definitions =
+    definitionsProp ?? getCollectionFilterDefinitions(resource);
   const filters = useCollectionPageFilters(resource, definitions);
 
   if (children) {

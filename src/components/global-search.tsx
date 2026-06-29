@@ -32,6 +32,7 @@ import {
 } from "@/lib/api";
 import { EMPLOYEES_BASE_PATH } from "@/lib/employee-routes";
 import { filterAppSearchRoutes } from "@/lib/app-search-routes";
+import { canAccessStaffRoutes } from "@/lib/nav-access";
 import { useAuth } from "@/contexts/auth-context";
 
 type ResultKind =
@@ -74,17 +75,17 @@ export function GlobalSearch() {
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const staffAccess = canAccessStaffRoutes(user?.role);
 
   const pageResults: SearchResultItem[] = React.useMemo(() => {
-    return filterAppSearchRoutes(query, { isAdmin }).map((r) => ({
+    return filterAppSearchRoutes(query, { role: user?.role }).map((r) => ({
       key: `page-${r.href}`,
       kind: "page" as const,
       title: r.label,
       subtitle: r.section,
       url: r.href,
     }));
-  }, [query, isAdmin]);
+  }, [query, user?.role]);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -98,7 +99,7 @@ export function GlobalSearch() {
   }, []);
 
   React.useEffect(() => {
-    if (!query || query.trim().length < REMOTE_MIN_QUERY_LEN) {
+    if (!staffAccess || !query || query.trim().length < REMOTE_MIN_QUERY_LEN) {
       setRemoteResults([]);
       setLoading(false);
       return;
@@ -232,7 +233,7 @@ export function GlobalSearch() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [query]);
+  }, [query, staffAccess]);
 
   const allResults = React.useMemo(
     () => [...pageResults, ...remoteResults],
@@ -249,10 +250,9 @@ export function GlobalSearch() {
   }, [allResults]);
 
   const sortedGroupEntries = React.useMemo(() => {
-    return KIND_ORDER.filter((k) => groupedResults[k]?.length).map((k) => [
-      k,
-      groupedResults[k],
-    ] as const);
+    return KIND_ORDER.filter((k) => groupedResults[k]?.length).map(
+      (k) => [k, groupedResults[k]] as const,
+    );
   }, [groupedResults]);
 
   const handleSelect = (item: SearchResultItem) => {
