@@ -10,6 +10,7 @@ import {
   Palette,
   Languages,
   Globe2,
+  Bell,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
 import { AppLauncherGrid } from "@/components/app-launcher-grid";
 import { canAccessStaffRoutes } from "@/lib/nav-access";
+import { PORTAL_NOTIFICATIONS_HREF } from "@/lib/portal-nav";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
@@ -101,8 +103,15 @@ export default function TopNavbar() {
           )}
         </div>
 
-        {/* Right side - Command, Notifications and Profile */}
+        {/* Right side - Settings, notifications (portal), apps, profile */}
         <div className="flex items-center space-x-4">
+          {!canAccessStaffRoutes(user?.role) ? (
+            <Link href={PORTAL_NOTIFICATIONS_HREF}>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Notifications">
+                <Bell className="h-5 w-5" />
+              </Button>
+            </Link>
+          ) : null}
           <div>
             <Link href="/settings">
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0">

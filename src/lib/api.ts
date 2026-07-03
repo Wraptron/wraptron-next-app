@@ -302,6 +302,8 @@ export interface Project {
   project_manager_employee_id?: number | null;
   project_sponsor_contact_id?: number | null;
   project_staff_employee_ids?: number[];
+  /** Portal users (`users.id` with role `user`) granted read access. */
+  project_user_ids?: number[];
   product_template_name?: string | null;
   product_template_part_code?: string | null;
   manager_first_name?: string | null;
@@ -326,6 +328,9 @@ export interface StaffManagerUser {
   last_name: string | null;
   role: string;
 }
+
+/** Client portal user; granted per-project read access via `project_user_ids`. */
+export type PortalUser = StaffManagerUser;
 
 export interface CreateProjectInput {
   project_name: string;
@@ -357,6 +362,7 @@ export interface CreateProjectInput {
   project_manager_employee_id?: number | null;
   project_sponsor_contact_id?: number | null;
   project_staff_employee_ids?: number[];
+  project_user_ids?: number[];
   tasks?: Array<{
     title: string;
     description?: string;
@@ -481,6 +487,11 @@ export const projectsApi = {
     return fetchApi<{ data: StaffManagerUser[] }>(
       "/api/projects/staff-managers",
     );
+  },
+
+  /** Active client portal users (role `user`) for project access assignment. */
+  getPortalUsers: async (): Promise<{ data: PortalUser[] }> => {
+    return fetchApi<{ data: PortalUser[] }>("/api/projects/portal-users");
   },
 
   // Create task for project
@@ -856,6 +867,11 @@ export interface Product {
   customer_packaging_specs?: string;
   customer_dispatch_requirements?: string;
   status: string;
+  category_id?: number;
+  category_name?: string;
+  is_featured?: boolean;
+  featured_sort_order?: number;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -908,6 +924,41 @@ export interface CreateProductInput {
   customer_packaging_specs?: string;
   customer_dispatch_requirements?: string;
   status?: string;
+  category_id?: number;
+  is_featured?: boolean;
+  featured_sort_order?: number;
+  image_url?: string;
+}
+
+export interface ProductCategory {
+  id: number;
+  name: string;
+  slug: string;
+  sort_order: number;
+}
+
+export interface CatalogProduct {
+  id: number;
+  part_code: string;
+  part_name: string;
+  product_description?: string;
+  selling_price?: number;
+  uom?: string;
+  image_url?: string;
+  is_featured: boolean;
+  featured_sort_order: number;
+  category_id?: number;
+  category_name?: string;
+  category_slug?: string;
+}
+
+export interface ProductCatalogResponse {
+  featured: CatalogProduct[];
+  categories: Array<{
+    category: ProductCategory;
+    products: CatalogProduct[];
+  }>;
+  active_products: CatalogProduct[];
 }
 
 export interface ProductsResponse {
@@ -918,6 +969,10 @@ export interface ProductsResponse {
 }
 
 export const productsApi = {
+  getCatalog: async (): Promise<ProductCatalogResponse> => {
+    return fetchApi<ProductCatalogResponse>("/api/products/catalog");
+  },
+
   getAll: async (
     params?: CollectionListQueryParams,
   ): Promise<ProductsResponse> => {

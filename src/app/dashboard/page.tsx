@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { Dashboard, type DashboardModule } from "@/components/dashboard";
+import { ClientPortalHome } from "@/components/portal/client-portal-home";
+import { useAuth } from "@/contexts/auth-context";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { canAccessStaffRoutes } from "@/lib/nav-access";
 
 const DASHBOARD_MODULES: DashboardModule[] = [
   {
@@ -75,11 +78,21 @@ const DASHBOARD_MODULES: DashboardModule[] = [
 
 export default function DashboardPage() {
   const { setTitle } = usePageTitle();
+  const { user } = useAuth();
+  const isStaff = canAccessStaffRoutes(user?.role);
 
   useEffect(() => {
     setTitle("Dashboard");
     return () => setTitle(null);
-  }, [setTitle]);
+  }, [setTitle, isStaff]);
+
+  if (!isStaff) {
+    return (
+      <Dashboard title="Welcome back" description="">
+        <ClientPortalHome />
+      </Dashboard>
+    );
+  }
 
   return (
     <Dashboard

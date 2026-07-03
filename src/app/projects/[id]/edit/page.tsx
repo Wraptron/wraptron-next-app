@@ -8,6 +8,7 @@ import {
   contactsApi,
   type Employee,
   type Contact,
+  type PortalUser,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +119,7 @@ interface ProjectFormData {
   project_manager_employee_id: number | null;
   project_sponsor_contact_id: number | null;
   project_staff_employee_ids: number[];
+  project_user_ids: number[];
   other_service_description: string;
   planned_date: string;
   target_date: string;
@@ -160,6 +162,7 @@ export default function EditProjectPage({
   const [showPageViewDropdown, setShowPageViewDropdown] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
 
   // Fetch objectives from API on component mount
   useEffect(() => {
@@ -174,12 +177,13 @@ export default function EditProjectPage({
         }
         setProjectId(id);
 
-        const [project, objResponse, employeesResponse, contactsResponse] =
+        const [project, objResponse, employeesResponse, contactsResponse, portalUsersResponse] =
           await Promise.all([
             projectsApi.getById(id),
             projectsApi.getObjectives(),
             employeesApi.getAll({ limit: 500 }),
             contactsApi.getAll({ limit: 500 }),
+            projectsApi.getPortalUsers(),
           ]);
 
         // Populate form data
@@ -190,6 +194,7 @@ export default function EditProjectPage({
           project_manager_employee_id: project.project_manager_employee_id ?? null,
           project_sponsor_contact_id: project.project_sponsor_contact_id ?? null,
           project_staff_employee_ids: project.project_staff_employee_ids || [],
+          project_user_ids: project.project_user_ids || [],
           other_service_description: project.other_service_description || "",
           planned_date: project.start_date
             ? project.start_date.split("T")[0]
@@ -227,6 +232,7 @@ export default function EditProjectPage({
         }
         setEmployees(employeesResponse.data || []);
         setContacts(contactsResponse.data || []);
+        setPortalUsers(portalUsersResponse.data || []);
       } catch (err) {
         console.error("Error initializing edit page:", err);
         setError("Failed to load project details");
@@ -242,6 +248,7 @@ export default function EditProjectPage({
     project_manager_employee_id: null,
     project_sponsor_contact_id: null,
     project_staff_employee_ids: [],
+    project_user_ids: [],
     other_service_description: "",
     planned_date: new Date().toISOString().split("T")[0],
     target_date: "",
@@ -289,6 +296,7 @@ export default function EditProjectPage({
         project_manager_employee_id: formData.project_manager_employee_id,
         project_sponsor_contact_id: formData.project_sponsor_contact_id,
         project_staff_employee_ids: formData.project_staff_employee_ids,
+        project_user_ids: formData.project_user_ids,
         other_service_description:
           formData.other_service_description || undefined,
         start_date: formData.planned_date,
@@ -589,6 +597,62 @@ export default function EditProjectPage({
                       </label>
                     );
                   })}
+                </div>
+              </div>
+
+              <div>
+                <Label>Portal access</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  Client users who can view this project in the portal.
+                </p>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-md border p-3 space-y-2">
+                  {portalUsers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No active client portal users found.
+                    </p>
+                  ) : (
+                    portalUsers.map((user) => {
+                      const checked = formData.project_user_ids.includes(user.id);
+                      const label = [user.first_name, user.last_name]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
+                      return (
+                        <label
+                          key={user.id}
+                          className="flex items-center space-x-2 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  project_user_ids: [
+                                    ...formData.project_user_ids,
+                                    user.id,
+                                  ],
+                                });
+                                return;
+                              }
+                              setFormData({
+                                ...formData,
+                                project_user_ids: formData.project_user_ids.filter(
+                                  (id) => id !== user.id,
+                                ),
+                              });
+                            }}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm text-foreground">
+                            {label || user.email}
+                            {label ? ` · ${user.email}` : ""}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 

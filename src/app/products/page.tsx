@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
@@ -30,6 +30,7 @@ import { statusBadgeClass, kanbanColumnHeaderClass } from "@/lib/status-colors";
 import { PageShell } from "@/components/page-shell";
 import { cn } from "@/lib/utils";
 import { ProductFormSheet } from "@/components/product-form-sheet";
+import { ProductFeaturedToggle } from "@/components/product-featured-toggle";
 
 const KANBAN_COLUMNS: CollectionKanbanColumn[] = [
   {
@@ -83,10 +84,31 @@ function productToCollectionItem(product: Product): CollectionItem {
   };
 }
 
-function buildProductTableColumns(products: Product[]): CollectionColumn[] {
+function buildProductTableColumns(
+  products: Product[],
+  onToggleFeatured: (productId: number, nextFeatured: boolean) => Promise<void>,
+): CollectionColumn[] {
   const byId = new Map(products.map((p) => [p.id, p]));
 
   return [
+    {
+      id: "featured",
+      header: "",
+      headerClassName: "w-[44px]",
+      className: "w-[44px]",
+      sortable: false,
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        if (!product) return null;
+        return (
+          <ProductFeaturedToggle
+            productId={product.id}
+            isFeatured={Boolean(product.is_featured)}
+            onToggle={onToggleFeatured}
+          />
+        );
+      },
+    },
     {
       id: "part_code",
       header: "Part code",
@@ -177,13 +199,27 @@ function buildProductTableColumns(products: Product[]): CollectionColumn[] {
   ];
 }
 
-function ProductKanbanCard({ product }: { product: Product }) {
+function ProductKanbanCard({
+  product,
+  onToggleFeatured,
+}: {
+  product: Product;
+  onToggleFeatured: (productId: number, nextFeatured: boolean) => Promise<void>;
+}) {
   return (
     <Card className="mb-0 gap-0 rounded-lg border border-border bg-card py-0 text-card-foreground shadow-none transition-colors hover:bg-accent/30">
       <CardContent className="p-3">
-        <h4 className="mb-2 text-sm font-semibold text-foreground">
-          {product.part_name}
-        </h4>
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {product.part_name}
+          </h4>
+          <ProductFeaturedToggle
+            productId={product.id}
+            isFeatured={Boolean(product.is_featured)}
+            onToggle={onToggleFeatured}
+            size="sm"
+          />
+        </div>
         <Badge className={statusBadgeClass(product.status)}>
           {product.status || "No status"}
         </Badge>
@@ -241,6 +277,14 @@ export default function ProductsPage() {
   );
   const [productSheetOpen, setProductSheetOpen] = useState(false);
 
+  const handleToggleFeatured = useCallback(
+    async (productId: number, nextFeatured: boolean) => {
+      await productsApi.update(productId, { is_featured: nextFeatured });
+      await fetchProducts();
+    },
+    [fetchProducts],
+  );
+
   useEffect(() => {
     setTitle("Products");
     return () => setTitle(null);
@@ -267,8 +311,8 @@ export default function ProductsPage() {
   );
 
   const productTableColumns = useMemo(
-    () => buildProductTableColumns(products),
-    [products],
+    () => buildProductTableColumns(products, handleToggleFeatured),
+    [products, handleToggleFeatured],
   );
 
   const productById = useMemo(
@@ -302,7 +346,12 @@ export default function ProductsPage() {
           getRowHref={getProductHref}
           renderCard={(item) => {
             const product = productById.get(Number(item.id));
-            return product ? <ProductKanbanCard product={product} /> : null;
+            return product ? (
+              <ProductKanbanCard
+                product={product}
+                onToggleFeatured={handleToggleFeatured}
+              />
+            ) : null;
           }}
           loadingMessage="Loading products…"
           emptyMessage="No products found."

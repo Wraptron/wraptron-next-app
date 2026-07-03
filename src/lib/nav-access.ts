@@ -1,15 +1,18 @@
 /**
  * Navigation and route access for role `user` vs `staff` / `admin`.
- * Regular users only see dashboard, invoices, hiring, and settings.
+ * Regular users see the client portal sidebar; settings is in the top nav.
  */
 
 export const STAFF_ONLY_MENU_IDS = new Set([
   "customers",
   "projects",
   "products",
+  "hiring",
   "accounts",
+  "invoices",
   "workspace",
   "human-resource",
+  "settings",
   "crm",
   "human-resources",
 ]);
@@ -24,7 +27,21 @@ const STAFF_ONLY_PATH_PREFIXES = [
   "/accounts",
   "/workspace",
   "/hr",
+  "/hiring",
+  "/invoices",
 ] as const;
+
+/** Paths reserved for the client portal — allowed for role `user`. */
+const CLIENT_PORTAL_PATH_PREFIXES = ["/portal"] as const;
+
+export function isClientPortalPath(pathname: string): boolean {
+  return (
+    pathname === "/dashboard" ||
+    CLIENT_PORTAL_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  );
+}
 
 export function normalizeRole(role?: string | null): string {
   return (role ?? "user").toLowerCase();
@@ -42,6 +59,7 @@ export function isApplicationsHomePath(pathname: string): boolean {
 
 export function isStaffOnlyPath(pathname: string): boolean {
   if (isApplicationsHomePath(pathname)) return true;
+  if (isClientPortalPath(pathname)) return false;
   return STAFF_ONLY_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -65,6 +83,8 @@ const STAFF_ONLY_QUICK_LINK_HREFS = new Set([
   "/products",
   "/accounts",
   "/workspace/attendance",
+  "/invoices",
+  "/settings",
 ]);
 
 const STAFF_ONLY_QUICK_LINK_PREFIXES = ["/hr"] as const;

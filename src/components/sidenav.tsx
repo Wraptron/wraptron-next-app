@@ -52,8 +52,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { useAuth } from "@/contexts/auth-context";
-import { filterByStaffAccess } from "@/lib/nav-access";
-
+import { canAccessStaffRoutes, filterByStaffAccess } from "@/lib/nav-access";
+import { CLIENT_PORTAL_MENU_ITEMS, PORTAL_RESOURCES_HREF } from "@/lib/portal-nav";
 interface MenuItem {
   id: string;
   label: string;
@@ -88,7 +88,7 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/products",
   },
   {
-    id: "hiring", // Keeping this as is, maybe redundant with workspace but user didn't ask to remove
+    id: "hiring",
     label: "Hiring",
     icon: Users,
     href: "/hiring",
@@ -356,6 +356,7 @@ export default function SideNav() {
     { heading: string; items: string[] }[]
   >([]);
   const [aboutNotesLoading, setAboutNotesLoading] = useState(false);
+  const isClientPortalUser = !canAccessStaffRoutes(user?.role);
 
   useEffect(() => {
     if (!aboutOpen) return;
@@ -386,10 +387,12 @@ export default function SideNav() {
     };
   }, [aboutOpen]);
 
-  const allMenuItems = useMemo(
-    () => filterByStaffAccess(MAIN_MENU_ITEMS, user?.role),
-    [user?.role],
-  );
+  const allMenuItems = useMemo(() => {
+    if (!canAccessStaffRoutes(user?.role)) {
+      return CLIENT_PORTAL_MENU_ITEMS;
+    }
+    return filterByStaffAccess(MAIN_MENU_ITEMS, user?.role);
+  }, [user?.role]);
 
   // When on /projects, show Projects and Tasks in sidebar
   const isProjectsPage = pathname?.startsWith("/projects");
@@ -437,7 +440,7 @@ export default function SideNav() {
     menuItems = HUMAN_RESOURCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
-  } else if (isSettingsPage) {
+  } else if (isSettingsPage && canAccessStaffRoutes(user?.role)) {
     menuItems = SETTINGS_MENU_ITEMS;
   } else {
     menuItems = allMenuItems;
@@ -563,7 +566,7 @@ export default function SideNav() {
       return;
     }
 
-    if (isSettingsPage) {
+    if (isSettingsPage && canAccessStaffRoutes(user?.role)) {
       setActiveItem((prev) => prev || SETTINGS_MENU_ITEMS[0]?.id || "");
       return;
     }
@@ -581,6 +584,7 @@ export default function SideNav() {
     isEmployeeManagementSection,
     isWorkspacePage,
     isSettingsPage,
+    user?.role,
   ]);
 
   const handleItemClick = (
@@ -740,7 +744,11 @@ export default function SideNav() {
         {/* Menu Items - Scrollable */}
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
-            {menuItems.map((item) => renderMenuItem(item))}
+            {menuItems.map((item) => (
+              <React.Fragment key={item.id}>
+                {renderMenuItem(item)}
+              </React.Fragment>
+            ))}
           </ul>
         </nav>
 
@@ -758,6 +766,29 @@ export default function SideNav() {
                 : "flex-row items-center justify-center",
             )}
           >
+            {isClientPortalUser ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 text-sidebar-foreground",
+                      pathname?.startsWith(PORTAL_RESOURCES_HREF) &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground",
+                    )}
+                    aria-label="Resources"
+                    onClick={() => router.push(PORTAL_RESOURCES_HREF)}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  Resources
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
