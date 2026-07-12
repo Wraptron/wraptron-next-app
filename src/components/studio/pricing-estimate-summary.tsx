@@ -97,16 +97,18 @@ export function PricingEstimateSummary({
 
           <Separator />
 
-          <div className="flex items-baseline justify-between">
-            <span className="text-base font-semibold">Total estimate</span>
-            <span className="text-2xl font-bold tabular-nums text-primary">
-              {formatCurrency(estimate.total)}
-            </span>
+          <div className="space-y-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-base font-semibold">Total estimate</span>
+              <span className="text-2xl font-bold tabular-nums text-primary">
+                {formatCurrency(Math.round(estimate.total * 0.9))} – {formatCurrency(Math.round(estimate.total * 1.1))}
+              </span>
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Indicative pricing only. Final quotes may vary after discovery and
-            technical review.
+            Range reflects ±10% variance. Final quotes may vary after discovery
+            and technical review.
           </p>
         </CardContent>
       </Card>

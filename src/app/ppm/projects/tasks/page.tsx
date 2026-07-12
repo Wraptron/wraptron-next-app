@@ -27,7 +27,16 @@ import {
   LayoutGrid,
   Columns3,
   Repeat,
+  Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   projectsApi,
   employeesApi,
@@ -50,6 +59,10 @@ import {
 type TaskWithProject = Task & { project_name: string };
 
 type ViewMode = "list" | "card" | "kanban";
+
+function getTaskKey(task: Pick<TaskWithProject, "project_id" | "id">) {
+  return `${task.project_id}-${task.id}`;
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
@@ -112,17 +125,35 @@ function loadData(
 const TaskCard = ({
   task,
   onOpen,
+  selected,
+  onSelectChange,
 }: {
   task: TaskWithProject;
   onOpen: () => void;
+  selected?: boolean;
+  onSelectChange?: (checked: boolean) => void;
 }) => (
   <Card
-    className="hover:shadow-md transition-shadow cursor-pointer"
+    className={`hover:shadow-md transition-shadow cursor-pointer ${
+      selected ? "ring-2 ring-primary/50 bg-primary/5" : ""
+    }`}
     onClick={onOpen}
   >
     <CardHeader className="pb-2">
       <div className="flex items-start justify-between gap-2">
-        <CardTitle className="text-base">{task.title || "Untitled"}</CardTitle>
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          {onSelectChange && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onSelectChange(e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-input text-primary focus:ring-ring"
+              aria-label={`Select ${task.title || "task"}`}
+            />
+          )}
+          <CardTitle className="text-base">{task.title || "Untitled"}</CardTitle>
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           {task.is_recurring && (
             <Badge variant="secondary" className="text-xs">
@@ -169,17 +200,35 @@ const TaskCard = ({
 const TaskKanbanCard = ({
   task,
   onOpen,
+  selected,
+  onSelectChange,
 }: {
   task: TaskWithProject;
   onOpen: () => void;
+  selected?: boolean;
+  onSelectChange?: (checked: boolean) => void;
 }) => (
   <Card
-    className="mb-3 cursor-pointer border border-border bg-card shadow-none transition-shadow hover:shadow-md"
+    className={`mb-3 cursor-pointer border border-border bg-card shadow-none transition-shadow hover:shadow-md ${
+      selected ? "ring-2 ring-primary/50 bg-primary/5" : ""
+    }`}
     onClick={onOpen}
   >
     <CardContent className="p-3">
       <div className="flex items-start justify-between gap-1 mb-1">
-        <h4 className="font-medium text-sm flex-1 line-clamp-2">{task.title || "Untitled"}</h4>
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          {onSelectChange && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onSelectChange(e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-input text-primary focus:ring-ring"
+              aria-label={`Select ${task.title || "task"}`}
+            />
+          )}
+          <h4 className="font-medium text-sm flex-1 line-clamp-2">{task.title || "Untitled"}</h4>
+        </div>
         {task.is_recurring && (
           <Repeat className="h-3.5 w-3 text-muted-foreground shrink-0" />
         )}
@@ -199,6 +248,11 @@ export default function ProjectsTasksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [selectedTaskKeys, setSelectedTaskKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("tasks_page_view_mode");
@@ -280,6 +334,56 @@ export default function ProjectsTasksPage() {
     router.push(`/projects/${task.project_id}/tasks/${task.id}`);
   };
 
+  const toggleSelect = (task: TaskWithProject) => {
+    const key = getTaskKey(task);
+    setSelectedTaskKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (visibleTasks: TaskWithProject[]) => {
+    if (visibleTasks.length === 0) return;
+    const visibleKeys = visibleTasks.map(getTaskKey);
+    const allSelected = visibleKeys.every((key) => selectedTaskKeys.has(key));
+    setSelectedTaskKeys((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        visibleKeys.forEach((key) => next.delete(key));
+      } else {
+        visibleKeys.forEach((key) => next.add(key));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTaskKeys.size === 0) return;
+
+    const tasksToDelete = tasks.filter((task) =>
+      selectedTaskKeys.has(getTaskKey(task)),
+    );
+
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        tasksToDelete.map((task) =>
+          projectsApi.deleteTask(task.project_id, task.id),
+        ),
+      );
+      setSelectedTaskKeys(new Set());
+      setDeleteDialogOpen(false);
+      refreshTasks();
+    } catch {
+      setError("Failed to delete selected tasks");
+      setDeleteDialogOpen(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getTasksByStatus = (visibleTasks: TaskWithProject[]) => {
     const grouped: Record<string, TaskWithProject[]> = {
       pending: [],
@@ -304,12 +408,25 @@ export default function ProjectsTasksPage() {
   };
 
   const renderContent = (visibleTasks: TaskWithProject[]) => {
+    const allVisibleSelected =
+      visibleTasks.length > 0 &&
+      visibleTasks.every((task) => selectedTaskKeys.has(getTaskKey(task)));
+
     if (viewMode === "list") {
       return (
         <div className="rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={() => toggleSelectAll(visibleTasks)}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                    aria-label="Select all tasks"
+                  />
+                </TableHead>
                 <TableHead className="w-[300px]">Task</TableHead>
                 <TableHead>Project</TableHead>
                 <TableHead>Status</TableHead>
@@ -320,17 +437,31 @@ export default function ProjectsTasksPage() {
             <TableBody>
               {visibleTasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     {isFiltering ? "No tasks match your filters." : "No tasks yet."}
                   </TableCell>
                 </TableRow>
               ) : (
-                visibleTasks.map((task) => (
+                visibleTasks.map((task) => {
+                  const taskKey = getTaskKey(task);
+                  const isSelected = selectedTaskKeys.has(taskKey);
+                  return (
                   <TableRow
-                    key={`${task.project_id}-${task.id}`}
-                    className="cursor-pointer hover:bg-muted/50"
+                    key={taskKey}
+                    className={`cursor-pointer hover:bg-muted/50 ${
+                      isSelected ? "bg-primary/10" : ""
+                    }`}
                     onClick={() => openTask(task)}
                   >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(task)}
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                        aria-label={`Select ${task.title || "task"}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {task.title || "Untitled"}
                       {task.description && (
@@ -362,7 +493,8 @@ export default function ProjectsTasksPage() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -391,9 +523,11 @@ export default function ProjectsTasksPage() {
               <div>
                 {(grouped[col.key] ?? []).map((task) => (
                   <TaskKanbanCard
-                    key={`${task.project_id}-${task.id}`}
+                    key={getTaskKey(task)}
                     task={task}
                     onOpen={() => openTask(task)}
+                    selected={selectedTaskKeys.has(getTaskKey(task))}
+                    onSelectChange={() => toggleSelect(task)}
                   />
                 ))}
                 {(!grouped[col.key] || grouped[col.key].length === 0) && (
@@ -437,9 +571,11 @@ export default function ProjectsTasksPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleTasks.map((task) => (
           <TaskCard
-            key={`${task.project_id}-${task.id}`}
+            key={getTaskKey(task)}
             task={task}
             onOpen={() => openTask(task)}
+            selected={selectedTaskKeys.has(getTaskKey(task))}
+            onSelectChange={() => toggleSelect(task)}
           />
         ))}
       </div>
@@ -548,12 +684,60 @@ export default function ProjectsTasksPage() {
 
         {!loading && !error && tasks.length > 0 && (
           <>
+            {selectedTaskKeys.size > 0 && (
+              <div className="mb-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
+                <span className="text-sm font-medium">
+                  {selectedTaskKeys.size} task
+                  {selectedTaskKeys.size === 1 ? "" : "s"} selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isDeleting}
+                  className="border-destructive/30 bg-card text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            )}
+
             {renderContent(filteredTasks)}
             <Button asChild variant="outline" className="mt-6">
               <Link href="/projects">View Projects</Link>
             </Button>
           </>
         )}
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete tasks</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {selectedTaskKeys.size} selected
+                task{selectedTaskKeys.size === 1 ? "" : "s"}? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <TaskFormSheet
           open={taskSheetOpen}

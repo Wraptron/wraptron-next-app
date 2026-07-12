@@ -42,7 +42,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-background text-foreground">
-      <SideNav />
+      <Suspense fallback={null}>
+        <SideNav />
+      </Suspense>
       <div
         className={cn(
           "flex flex-col h-full transition-all duration-300 ease-in-out ml-0",

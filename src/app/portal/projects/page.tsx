@@ -109,7 +109,7 @@ export default function PortalProjectsPage() {
                     <ProgressBar value={project.progress} />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-                    <span>Lead: {project.lead}</span>
+                    <span>Project Manager: {project.lead}</span>
                     <span>
                       Due:{" "}
                       {new Date(project.dueDate).toLocaleDateString(undefined, {

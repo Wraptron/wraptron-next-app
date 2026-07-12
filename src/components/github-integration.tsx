@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   githubApi,
+  getApiErrorMessage,
+  isGitHubTokenError,
   type GitHubConnection,
   type GitHubRepo,
   type ProjectGitHubRepository,
@@ -77,6 +79,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
   const [branch, setBranch] = useState("main");
   const [isPrimary, setIsPrimary] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [githubTokenError, setGithubTokenError] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -111,6 +114,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
   const fetchRepositories = async (connectionId: number, retryCount = 0) => {
     setLoadingRepos(true);
     setError(null);
+    setGithubTokenError(false);
     
     try {
       const response = await githubApi.getConnectionRepositories(connectionId);
@@ -134,16 +138,15 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
       }
       
       // Provide user-friendly error messages
-      let errorMessage = "Failed to fetch repositories";
+      let errorMessage = getApiErrorMessage(err, "Failed to fetch repositories");
       if (err?.message?.includes("Broken pipe")) {
         errorMessage = "Connection interrupted. Please check if the backend server is running and try again.";
-      } else if (err?.message?.includes("Failed to fetch")) {
+      } else if (err?.message?.includes("Failed to fetch") && !isGitHubTokenError(err)) {
         errorMessage = "Cannot connect to the server. Please ensure the backend is running on " + 
           (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
-      } else if (err?.message) {
-        errorMessage = err.message;
       }
       
+      setGithubTokenError(isGitHubTokenError(err));
       setError(errorMessage);
       setAvailableRepos([]);
     } finally {
@@ -244,6 +247,16 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
           <XCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
             {error}
+            {githubTokenError && (
+              <div className="mt-2">
+                <Link href="/settings">
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Update GitHub token in Settings
+                  </Button>
+                </Link>
+              </div>
+            )}
             {error.includes("Cannot connect to the server") && (
               <div className="mt-2 text-sm">
                 <p className="font-medium mb-1">Troubleshooting:</p>
@@ -420,9 +433,26 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                     </div>
                   ) : availableRepos.length === 0 && !loadingRepos ? (
                     <div className="text-center py-8">
-                      <p className="text-gray-500 mb-2">No repositories found</p>
+                      <p className="text-gray-500 mb-2">
+                        {githubTokenError
+                          ? "Could not load repositories for this connection"
+                          : "No repositories found"}
+                      </p>
                       <p className="text-xs text-gray-400">
-                        Make sure your GitHub token has the <code className="bg-gray-100 px-1 py-0.5 rounded">repo</code> scope
+                        {githubTokenError ? (
+                          <>
+                            Your GitHub token may be expired. Update it in{" "}
+                            <Link href="/settings" className="text-blue-600 underline">
+                              Settings
+                            </Link>
+                            .
+                          </>
+                        ) : (
+                          <>
+                            Make sure your GitHub token has the{" "}
+                            <code className="bg-gray-100 px-1 py-0.5 rounded">repo</code> scope
+                          </>
+                        )}
                       </p>
                     </div>
                   ) : (

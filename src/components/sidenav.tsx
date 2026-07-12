@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   CreditCard,
   ChevronLeft,
@@ -53,7 +53,10 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { useAuth } from "@/contexts/auth-context";
 import { canAccessStaffRoutes, filterByStaffAccess } from "@/lib/nav-access";
-import { CLIENT_PORTAL_MENU_ITEMS, PORTAL_RESOURCES_HREF } from "@/lib/portal-nav";
+import {
+  CLIENT_PORTAL_MENU_ITEMS,
+  PORTAL_RESOURCES_HREF,
+} from "@/lib/portal-nav";
 interface MenuItem {
   id: string;
   label: string;
@@ -271,6 +274,12 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
 
 const SETTINGS_MENU_ITEMS: MenuItem[] = [
   {
+    id: "settings-organisation",
+    label: "Organisation",
+    icon: Building2,
+    href: "/settings?section=organisation",
+  },
+  {
     id: "settings-general",
     label: "General",
     icon: Settings,
@@ -307,6 +316,39 @@ const SETTINGS_MENU_ITEMS: MenuItem[] = [
     href: "/settings?section=notifications",
   },
 ];
+
+const CLIENT_SETTINGS_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "settings-organisation",
+    label: "Organisation",
+    icon: Building2,
+    href: "/settings?section=organisation",
+  },
+  {
+    id: "settings-general",
+    label: "General",
+    icon: Settings,
+    href: "/settings?section=general",
+  },
+  {
+    id: "settings-display-preferences",
+    label: "Display Preferences",
+    icon: Monitor,
+    href: "/settings?section=display-preferences",
+  },
+  {
+    id: "settings-notifications",
+    label: "Notifications",
+    icon: Activity,
+    href: "/settings?section=notifications",
+  },
+];
+
+function getSettingsMenuItems(role?: string | null): MenuItem[] {
+  return canAccessStaffRoutes(role)
+    ? SETTINGS_MENU_ITEMS
+    : CLIENT_SETTINGS_MENU_ITEMS;
+}
 
 const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
   {
@@ -346,6 +388,7 @@ const FEEDBACK_MAILTO = `mailto:dev@wraptron.com?subject=${encodeURIComponent("W
 export default function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [activeItem, setActiveItem] = useState<string>("");
@@ -440,8 +483,8 @@ export default function SideNav() {
     menuItems = HUMAN_RESOURCE_MENU_ITEMS;
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
-  } else if (isSettingsPage && canAccessStaffRoutes(user?.role)) {
-    menuItems = SETTINGS_MENU_ITEMS;
+  } else if (isSettingsPage) {
+    menuItems = getSettingsMenuItems(user?.role);
   } else {
     menuItems = allMenuItems;
   }
@@ -566,8 +609,13 @@ export default function SideNav() {
       return;
     }
 
-    if (isSettingsPage && canAccessStaffRoutes(user?.role)) {
-      setActiveItem((prev) => prev || SETTINGS_MENU_ITEMS[0]?.id || "");
+    if (isSettingsPage) {
+      const currentSettingsItems = getSettingsMenuItems(user?.role);
+      const section = searchParams.get("section") || "general";
+      const settingsItem = currentSettingsItems.find((item) =>
+        item.href.includes(`section=${section}`),
+      );
+      setActiveItem(settingsItem?.id || currentSettingsItems[0]?.id || "");
       return;
     }
 
@@ -585,6 +633,7 @@ export default function SideNav() {
     isWorkspacePage,
     isSettingsPage,
     user?.role,
+    searchParams,
   ]);
 
   const handleItemClick = (

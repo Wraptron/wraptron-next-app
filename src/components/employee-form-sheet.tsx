@@ -108,6 +108,7 @@ const getInitialFormState = (
   role: employee?.role ?? "",
   department: employee?.department ?? "",
   designation: employee?.designation ?? "",
+  reporting_manager_id: employee?.reporting_manager_id ?? undefined,
 });
 
 const MAIN_CONTENT_PORTAL_ID = "main-content-portal";
@@ -142,6 +143,10 @@ export function EmployeeFormSheet({
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersLoadError, setUsersLoadError] = useState(false);
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [managers, setManagers] = useState<Employee[]>([]);
+  const [managersLoading, setManagersLoading] = useState(false);
+  const [managersLoadError, setManagersLoadError] = useState(false);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
 
   useEffect(() => {
@@ -209,6 +214,57 @@ export function EmployeeFormSheet({
       });
   }, [linkUserOpen]);
 
+  useEffect(() => {
+    if (!managerOpen) return;
+    setManagersLoadError(false);
+    setManagersLoading(true);
+    employeesApi
+      .getAll({ employment_status: "active", limit: 500 })
+      .then((res) => {
+        setManagers(
+          employee
+            ? res.data.filter((e) => e.id !== employee.id)
+            : res.data,
+        );
+      })
+      .catch(() => {
+        setManagersLoadError(true);
+        setManagers([]);
+      })
+      .finally(() => {
+        setManagersLoading(false);
+      });
+  }, [managerOpen, employee]);
+
+  const getEmployeeLabel = (emp: {
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    emp_code?: string;
+    email?: string;
+  }) => {
+    const name = [emp.first_name, emp.middle_name, emp.last_name]
+      .filter(Boolean)
+      .join(" ");
+    const suffix = emp.emp_code ? ` (${emp.emp_code})` : emp.email ? ` (${emp.email})` : "";
+    return `${name}${suffix}`;
+  };
+
+  const selectedManagerLabel = (() => {
+    if (!formData.reporting_manager_id) return null;
+    const fromList = managers.find((m) => m.id === formData.reporting_manager_id);
+    if (fromList) return getEmployeeLabel(fromList);
+    if (
+      employee?.reporting_manager_id === formData.reporting_manager_id &&
+      (employee.manager_first_name || employee.manager_last_name)
+    ) {
+      return [employee.manager_first_name, employee.manager_last_name]
+        .filter(Boolean)
+        .join(" ");
+    }
+    return `Employee #${formData.reporting_manager_id}`;
+  })();
+
   const resetForm = () => {
     setFormData(getInitialFormState(null));
   };
@@ -260,6 +316,7 @@ export function EmployeeFormSheet({
         role: formData.role || undefined,
         department: formData.department || undefined,
         designation: formData.designation || undefined,
+        reporting_manager_id: formData.reporting_manager_id ?? null,
       };
       if (employee) {
         await employeesApi.update(employee.id, payload);
@@ -713,6 +770,92 @@ export function EmployeeFormSheet({
                     }
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Reporting Manager</Label>
+                {managersLoadError ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formData.reporting_manager_id ?? ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        reporting_manager_id: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    placeholder="Employee ID"
+                  />
+                ) : (
+                  <div className="flex gap-1">
+                    <Popover open={managerOpen} onOpenChange={setManagerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 justify-between font-normal text-left"
+                        >
+                          {selectedManagerLabel ?? "Select manager..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput placeholder="Search employees..." />
+                          <CommandList>
+                            {managersLoading ? (
+                              <div className="flex items-center justify-center py-6">
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : (
+                              <>
+                                <CommandEmpty>No employee found.</CommandEmpty>
+                                <CommandGroup>
+                                  {managers.map((m) => (
+                                    <CommandItem
+                                      key={m.id}
+                                      value={getEmployeeLabel(m)}
+                                      onSelect={() => {
+                                        setFormData({
+                                          ...formData,
+                                          reporting_manager_id: m.id,
+                                        });
+                                        setManagerOpen(false);
+                                      }}
+                                    >
+                                      {getEmployeeLabel(m)}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {formData.reporting_manager_id != null && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label="Clear reporting manager"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            reporting_manager_id: undefined,
+                          })
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </Section>
 

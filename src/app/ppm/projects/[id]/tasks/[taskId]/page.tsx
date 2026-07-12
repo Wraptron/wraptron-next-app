@@ -29,9 +29,17 @@ import {
   AlertCircle,
   Hash,
   FileText,
-  Clock,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { TaskChangeHistory } from "@/components/task-change-history";
@@ -45,6 +53,8 @@ export default function EditTaskPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [project, setProject] = useState<Project | null>(null);
@@ -185,6 +195,22 @@ export default function EditTaskPage() {
       // Show error toast or message
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!projectId || !taskId) return;
+
+    setDeleting(true);
+    try {
+      await projectsApi.deleteTask(projectId, taskId);
+      router.push(`/projects/${projectId}`);
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      setError("Failed to delete task");
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -436,27 +462,74 @@ export default function EditTaskPage() {
             refreshKey={changeHistoryKey}
           />
 
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Link href={`/projects/${selectedProjectId || projectId}`}>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </Link>
-            <Button type="submit" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
+          <div className="flex items-center justify-between gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={saving || deleting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Task
             </Button>
+            <div className="flex items-center gap-3">
+              <Link href={`/projects/${selectedProjectId || projectId}`}>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </Link>
+              <Button type="submit" disabled={saving || deleting}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete task</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete &ldquo;{title}&rdquo;? This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

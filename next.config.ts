@@ -72,7 +72,7 @@ const posthogHost =
   process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
 
 const nextConfig: NextConfig = {
-  // Set the output file tracing root to this directory to avoid lockfile warnings
+  allowedDevOrigins: ["192.168.29.136"],
   outputFileTracingRoot: path.join(__dirname),
   async redirects() {
     return [

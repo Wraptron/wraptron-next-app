@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -95,6 +96,7 @@ import {
   Users,
   Repeat,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 const SERVICE_OPTIONS = [
@@ -1260,6 +1262,8 @@ function TaskListView({
 
   // Selection State
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Drag and Drop State
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -1293,6 +1297,26 @@ function TaskListView({
       newSelected.add(taskId);
     }
     setSelectedTasks(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTasks.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        Array.from(selectedTasks).map((taskId) =>
+          projectsApi.deleteTask(projectId, taskId),
+        ),
+      );
+      setSelectedTasks(new Set());
+      setDeleteDialogOpen(false);
+      onUpdate();
+    } catch (err) {
+      console.error("Error deleting tasks:", err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Sort Handler
@@ -1477,7 +1501,56 @@ function TaskListView({
   }
 
   return (
-    <Card>
+    <>
+      {selectedTasks.size > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
+          <span className="text-sm font-medium">
+            {selectedTasks.size} task{selectedTasks.size === 1 ? "" : "s"}{" "}
+            selected
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isDeleting}
+            className="border-destructive/30 bg-card text-destructive hover:border-destructive/50 hover:bg-destructive/10"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete tasks</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedTasks.size} selected task
+              {selectedTasks.size === 1 ? "" : "s"}? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
       <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
         <div className="text-sm font-medium text-muted-foreground">
           {processedTasks.length} task{processedTasks.length !== 1 && "s"}
@@ -1611,6 +1684,7 @@ function TaskListView({
         </Table>
       </CardContent>
     </Card>
+    </>
   );
 }
 

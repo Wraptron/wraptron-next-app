@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -77,13 +77,14 @@ export function PricingCalculator() {
 
   const [projectType, setProjectType] = useState<ProjectType>("website");
   const [projectName, setProjectName] = useState("");
-  const [screenScaleIndex, setScreenScaleIndex] = useState(2);
+  const [screenCount, setScreenCount] = useState(5);
   const [functionScaleIndex, setFunctionScaleIndex] = useState(2);
   const [designComplexity, setDesignComplexity] =
     useState<DesignComplexity>("medium");
   const [frontendFramework, setFrontendFramework] = useState("react");
   const [backendFramework, setBackendFramework] = useState("node");
-  const [capabilities, setCapabilities] = useState<string[]>(["auth"]);
+  const [database, setDatabase] = useState("postgresql");
+  const [capabilities] = useState<string[]>([]);
   const [supportTier, setSupportTier] = useState<SupportTier>("basic_care");
   const [supportMonths, setSupportMonths] = useState("12");
   const [durationMonths, setDurationMonths] = useState("6");
@@ -121,11 +122,12 @@ export function PricingCalculator() {
     () => ({
       projectType,
       projectName: projectName.trim() || undefined,
-      screenScaleIndex,
+      screens: screenCount,
       functionScaleIndex,
       designComplexity,
       frontendFramework,
       backendFramework,
+      database,
       capabilities,
       supportTier,
       supportMonths: Number(supportMonths) || 0,
@@ -135,11 +137,12 @@ export function PricingCalculator() {
     [
       projectType,
       projectName,
-      screenScaleIndex,
+      screenCount,
       functionScaleIndex,
       designComplexity,
       frontendFramework,
       backendFramework,
+      database,
       capabilities,
       supportTier,
       supportMonths,
@@ -157,12 +160,6 @@ export function PricingCalculator() {
     projectName.trim() ||
     config.projectTypes[projectType]?.label ||
     "Project estimate";
-
-  const toggleCapability = (id: string, checked: boolean) => {
-    setCapabilities((prev) =>
-      checked ? [...prev, id] : prev.filter((c) => c !== id),
-    );
-  };
 
   const updateTeamCount = (roleId: string, delta: number) => {
     setTeamComposition((prev) => {
@@ -194,8 +191,8 @@ export function PricingCalculator() {
             Pricing calculator
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Estimate project cost from scope, technology stack, and support tier.
-            Rates are configurable in Settings.
+            Estimate project cost from scope, technology stack, and support
+            tier. Rates are configurable in Settings.
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
@@ -251,15 +248,13 @@ export function PricingCalculator() {
                           selected && "border-primary bg-primary/5 shadow-sm",
                         )}
                       >
-                        <RadioGroupItem
-                          value={opt.value}
-                          className="sr-only"
-                        />
+                        <RadioGroupItem value={opt.value} className="sr-only" />
                         <div className="flex items-start gap-3">
                           <div
                             className={cn(
                               "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-background",
-                              selected && "border-primary/30 bg-primary/10 text-primary",
+                              selected &&
+                                "border-primary/30 bg-primary/10 text-primary",
                             )}
                           >
                             <Icon className="h-5 w-5" />
@@ -291,12 +286,28 @@ export function PricingCalculator() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <ScopeScaleSlider
-                  label="Screens / views / pages"
-                  options={config.scopeScales.screens}
-                  valueIndex={screenScaleIndex}
-                  onValueIndexChange={setScreenScaleIndex}
-                />
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <Label>Screens / views / pages</Label>
+                    <span className="shrink-0 text-sm font-medium tabular-nums text-primary">
+                      {screenCount}
+                    </span>
+                  </div>
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <Slider
+                      min={1}
+                      max={30}
+                      step={1}
+                      value={[screenCount]}
+                      onValueChange={(values) => setScreenCount(values[0] ?? 1)}
+                      aria-label="Screens / views / pages"
+                    />
+                    <div className="mt-3 flex justify-between gap-1">
+                      <span className="text-xs text-muted-foreground">1</span>
+                      <span className="text-xs text-muted-foreground">30</span>
+                    </div>
+                  </div>
+                </div>
                 <ScopeScaleSlider
                   label="Functional requirements / functions"
                   options={config.scopeScales.functions}
@@ -380,7 +391,10 @@ export function PricingCalculator() {
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          <Badge variant="secondary" className="min-w-8 justify-center">
+                          <Badge
+                            variant="secondary"
+                            className="min-w-8 justify-center"
+                          >
                             {count}
                           </Badge>
                           <Button
@@ -405,12 +419,12 @@ export function PricingCalculator() {
             <CardHeader>
               <CardTitle>Technology stack</CardTitle>
               <CardDescription>
-                Front-end, back-end, and application capabilities that affect
-                delivery effort.
+                Front-end, back-end, and database choices that affect delivery
+                effort.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Front-end framework</Label>
                   <Select
@@ -451,35 +465,29 @@ export function PricingCalculator() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Database</Label>
+                  <Select
+                    value={database}
+                    onValueChange={setDatabase}
+                    disabled={!isScopeProjectType(projectType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {config.techStack.databases.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.label}
+                          {d.multiplier !== 1 ? ` (×${d.multiplier})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {isScopeProjectType(projectType) ? (
-                <div className="space-y-3">
-                  <Label>Capabilities & integrations</Label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {config.techStack.capabilities.map((cap) => (
-                      <label
-                        key={cap.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-muted/40"
-                      >
-                        <Checkbox
-                          checked={capabilities.includes(cap.id)}
-                          onCheckedChange={(checked) =>
-                            toggleCapability(cap.id, checked === true)
-                          }
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{cap.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            +{cap.addon.toLocaleString()}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ) : (
+              {!isScopeProjectType(projectType) && (
                 <p className="text-sm text-muted-foreground">
                   Tech stack multipliers apply to product builds. Dedicated team
                   pricing is based on role rates and duration.
@@ -504,30 +512,32 @@ export function PricingCalculator() {
                 {SUPPORT_TIER_ORDER.map((key) => {
                   const tier = config.supportTiers[key];
                   return (
-                  <label
-                    key={key}
-                    className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
-                  >
-                    <RadioGroupItem value={key} className="mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium">{tier.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {tier.monthlyAddon > 0
-                          ? `${tier.monthlyAddon.toLocaleString()}/month`
-                          : "No recurring support cost"}
-                        {tier.multiplier !== 1
-                          ? ` · ×${tier.multiplier} on development`
-                          : ""}
-                      </p>
-                    </div>
-                  </label>
+                    <label
+                      key={key}
+                      className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+                    >
+                      <RadioGroupItem value={key} className="mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium">{tier.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tier.monthlyAddon > 0
+                            ? `${tier.monthlyAddon.toLocaleString()}/month`
+                            : "No recurring support cost"}
+                          {tier.multiplier !== 1
+                            ? ` · ×${tier.multiplier} on development`
+                            : ""}
+                        </p>
+                      </div>
+                    </label>
                   );
                 })}
               </RadioGroup>
 
               {supportTier !== "none" ? (
                 <div className="space-y-2">
-                  <Label htmlFor="support-months">Support period (months)</Label>
+                  <Label htmlFor="support-months">
+                    Support period (months)
+                  </Label>
                   <Input
                     id="support-months"
                     type="number"

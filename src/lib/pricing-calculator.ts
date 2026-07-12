@@ -1,12 +1,12 @@
-export type ProjectType =
-  | "website"
-  | "pwa"
-  | "mobile_app"
-  | "dedicated_team";
+export type ProjectType = "website" | "pwa" | "mobile_app" | "dedicated_team";
 
 export type DesignComplexity = "basic" | "medium" | "high";
 
-export type SupportTier = "none" | "basic_care" | "standard_care" | "premium_care";
+export type SupportTier =
+  | "none"
+  | "basic_care"
+  | "standard_care"
+  | "premium_care";
 
 export const SUPPORT_TIER_ORDER: SupportTier[] = [
   "none",
@@ -89,6 +89,7 @@ export interface PricingCalculatorConfig {
   techStack: {
     frontendFrameworks: TechStackOption[];
     backendFrameworks: TechStackOption[];
+    databases: TechStackOption[];
     capabilities: CapabilityOption[];
   };
   teamRoles: TeamRoleOption[];
@@ -119,6 +120,7 @@ export interface PricingCalculatorInput {
   durationMonths?: number;
   frontendFramework?: string;
   backendFramework?: string;
+  database?: string;
   capabilities?: string[];
   supportTier: SupportTier;
   supportMonths?: number;
@@ -203,6 +205,10 @@ export const DEFAULT_PRICING_CALCULATOR_CONFIG: PricingCalculatorConfig = {
       { id: "angular", label: "Angular", multiplier: 1.05 },
       { id: "svelte", label: "Svelte / SvelteKit", multiplier: 1.05 },
       { id: "astro", label: "Astro", multiplier: 0.95 },
+      { id: "expo", label: "Expo", multiplier: 1.05 },
+      { id: "kotlin", label: "Kotlin", multiplier: 1.1 },
+      { id: "swift", label: "Swift", multiplier: 1.1 },
+      { id: "react_native", label: "React Native", multiplier: 1.05 },
     ],
     backendFrameworks: [
       { id: "node", label: "Node.js", multiplier: 1 },
@@ -210,6 +216,18 @@ export const DEFAULT_PRICING_CALCULATOR_CONFIG: PricingCalculatorConfig = {
       { id: "python", label: "Python (Django/FastAPI)", multiplier: 1.05 },
       { id: "dotnet", label: ".NET", multiplier: 1.1 },
       { id: "go", label: "Go", multiplier: 1.1 },
+      { id: "solidity", label: "Solidity", multiplier: 1.15 },
+    ],
+    databases: [
+      { id: "postgresql", label: "PostgreSQL", multiplier: 1 },
+      { id: "mysql", label: "MySQL", multiplier: 1 },
+      { id: "sqlite", label: "SQLite", multiplier: 0.95 },
+      { id: "mongodb", label: "MongoDB", multiplier: 1.05 },
+      { id: "mariadb", label: "MariaDB", multiplier: 1 },
+      { id: "mssql", label: "MS SQL", multiplier: 1.1 },
+      { id: "firestore", label: "Firestore", multiplier: 1.05 },
+      { id: "chromadb", label: "ChromaDB", multiplier: 1.1 },
+      { id: "pinecone", label: "Pinecone", multiplier: 1.1 },
     ],
     capabilities: [
       { id: "auth", label: "Authentication & authorization", addon: 40000 },
@@ -218,9 +236,19 @@ export const DEFAULT_PRICING_CALCULATOR_CONFIG: PricingCalculatorConfig = {
       { id: "search", label: "Search & filtering", addon: 35000 },
       { id: "cms", label: "CMS / content management", addon: 50000 },
       { id: "analytics", label: "Analytics & reporting", addon: 40000 },
-      { id: "integrations", label: "Third-party integrations", addon: 55000, hours: 60 },
+      {
+        id: "integrations",
+        label: "Third-party integrations",
+        addon: 55000,
+        hours: 60,
+      },
       { id: "offline", label: "Offline-first / sync", addon: 70000, hours: 80 },
-      { id: "admin_dashboard", label: "Admin dashboard", addon: 55000, hours: 80 },
+      {
+        id: "admin_dashboard",
+        label: "Admin dashboard",
+        addon: 55000,
+        hours: 80,
+      },
     ],
   },
   teamRoles: [
@@ -234,19 +262,43 @@ export const DEFAULT_PRICING_CALCULATOR_CONFIG: PricingCalculatorConfig = {
     { id: "mobile", label: "Mobile Engineer", monthlyRate: 175000 },
   ],
   scopeScales: {
-    screens: [
-      { id: "minimal", label: "Minimal", description: "1–3 screens / views", count: 2 },
-      { id: "small", label: "Small", description: "4–8 screens / views", count: 6 },
-      { id: "medium", label: "Medium", description: "9–15 screens / views", count: 12 },
-      { id: "large", label: "Large", description: "16–25 screens / views", count: 20 },
-      { id: "enterprise", label: "Enterprise", description: "26+ screens / views", count: 30 },
-    ],
+    screens: Array.from({ length: 30 }, (_, i) => ({
+      id: `screens-${i + 1}`,
+      label: `${i + 1}`,
+      description: `${i + 1} screen${i === 0 ? "" : "s"} / view${i === 0 ? "" : "s"}`,
+      count: i + 1,
+    })),
     functions: [
-      { id: "minimal", label: "Minimal", description: "1–2 functional requirements", count: 2 },
-      { id: "small", label: "Small", description: "3–5 functional requirements", count: 4 },
-      { id: "medium", label: "Medium", description: "6–10 functional requirements", count: 8 },
-      { id: "large", label: "Large", description: "11–18 functional requirements", count: 14 },
-      { id: "enterprise", label: "Enterprise", description: "19+ functional requirements", count: 22 },
+      {
+        id: "minimal",
+        label: "Minimal",
+        description: "1–2 functional requirements",
+        count: 2,
+      },
+      {
+        id: "small",
+        label: "Small",
+        description: "3–5 functional requirements",
+        count: 4,
+      },
+      {
+        id: "medium",
+        label: "Medium",
+        description: "6–10 functional requirements",
+        count: 8,
+      },
+      {
+        id: "large",
+        label: "Large",
+        description: "11–18 functional requirements",
+        count: 14,
+      },
+      {
+        id: "enterprise",
+        label: "Enterprise",
+        description: "19+ functional requirements",
+        count: 22,
+      },
     ],
   },
   timeline: {
@@ -378,7 +430,10 @@ function getTechMultiplier(
   const backend = config.techStack.backendFrameworks.find(
     (b) => b.id === input.backendFramework,
   );
-  return (frontend?.multiplier ?? 1) * (backend?.multiplier ?? 1);
+  const db = config.techStack.databases.find(
+    (d) => d.id === input.database,
+  );
+  return (frontend?.multiplier ?? 1) * (backend?.multiplier ?? 1) * (db?.multiplier ?? 1);
 }
 
 function getCapabilityHours(
@@ -397,7 +452,8 @@ export function calculateTimelineEstimate(
 ): TimelineEstimate {
   if (input.projectType === "dedicated_team") {
     const months =
-      input.durationMonths ?? config.dedicatedTeamDefaults.defaultDurationMonths;
+      input.durationMonths ??
+      config.dedicatedTeamDefaults.defaultDurationMonths;
     const composition = input.teamComposition ?? [];
     const headcount = composition.reduce(
       (sum, selection) => sum + (selection.count ?? 0),
@@ -488,7 +544,8 @@ export function calculatePricingEstimate(
 
   if (input.projectType === "dedicated_team") {
     const duration =
-      input.durationMonths ?? config.dedicatedTeamDefaults.defaultDurationMonths;
+      input.durationMonths ??
+      config.dedicatedTeamDefaults.defaultDurationMonths;
     const composition = input.teamComposition ?? [];
     let monthlyTeamCost = 0;
 
@@ -676,13 +733,15 @@ export function mergePricingConfig(
       backendFrameworks:
         partial.techStack?.backendFrameworks ??
         DEFAULT_PRICING_CALCULATOR_CONFIG.techStack.backendFrameworks,
+      databases:
+        partial.techStack?.databases ??
+        DEFAULT_PRICING_CALCULATOR_CONFIG.techStack.databases,
       capabilities: mergeCapabilities(
         partial.techStack?.capabilities,
         DEFAULT_PRICING_CALCULATOR_CONFIG.techStack.capabilities,
       ),
     },
-    teamRoles:
-      partial.teamRoles ?? DEFAULT_PRICING_CALCULATOR_CONFIG.teamRoles,
+    teamRoles: partial.teamRoles ?? DEFAULT_PRICING_CALCULATOR_CONFIG.teamRoles,
     scopeScales: {
       screens:
         partial.scopeScales?.screens ??
@@ -715,7 +774,8 @@ export const PROJECT_TYPE_OPTIONS: {
   {
     value: "website",
     label: "Website",
-    description: "Marketing sites, landing pages, and content-driven web presence.",
+    description:
+      "Marketing sites, landing pages, and content-driven web presence.",
   },
   {
     value: "pwa",

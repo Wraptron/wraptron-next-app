@@ -122,7 +122,7 @@ export function SettingsPricingCalculator() {
   };
 
   const updateTechMultiplier = (
-    group: "frontendFrameworks" | "backendFrameworks",
+    group: "frontendFrameworks" | "backendFrameworks" | "databases",
     id: string,
     value: string,
   ) => {
@@ -259,7 +259,12 @@ export function SettingsPricingCalculator() {
               <RefreshCw className="mr-2 h-4 w-4" />
               Reset to defaults
             </Button>
-            <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+            >
               {saving ? "Saving…" : "Save rates"}
             </Button>
           </div>
@@ -297,7 +302,10 @@ export function SettingsPricingCalculator() {
                 ).map((project) => {
                   const rates = config.projectTypes[project.value];
                   return (
-                    <TableRow key={project.value} className="hover:bg-transparent">
+                    <TableRow
+                      key={project.value}
+                      className="hover:bg-transparent"
+                    >
                       <TableCell className="px-3 py-0 font-medium">
                         {project.label}
                       </TableCell>
@@ -383,35 +391,35 @@ export function SettingsPricingCalculator() {
             {SUPPORT_TIER_ORDER.map((key) => {
               const tier = config.supportTiers[key];
               return (
-              <div
-                key={key}
-                className="grid gap-3 rounded-lg border p-4 sm:grid-cols-3"
-              >
-                <p className="font-medium sm:col-span-3">{tier.label}</p>
-                <div className="space-y-1">
-                  <Label>Monthly add-on</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={tier.monthlyAddon}
-                    onChange={(e) =>
-                      updateSupportTier(key, "monthlyAddon", e.target.value)
-                    }
-                  />
+                <div
+                  key={key}
+                  className="grid gap-3 rounded-lg border p-4 sm:grid-cols-3"
+                >
+                  <p className="font-medium sm:col-span-3">{tier.label}</p>
+                  <div className="space-y-1">
+                    <Label>Monthly add-on</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={tier.monthlyAddon}
+                      onChange={(e) =>
+                        updateSupportTier(key, "monthlyAddon", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Development multiplier</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={tier.multiplier}
+                      onChange={(e) =>
+                        updateSupportTier(key, "multiplier", e.target.value)
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label>Development multiplier</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.05}
-                    value={tier.multiplier}
-                    onChange={(e) =>
-                      updateSupportTier(key, "multiplier", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
               );
             })}
           </div>
@@ -453,7 +461,7 @@ export function SettingsPricingCalculator() {
 
         <section className="space-y-4">
           <h3 className="font-medium">Technology stack multipliers</h3>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">Front-end</p>
               {config.techStack.frontendFrameworks.map((item) => (
@@ -498,14 +506,36 @@ export function SettingsPricingCalculator() {
                 </div>
               ))}
             </div>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Database</p>
+              {config.techStack.databases.map((item) => (
+                <div key={item.id} className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 text-sm">{item.label}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.05}
+                    className="w-24"
+                    value={item.multiplier}
+                    onChange={(e) =>
+                      updateTechMultiplier(
+                        "databases",
+                        item.id,
+                        e.target.value,
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         <section className="space-y-4">
           <h3 className="font-medium">Scope scale counts</h3>
           <p className="text-sm text-muted-foreground">
-            Numeric values used for pricing and timeline when a scale is selected
-            on the slider.
+            Numeric values used for pricing and timeline when a scale is
+            selected on the slider.
           </p>
           <div className="grid gap-6 lg:grid-cols-2">
             {(["screens", "functions"] as const).map((kind) => (
@@ -548,11 +578,15 @@ export function SettingsPricingCalculator() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-10 w-[200px] px-3 py-0">Phase</TableHead>
+                  <TableHead className="h-10 w-[200px] px-3 py-0">
+                    Phase
+                  </TableHead>
                   <TableHead className="h-10 p-0">Base hours</TableHead>
                   <TableHead className="h-10 p-0">Hours per screen</TableHead>
                   <TableHead className="h-10 p-0">Hours per function</TableHead>
-                  <TableHead className="h-10 p-0">Hours per capability</TableHead>
+                  <TableHead className="h-10 p-0">
+                    Hours per capability
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

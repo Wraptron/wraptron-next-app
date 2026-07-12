@@ -181,7 +181,7 @@ export default function EditProjectPage({
           await Promise.all([
             projectsApi.getById(id),
             projectsApi.getObjectives(),
-            employeesApi.getAll({ limit: 500 }),
+            employeesApi.getAll({ employment_status: "active", limit: 500 }),
             contactsApi.getAll({ limit: 500 }),
             projectsApi.getPortalUsers(),
           ]);
@@ -230,7 +230,31 @@ export default function EditProjectPage({
         if (objResponse.objectives && objResponse.objectives.length > 0) {
           setAvailableObjectives(objResponse.objectives);
         }
-        setEmployees(employeesResponse.data || []);
+
+        let employeesList = employeesResponse.data || [];
+        const assignedEmployeeIds = [
+          project.project_manager_employee_id,
+          ...(project.project_staff_employee_ids || []),
+        ].filter((employeeId): employeeId is number => employeeId != null);
+        const missingAssignedIds = assignedEmployeeIds.filter(
+          (employeeId) =>
+            !employeesList.some((employee) => employee.id === employeeId),
+        );
+        if (missingAssignedIds.length > 0) {
+          const missingEmployees = await Promise.all(
+            missingAssignedIds.map((employeeId) =>
+              employeesApi.getById(employeeId).catch(() => null),
+            ),
+          );
+          employeesList = [
+            ...employeesList,
+            ...missingEmployees.filter(
+              (employee): employee is Employee => employee != null,
+            ),
+          ];
+        }
+
+        setEmployees(employeesList);
         setContacts(contactsResponse.data || []);
         setPortalUsers(portalUsersResponse.data || []);
       } catch (err) {

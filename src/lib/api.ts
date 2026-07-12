@@ -11,6 +11,22 @@ export class ApiError extends Error {
   }
 }
 
+export function isGitHubTokenError(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  const data = err.data as { code?: string; github_status?: number } | undefined;
+  return data?.code === "github_api_error" && data.github_status === 401;
+}
+
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    return err.message || fallback;
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return fallback;
+}
+
 // Get auth token from localStorage
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -85,8 +101,19 @@ async function fetchApi<T>(
   }
 
   if (!response.ok) {
-    // If unauthorized, clear token and redirect to login
-    if (response.status === 401) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+      detail?: string;
+      code?: string;
+      [key: string]: unknown;
+    };
+
+    // Only treat 401 as a Wraptron session expiry — not upstream GitHub auth failures.
+    if (
+      response.status === 401 &&
+      errorData.code !== "github_api_error"
+    ) {
       setAuthToken(null);
       if (
         typeof window !== "undefined" &&
@@ -97,12 +124,6 @@ async function fetchApi<T>(
       }
     }
 
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-      detail?: string;
-      [key: string]: unknown;
-    };
     const base = errorData.error || errorData.message || "An error occurred";
     const detail =
       typeof errorData.detail === "string" && errorData.detail.trim()
@@ -514,6 +535,13 @@ export const projectsApi = {
     return fetchApi<Task>(`/api/projects/${projectId}/tasks/${taskId}`, {
       method: "PUT",
       body: JSON.stringify(data),
+    });
+  },
+
+  // Delete task
+  deleteTask: async (projectId: number, taskId: number): Promise<void> => {
+    return fetchApi<void>(`/api/projects/${projectId}/tasks/${taskId}`, {
+      method: "DELETE",
     });
   },
 

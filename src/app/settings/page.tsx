@@ -533,9 +533,7 @@ export default function Settings() {
     } catch (err) {
       setProjectStatuses(previous);
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to reorder project stages",
+        err instanceof Error ? err.message : "Failed to reorder project stages",
       );
       throw err;
     }
@@ -584,6 +582,7 @@ export default function Settings() {
   const activeSettingsSection =
     requestedSection === "general" ||
     requestedSection === "display-preferences" ||
+    requestedSection === "organisation" ||
     requestedSection === "user-management" ||
     requestedSection === "integrations" ||
     requestedSection === "apps" ||
@@ -592,108 +591,111 @@ export default function Settings() {
       : "general";
 
   const showGeneral = activeSettingsSection === "general";
-  const showDisplayPreferences = activeSettingsSection === "display-preferences";
+  const showDisplayPreferences =
+    activeSettingsSection === "display-preferences";
+  const showOrganisation = activeSettingsSection === "organisation";
   const showIntegrations = activeSettingsSection === "integrations";
   const showApps = activeSettingsSection === "apps";
   const showEmptySection = activeSettingsSection === "notifications";
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        {/* Success Message */}
-        {successMessage && (
-          <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/50">
-            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <AlertDescription className="text-green-800 dark:text-green-200">
-              {successMessage}
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Success Message */}
+      {successMessage && (
+        <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/50">
+          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertDescription className="text-green-800 dark:text-green-200">
+            {successMessage}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Error Message */}
-        {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/50">
-            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-            <AlertDescription className="text-red-800 dark:text-red-200">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Error Message */}
+      {error && (
+        <Alert className="mb-6 border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/50">
+          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-200">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {showDisplayPreferences && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Preferences</CardTitle>
-              <CardDescription className="mt-2">
-                Choose how Wraptron looks on this device.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <div id="appearance" className="scroll-mt-28 space-y-3">
-                {!themeReady ? (
-                  <p className="text-sm text-muted-foreground">Loading theme…</p>
-                ) : (
-                  <RadioGroup
-                    value={theme ?? "system"}
-                    onValueChange={setTheme}
-                    className="grid gap-3"
+      {showDisplayPreferences && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Preferences</CardTitle>
+            <CardDescription className="mt-2">
+              Choose how Wraptron looks on this device.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div id="appearance" className="scroll-mt-28 space-y-3">
+              {!themeReady ? (
+                <p className="text-sm text-muted-foreground">Loading theme…</p>
+              ) : (
+                <RadioGroup
+                  value={theme ?? "system"}
+                  onValueChange={setTheme}
+                  className="grid gap-3"
+                >
+                  <label
+                    htmlFor="theme-light"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
                   >
-                    <label
-                      htmlFor="theme-light"
-                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                    >
-                      <RadioGroupItem value="light" id="theme-light" />
-                      <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium">Light mode</span>
-                    </label>
-                    <label
-                      htmlFor="theme-dark"
-                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                    >
-                      <RadioGroupItem value="dark" id="theme-dark" />
-                      <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium">Dark mode</span>
-                    </label>
-                    <label
-                      htmlFor="theme-system"
-                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-                    >
-                      <RadioGroupItem value="system" id="theme-system" />
-                      <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium">System</span>
-                    </label>
-                  </RadioGroup>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    <RadioGroupItem value="light" id="theme-light" />
+                    <Sun className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">Light mode</span>
+                  </label>
+                  <label
+                    htmlFor="theme-dark"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                  >
+                    <RadioGroupItem value="dark" id="theme-dark" />
+                    <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">Dark mode</span>
+                  </label>
+                  <label
+                    htmlFor="theme-system"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-accent/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                  >
+                    <RadioGroupItem value="system" id="theme-system" />
+                    <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">System</span>
+                  </label>
+                </RadioGroup>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {showGeneral && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Language</CardTitle>
-              <CardDescription className="mt-2">
-                Interface language for menus and labels.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="ui-language">Interface language</Label>
-                <Select value={uiLocale} onValueChange={handleUiLocaleChange}>
-                  <SelectTrigger id="ui-language" className="w-full max-w-xs">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {showGeneral && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Language</CardTitle>
+            <CardDescription className="mt-2">
+              Interface language for menus and labels.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="ui-language">Interface language</Label>
+              <Select value={uiLocale} onValueChange={handleUiLocaleChange}>
+                <SelectTrigger id="ui-language" className="w-full max-w-xs">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Currency Settings Section */}
-        {showGeneral && <Card className="mb-6">
+      {/* Currency Settings Section */}
+      {showGeneral && (
+        <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
@@ -727,9 +729,11 @@ export default function Settings() {
               </div>
             </div>
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {showGeneral && <Card className="mb-6">
+      {showOrganisation && (
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>Company Information</CardTitle>
             <CardDescription className="mt-2">
@@ -807,44 +811,46 @@ export default function Settings() {
               )}
             </div>
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {showApps && (
-          <>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">Studio</h2>
-              <p className="text-sm text-muted-foreground">
-                Pricing calculator rates and multipliers.
-              </p>
-            </div>
-            <SettingsPricingCalculator />
-          </>
-        )}
+      {showApps && (
+        <>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Studio</h2>
+            <p className="text-sm text-muted-foreground">
+              Pricing calculator rates and multipliers.
+            </p>
+          </div>
+          <SettingsPricingCalculator />
+        </>
+      )}
 
-        {showApps && (
-          <>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">Products</h2>
-              <p className="text-sm text-muted-foreground">
-                Interface types and feature types.
-              </p>
-            </div>
-            <SettingsProductCatalogTypes />
-          </>
-        )}
+      {showApps && (
+        <>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Products</h2>
+            <p className="text-sm text-muted-foreground">
+              Interface types and feature types.
+            </p>
+          </div>
+          <SettingsProductCatalogTypes />
+        </>
+      )}
 
-        {showApps && (
-          <>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">Human Resource</h2>
-              <p className="text-sm text-muted-foreground">Workspace skills.</p>
-            </div>
-            <SettingsWorkspaceSkills />
-          </>
-        )}
+      {showApps && (
+        <>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Human Resource</h2>
+            <p className="text-sm text-muted-foreground">Workspace skills.</p>
+          </div>
+          <SettingsWorkspaceSkills />
+        </>
+      )}
 
-        {/* Sales Stages Section */}
-        {showApps && <Card className="mb-6">
+      {/* Sales Stages Section */}
+      {showApps && (
+        <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -884,10 +890,12 @@ export default function Settings() {
               />
             )}
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {/* Project statuses Section */}
-        {showApps && <Card className="mb-6">
+      {/* Project statuses Section */}
+      {showApps && (
+        <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -927,10 +935,12 @@ export default function Settings() {
               />
             )}
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {/* GitHub Connections Section */}
-        {showIntegrations && <Card>
+      {/* GitHub Connections Section */}
+      {showIntegrations && (
+        <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -1057,10 +1067,12 @@ export default function Settings() {
               </div>
             )}
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {/* Help Section */}
-        {showIntegrations && <Card className="mt-6">
+      {/* Help Section */}
+      {showIntegrations && (
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle>How to create a GitHub Personal Access Token</CardTitle>
           </CardHeader>
@@ -1127,399 +1139,399 @@ export default function Settings() {
               </p>
             </div>
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
-        {showIntegrations && <SettingsZohoIntegrations />}
+      {showIntegrations && <SettingsZohoIntegrations />}
 
-        {activeSettingsSection === "user-management" && <SettingsUserManagement />}
+      {activeSettingsSection === "user-management" && (
+        <SettingsUserManagement />
+      )}
 
-        {showEmptySection && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Notifications
-              </CardTitle>
-              <CardDescription className="mt-2">
-                No configurable details are available in this section yet.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
+      {showEmptySection && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription className="mt-2">
+              No configurable details are available in this section yet.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
-        {/* Add Connection Dialog */}
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add GitHub Connection</DialogTitle>
-              <DialogDescription>
-                Connect your GitHub account to link repositories with projects
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="connection-name">Connection Name</Label>
-                <Input
-                  id="connection-name"
-                  placeholder="e.g., My GitHub Account"
-                  value={connectionName}
-                  onChange={(e) => setConnectionName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="access-token">Personal Access Token</Label>
-                <Input
-                  id="access-token"
-                  type="password"
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  value={accessToken}
-                  onChange={(e) => setAccessToken(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Your token will be encrypted and stored securely
-                </p>
-              </div>
+      {/* Add Connection Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add GitHub Connection</DialogTitle>
+            <DialogDescription>
+              Connect your GitHub account to link repositories with projects
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="connection-name">Connection Name</Label>
+              <Input
+                id="connection-name"
+                placeholder="e.g., My GitHub Account"
+                value={connectionName}
+                onChange={(e) => setConnectionName(e.target.value)}
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAddDialogOpen(false);
-                  setConnectionName("");
-                  setAccessToken("");
-                }}
-                disabled={formLoading}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleAddConnection} disabled={formLoading}>
-                {formLoading ? "Adding..." : "Add Connection"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Connection Dialog */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit GitHub Connection</DialogTitle>
-              <DialogDescription>
-                Update connection name or access token
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-connection-name">Connection Name</Label>
-                <Input
-                  id="edit-connection-name"
-                  placeholder="e.g., My GitHub Account"
-                  value={connectionName}
-                  onChange={(e) => setConnectionName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-access-token">
-                  New Personal Access Token (optional)
-                </Label>
-                <Input
-                  id="edit-access-token"
-                  type="password"
-                  placeholder="Leave empty to keep existing token"
-                  value={accessToken}
-                  onChange={(e) => setAccessToken(e.target.value)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="access-token">Personal Access Token</Label>
+              <Input
+                id="access-token"
+                type="password"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Your token will be encrypted and stored securely
+              </p>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditDialogOpen(false);
-                  setConnectionName("");
-                  setAccessToken("");
-                  setSelectedConnection(null);
-                }}
-                disabled={formLoading}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleEditConnection} disabled={formLoading}>
-                {formLoading ? "Updating..." : "Update Connection"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddDialogOpen(false);
+                setConnectionName("");
+                setAccessToken("");
+              }}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddConnection} disabled={formLoading}>
+              {formLoading ? "Adding..." : "Add Connection"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete Connection Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete GitHub Connection</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete "
-                {selectedConnection?.connection_name}"? This will also remove
-                all repository links using this connection.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDeleteDialogOpen(false);
-                  setSelectedConnection(null);
-                }}
-                disabled={formLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteConnection}
-                disabled={formLoading}
-              >
-                {formLoading ? "Deleting..." : "Delete Connection"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Add Sales Stage Dialog */}
-        <Dialog open={stageAddOpen} onOpenChange={setStageAddOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add sales stage</DialogTitle>
-              <DialogDescription>
-                Add a new stage to your sales pipeline (e.g. lead, qualified,
-                won).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="stage-name">Name</Label>
-                <Input
-                  id="stage-name"
-                  placeholder="e.g. discovery"
-                  value={stageName}
-                  onChange={(e) => setStageName(e.target.value)}
-                />
-              </div>
+      {/* Edit Connection Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit GitHub Connection</DialogTitle>
+            <DialogDescription>
+              Update connection name or access token
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-connection-name">Connection Name</Label>
+              <Input
+                id="edit-connection-name"
+                placeholder="e.g., My GitHub Account"
+                value={connectionName}
+                onChange={(e) => setConnectionName(e.target.value)}
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStageAddOpen(false);
-                  setStageName("");
-                }}
-                disabled={stageFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddStage}
-                disabled={stageFormLoading || !stageName.trim()}
-              >
-                {stageFormLoading ? "Adding..." : "Add stage"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Sales Stage Dialog */}
-        <Dialog open={stageEditOpen} onOpenChange={setStageEditOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit sales stage</DialogTitle>
-              <DialogDescription>
-                Change the stage name. Deals using this stage will show the new
-                name.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-stage-name">Name</Label>
-                <Input
-                  id="edit-stage-name"
-                  value={stageName}
-                  onChange={(e) => setStageName(e.target.value)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-access-token">
+                New Personal Access Token (optional)
+              </Label>
+              <Input
+                id="edit-access-token"
+                type="password"
+                placeholder="Leave empty to keep existing token"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStageEditOpen(false);
-                  setStageName("");
-                  setSelectedStage(null);
-                }}
-                disabled={stageFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEditStage}
-                disabled={stageFormLoading || !stageName.trim()}
-              >
-                {stageFormLoading ? "Updating..." : "Update"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setConnectionName("");
+                setAccessToken("");
+                setSelectedConnection(null);
+              }}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditConnection} disabled={formLoading}>
+              {formLoading ? "Updating..." : "Update Connection"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete Sales Stage Dialog */}
-        <Dialog open={stageDeleteOpen} onOpenChange={setStageDeleteOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete sales stage</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete "{selectedStage?.name}"? Deals
-                in this stage will keep the stage value but it may no longer
-                appear in pipeline lists until you add a stage with the same
-                name again.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStageDeleteOpen(false);
-                  setSelectedStage(null);
-                }}
-                disabled={stageFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteStage}
-                disabled={stageFormLoading}
-              >
-                {stageFormLoading ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {/* Delete Connection Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete GitHub Connection</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "
+              {selectedConnection?.connection_name}"? This will also remove all
+              repository links using this connection.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSelectedConnection(null);
+              }}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConnection}
+              disabled={formLoading}
+            >
+              {formLoading ? "Deleting..." : "Delete Connection"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Add Project Status Dialog */}
-        <Dialog open={projStatusAddOpen} onOpenChange={setProjStatusAddOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add project status</DialogTitle>
-              <DialogDescription>
-                Add a status used on the projects board (e.g. Draft, Active,
-                Completed).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="proj-status-name">Name</Label>
-                <Input
-                  id="proj-status-name"
-                  placeholder="e.g. In review"
-                  value={projStatusName}
-                  onChange={(e) => setProjStatusName(e.target.value)}
-                />
-              </div>
+      {/* Add Sales Stage Dialog */}
+      <Dialog open={stageAddOpen} onOpenChange={setStageAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add sales stage</DialogTitle>
+            <DialogDescription>
+              Add a new stage to your sales pipeline (e.g. lead, qualified,
+              won).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stage-name">Name</Label>
+              <Input
+                id="stage-name"
+                placeholder="e.g. discovery"
+                value={stageName}
+                onChange={(e) => setStageName(e.target.value)}
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setProjStatusAddOpen(false);
-                  setProjStatusName("");
-                }}
-                disabled={projStatusFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddProjStatus}
-                disabled={projStatusFormLoading || !projStatusName.trim()}
-              >
-                {projStatusFormLoading ? "Adding..." : "Add status"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStageAddOpen(false);
+                setStageName("");
+              }}
+              disabled={stageFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddStage}
+              disabled={stageFormLoading || !stageName.trim()}
+            >
+              {stageFormLoading ? "Adding..." : "Add stage"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Edit Project Status Dialog */}
-        <Dialog open={projStatusEditOpen} onOpenChange={setProjStatusEditOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit project status</DialogTitle>
-              <DialogDescription>
-                Changing the name updates how it appears in dropdowns; existing
-                projects keep the new label when they match.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-proj-status-name">Name</Label>
-                <Input
-                  id="edit-proj-status-name"
-                  value={projStatusName}
-                  onChange={(e) => setProjStatusName(e.target.value)}
-                />
-              </div>
+      {/* Edit Sales Stage Dialog */}
+      <Dialog open={stageEditOpen} onOpenChange={setStageEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit sales stage</DialogTitle>
+            <DialogDescription>
+              Change the stage name. Deals using this stage will show the new
+              name.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-stage-name">Name</Label>
+              <Input
+                id="edit-stage-name"
+                value={stageName}
+                onChange={(e) => setStageName(e.target.value)}
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setProjStatusEditOpen(false);
-                  setProjStatusName("");
-                  setSelectedProjStatus(null);
-                }}
-                disabled={projStatusFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEditProjStatus}
-                disabled={projStatusFormLoading || !projStatusName.trim()}
-              >
-                {projStatusFormLoading ? "Updating..." : "Update"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStageEditOpen(false);
+                setStageName("");
+                setSelectedStage(null);
+              }}
+              disabled={stageFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditStage}
+              disabled={stageFormLoading || !stageName.trim()}
+            >
+              {stageFormLoading ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete Project Status Dialog */}
-        <Dialog
-          open={projStatusDeleteOpen}
-          onOpenChange={setProjStatusDeleteOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete project status</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete "{selectedProjStatus?.name}"?
-                Projects using this value will show it under Other until you
-                edit them.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setProjStatusDeleteOpen(false);
-                  setSelectedProjStatus(null);
-                }}
-                disabled={projStatusFormLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteProjStatus}
-                disabled={projStatusFormLoading}
-              >
-                {projStatusFormLoading ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </PageShell>
+      {/* Delete Sales Stage Dialog */}
+      <Dialog open={stageDeleteOpen} onOpenChange={setStageDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete sales stage</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedStage?.name}"? Deals in
+              this stage will keep the stage value but it may no longer appear
+              in pipeline lists until you add a stage with the same name again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStageDeleteOpen(false);
+                setSelectedStage(null);
+              }}
+              disabled={stageFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteStage}
+              disabled={stageFormLoading}
+            >
+              {stageFormLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Project Status Dialog */}
+      <Dialog open={projStatusAddOpen} onOpenChange={setProjStatusAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add project status</DialogTitle>
+            <DialogDescription>
+              Add a status used on the projects board (e.g. Draft, Active,
+              Completed).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="proj-status-name">Name</Label>
+              <Input
+                id="proj-status-name"
+                placeholder="e.g. In review"
+                value={projStatusName}
+                onChange={(e) => setProjStatusName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProjStatusAddOpen(false);
+                setProjStatusName("");
+              }}
+              disabled={projStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddProjStatus}
+              disabled={projStatusFormLoading || !projStatusName.trim()}
+            >
+              {projStatusFormLoading ? "Adding..." : "Add status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Status Dialog */}
+      <Dialog open={projStatusEditOpen} onOpenChange={setProjStatusEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit project status</DialogTitle>
+            <DialogDescription>
+              Changing the name updates how it appears in dropdowns; existing
+              projects keep the new label when they match.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-proj-status-name">Name</Label>
+              <Input
+                id="edit-proj-status-name"
+                value={projStatusName}
+                onChange={(e) => setProjStatusName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProjStatusEditOpen(false);
+                setProjStatusName("");
+                setSelectedProjStatus(null);
+              }}
+              disabled={projStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditProjStatus}
+              disabled={projStatusFormLoading || !projStatusName.trim()}
+            >
+              {projStatusFormLoading ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Project Status Dialog */}
+      <Dialog
+        open={projStatusDeleteOpen}
+        onOpenChange={setProjStatusDeleteOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete project status</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedProjStatus?.name}"?
+              Projects using this value will show it under Other until you edit
+              them.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProjStatusDeleteOpen(false);
+                setSelectedProjStatus(null);
+              }}
+              disabled={projStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProjStatus}
+              disabled={projStatusFormLoading}
+            >
+              {projStatusFormLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }
