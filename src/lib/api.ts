@@ -1135,7 +1135,7 @@ export interface CreateEmployeeInput {
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
-  reporting_manager_id?: number;
+  reporting_manager_id?: number | null;
   date_of_birth?: string;
   gender?: string;
   marital_status?: string;
