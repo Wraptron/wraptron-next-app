@@ -12,7 +12,7 @@ interface PreviewToolbarProps {
 
 export function PreviewToolbar({ mode, onModeChange }: PreviewToolbarProps) {
   return (
-    <div className="border-b bg-white px-4 py-2 flex items-center justify-center gap-2">
+    <div className="border-b bg-background px-4 py-2 flex items-center justify-center gap-2">
       <Button
         variant={mode === "desktop" ? "default" : "ghost"}
         size="sm"

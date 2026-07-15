@@ -196,7 +196,7 @@ export function AIAssistantDialog({
               rows={6}
               className="mt-2"
             />
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Describe what kind of form you want to create, and we'll generate it for you.
             </p>
           </div>

@@ -8,11 +8,15 @@ import {
   githubApi,
   salesStagesApi,
   projectStatusesApi,
+  taskStatusesApi,
   invoiceSettingsApi,
+  WORKFLOW_CATEGORY_LABELS,
   type GitHubConnection,
   type SalesStage,
   type ProjectStatus,
+  type TaskStatus,
   type InvoiceSettings,
+  type WorkflowCategory,
 } from "@/lib/api";
 import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsPricingCalculator } from "@/components/settings-pricing-calculator";
@@ -65,6 +69,7 @@ import {
   DollarSign,
   TrendingUp,
   FolderKanban,
+  ListTodo,
   Sun,
   Moon,
   Monitor,
@@ -123,6 +128,19 @@ export default function Settings() {
     useState<ProjectStatus | null>(null);
   const [projStatusName, setProjStatusName] = useState("");
   const [projStatusFormLoading, setProjStatusFormLoading] = useState(false);
+
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([]);
+  const [taskStatusesLoading, setTaskStatusesLoading] = useState(true);
+  const [taskStatusAddOpen, setTaskStatusAddOpen] = useState(false);
+  const [taskStatusEditOpen, setTaskStatusEditOpen] = useState(false);
+  const [taskStatusDeleteOpen, setTaskStatusDeleteOpen] = useState(false);
+  const [selectedTaskStatus, setSelectedTaskStatus] =
+    useState<TaskStatus | null>(null);
+  const [taskStatusName, setTaskStatusName] = useState("");
+  const [taskStatusCategory, setTaskStatusCategory] =
+    useState<WorkflowCategory>("backlog");
+  const [taskStatusFormLoading, setTaskStatusFormLoading] = useState(false);
+
   const [invoiceSettings, setInvoiceSettings] =
     useState<InvoiceSettings | null>(null);
   const [invoiceSettingsForm, setInvoiceSettingsForm] = useState({
@@ -207,6 +225,21 @@ export default function Settings() {
         setProjectStatuses([]);
       } finally {
         setProjectStatusesLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setTaskStatusesLoading(true);
+      try {
+        const res = await taskStatusesApi.getAll();
+        setTaskStatuses(res.data ?? []);
+      } catch {
+        setTaskStatuses([]);
+      } finally {
+        setTaskStatusesLoading(false);
       }
     };
     load();
@@ -534,6 +567,114 @@ export default function Settings() {
       setProjectStatuses(previous);
       setError(
         err instanceof Error ? err.message : "Failed to reorder project stages",
+      );
+      throw err;
+    }
+  };
+
+  const fetchTaskStatuses = async () => {
+    try {
+      const res = await taskStatusesApi.getAll();
+      setTaskStatuses(res.data ?? []);
+    } catch {
+      setTaskStatuses([]);
+    }
+  };
+
+  const handleAddTaskStatus = async () => {
+    if (!taskStatusName.trim()) {
+      setError("Status name is required");
+      return;
+    }
+    setTaskStatusFormLoading(true);
+    setError(null);
+    try {
+      await taskStatusesApi.create({
+        name: taskStatusName.trim(),
+        sort_order: taskStatuses.length,
+        category: taskStatusCategory,
+      });
+      setSuccessMessage("Task status added.");
+      setTaskStatusAddOpen(false);
+      setTaskStatusName("");
+      setTaskStatusCategory("backlog");
+      fetchTaskStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add status");
+    } finally {
+      setTaskStatusFormLoading(false);
+    }
+  };
+
+  const handleEditTaskStatus = async () => {
+    if (!selectedTaskStatus) return;
+    if (!taskStatusName.trim()) {
+      setError("Status name is required");
+      return;
+    }
+    setTaskStatusFormLoading(true);
+    setError(null);
+    try {
+      await taskStatusesApi.update(selectedTaskStatus.id, {
+        name: taskStatusName.trim(),
+        category: taskStatusCategory,
+      });
+      setSuccessMessage("Task status updated.");
+      setTaskStatusEditOpen(false);
+      setTaskStatusName("");
+      setSelectedTaskStatus(null);
+      fetchTaskStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setTaskStatusFormLoading(false);
+    }
+  };
+
+  const handleDeleteTaskStatus = async () => {
+    if (!selectedTaskStatus) return;
+    setTaskStatusFormLoading(true);
+    setError(null);
+    try {
+      await taskStatusesApi.delete(selectedTaskStatus.id);
+      setSuccessMessage("Task status deleted.");
+      setTaskStatusDeleteOpen(false);
+      setSelectedTaskStatus(null);
+      fetchTaskStatuses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete status");
+    } finally {
+      setTaskStatusFormLoading(false);
+    }
+  };
+
+  const openEditTaskStatus = (s: TaskStatus) => {
+    setSelectedTaskStatus(s);
+    setTaskStatusName(s.name);
+    setTaskStatusCategory(s.category ?? "backlog");
+    setTaskStatusEditOpen(true);
+  };
+
+  const openDeleteTaskStatus = (s: TaskStatus) => {
+    setSelectedTaskStatus(s);
+    setTaskStatusDeleteOpen(true);
+  };
+
+  const handleReorderTaskStatuses = async (reordered: TaskStatus[]) => {
+    const previous = taskStatuses;
+    setTaskStatuses(reordered);
+    setError(null);
+    try {
+      await Promise.all(
+        reordered.map((status, index) =>
+          taskStatusesApi.update(status.id, { sort_order: index }),
+        ),
+      );
+      setSuccessMessage("Task statuses reordered.");
+    } catch (err) {
+      setTaskStatuses(previous);
+      setError(
+        err instanceof Error ? err.message : "Failed to reorder task statuses",
       );
       throw err;
     }
@@ -932,6 +1073,50 @@ export default function Settings() {
                 onReorder={handleReorderProjectStatuses}
                 onEdit={openEditProjStatus}
                 onDelete={openDeleteProjStatus}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Task statuses Section */}
+      {showApps && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ListTodo className="h-5 w-5" />
+                  Task Statuses
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Manage task statuses for the task pipeline catalog
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => {
+                  setTaskStatusName("");
+                  setTaskStatusAddOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add status
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {taskStatusesLoading ? (
+              <div className="text-center py-8">Loading statuses...</div>
+            ) : taskStatuses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No statuses yet. Add one to customize your task pipeline.
+              </div>
+            ) : (
+              <SortableSettingsTable
+                items={taskStatuses}
+                onReorder={handleReorderTaskStatuses}
+                onEdit={openEditTaskStatus}
+                onDelete={openDeleteTaskStatus}
               />
             )}
           </CardContent>
@@ -1528,6 +1713,178 @@ export default function Settings() {
               disabled={projStatusFormLoading}
             >
               {projStatusFormLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Task Status Dialog */}
+      <Dialog open={taskStatusAddOpen} onOpenChange={setTaskStatusAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add task status</DialogTitle>
+            <DialogDescription>
+              Add a status for the task pipeline catalog (e.g. Backlog, In
+              progress, Done).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-status-name">Name</Label>
+              <Input
+                id="task-status-name"
+                placeholder="e.g. blocked"
+                value={taskStatusName}
+                onChange={(e) => setTaskStatusName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Workflow category</Label>
+              <Select
+                value={taskStatusCategory}
+                onValueChange={(v) =>
+                  setTaskStatusCategory(v as WorkflowCategory)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.entries(WORKFLOW_CATEGORY_LABELS) as [
+                      WorkflowCategory,
+                      string,
+                    ][]
+                  ).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Role permissions and GitHub automation key off the category,
+                not the status name.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTaskStatusAddOpen(false);
+                setTaskStatusName("");
+              }}
+              disabled={taskStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddTaskStatus}
+              disabled={taskStatusFormLoading || !taskStatusName.trim()}
+            >
+              {taskStatusFormLoading ? "Adding..." : "Add status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Status Dialog */}
+      <Dialog open={taskStatusEditOpen} onOpenChange={setTaskStatusEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit task status</DialogTitle>
+            <DialogDescription>
+              Renaming a status updates the tasks that use it; the workflow
+              category drives board order, permissions, and GitHub automation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-task-status-name">Name</Label>
+              <Input
+                id="edit-task-status-name"
+                value={taskStatusName}
+                onChange={(e) => setTaskStatusName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Workflow category</Label>
+              <Select
+                value={taskStatusCategory}
+                onValueChange={(v) =>
+                  setTaskStatusCategory(v as WorkflowCategory)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.entries(WORKFLOW_CATEGORY_LABELS) as [
+                      WorkflowCategory,
+                      string,
+                    ][]
+                  ).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTaskStatusEditOpen(false);
+                setTaskStatusName("");
+                setSelectedTaskStatus(null);
+              }}
+              disabled={taskStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditTaskStatus}
+              disabled={taskStatusFormLoading || !taskStatusName.trim()}
+            >
+              {taskStatusFormLoading ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Status Dialog */}
+      <Dialog
+        open={taskStatusDeleteOpen}
+        onOpenChange={setTaskStatusDeleteOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete task status</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedTaskStatus?.name}"?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTaskStatusDeleteOpen(false);
+                setSelectedTaskStatus(null);
+              }}
+              disabled={taskStatusFormLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTaskStatus}
+              disabled={taskStatusFormLoading}
+            >
+              {taskStatusFormLoading ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

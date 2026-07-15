@@ -292,6 +292,8 @@ export interface TaskChange {
 export interface Project {
   id: number;
   project_name: string;
+  /** Short unique task-key prefix (e.g. ACME → tasks ACME-12). */
+  key?: string;
   services_offered: string[];
   start_date?: string;
   target_date?: string;
@@ -2103,6 +2105,211 @@ export const projectStatusesApi = {
     return fetchApi<void>(`/api/project-statuses/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+// ============================================================================
+// Task statuses (Settings → task pipeline catalog)
+// ============================================================================
+
+/** Workflow category driving permissions and automation (Linear-style). */
+export type WorkflowCategory = "backlog" | "in_progress" | "review" | "done";
+
+export const WORKFLOW_CATEGORY_ORDER: Record<WorkflowCategory, number> = {
+  backlog: 0,
+  in_progress: 1,
+  review: 2,
+  done: 3,
+};
+
+export const WORKFLOW_CATEGORY_LABELS: Record<WorkflowCategory, string> = {
+  backlog: "Backlog",
+  in_progress: "In Progress",
+  review: "Review",
+  done: "Done",
+};
+
+export interface TaskStatus {
+  id: number;
+  name: string;
+  category: WorkflowCategory;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const taskStatusesApi = {
+  getAll: async (): Promise<{ data: TaskStatus[] }> => {
+    return fetchApi<{ data: TaskStatus[] }>("/api/task-statuses");
+  },
+
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+    category?: WorkflowCategory;
+  }): Promise<TaskStatus> => {
+    return fetchApi<TaskStatus>("/api/task-statuses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number; category?: WorkflowCategory },
+  ): Promise<TaskStatus> => {
+    return fetchApi<TaskStatus>(`/api/task-statuses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/task-statuses/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ============================================================================
+// Tasks (Linear-style board: /tasks)
+// ============================================================================
+
+export interface BoardTask {
+  id: number;
+  project_id: number;
+  title: string;
+  status: string;
+  category: WorkflowCategory | null;
+  priority: string | null;
+  number: number;
+  /** e.g. ACME-12 */
+  display_key: string;
+  project_key: string;
+  project_name: string;
+  branch_name: string | null;
+  assigned_employee_id: number | null;
+  assignee_name: string | null;
+  pr_count: number;
+  latest_pr_state: "open" | "merged" | "closed" | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskPullRequest {
+  id: number;
+  repo_owner: string;
+  repo_name: string;
+  pr_number: number;
+  title: string | null;
+  url: string;
+  state: "open" | "merged" | "closed";
+  author_login: string | null;
+  head_branch: string | null;
+  opened_at: string | null;
+  merged_at: string | null;
+}
+
+export interface TaskActivityEntry {
+  id: number;
+  change_type: string;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string | null;
+  created_at: string;
+  /** Resolved employee name when field_name is assigned_employee_id */
+  new_assignee_name?: string | null;
+  old_assignee_name?: string | null;
+}
+
+export interface TaskTimeInStatus {
+  status: string;
+  category: WorkflowCategory;
+  seconds: number;
+}
+
+export interface TaskDetail extends BoardTask {
+  description: string | null;
+  pull_requests: TaskPullRequest[];
+  activity: TaskActivityEntry[];
+  time_in_status: TaskTimeInStatus[];
+}
+
+export interface TaskBoardFilters {
+  project_id?: number;
+  assigned_employee_id?: number;
+  status?: string;
+  category?: WorkflowCategory;
+  q?: string;
+}
+
+export interface TakeTaskResponse extends BoardTask {
+  /** True when the take action assigned the task to the caller. */
+  assigned: boolean;
+  /** True when the take action moved the task to In Progress. */
+  moved: boolean;
+}
+
+export const tasksApi = {
+  board: async (filters?: TaskBoardFilters): Promise<{ data: BoardTask[] }> => {
+    const params = new URLSearchParams();
+    if (filters?.project_id) params.set("project_id", String(filters.project_id));
+    if (filters?.assigned_employee_id) {
+      params.set("assigned_employee_id", String(filters.assigned_employee_id));
+    }
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.category) params.set("category", filters.category);
+    if (filters?.q) params.set("q", filters.q);
+    const qs = params.toString();
+    return fetchApi<{ data: BoardTask[] }>(`/api/tasks${qs ? `?${qs}` : ""}`);
+  },
+
+  getByKey: async (key: string): Promise<TaskDetail> => {
+    return fetchApi<TaskDetail>(`/api/tasks/${encodeURIComponent(key)}`);
+  },
+
+  create: async (data: {
+    project_id: number;
+    title: string;
+    description?: string;
+    assigned_employee_id?: number | null;
+    priority?: string;
+  }): Promise<BoardTask> => {
+    return fetchApi<BoardTask>("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: {
+      title?: string;
+      description?: string | null;
+      status?: string;
+      assigned_employee_id?: number | null;
+      priority?: string;
+    },
+  ): Promise<BoardTask> => {
+    return fetchApi<BoardTask>(`/api/tasks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Linear-style "copy branch name" action: persists the branch name,
+   * assigns the caller if unassigned, and moves backlog tasks to In Progress.
+   */
+  take: async (id: number): Promise<TakeTaskResponse> => {
+    return fetchApi<TakeTaskResponse>(`/api/tasks/${id}/take`, {
+      method: "POST",
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/tasks/${id}`, { method: "DELETE" });
   },
 };
 

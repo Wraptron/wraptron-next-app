@@ -44,20 +44,20 @@ function BuilderToolbar() {
     } = useFormBuilder();
 
     return (
-        <div className="h-14 border-b bg-white flex items-center justify-between px-4 sticky top-0 z-20">
+        <div className="h-14 border-b bg-background flex items-center justify-between px-4 sticky top-0 z-20">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
                     <ChevronLeft className="w-4 h-4 mr-1" /> Back
                 </Button>
-                <div className="h-6 w-px bg-gray-200" />
-                <h1 className="font-semibold text-gray-900">Untitled Form</h1>
+                <div className="h-6 w-px bg-border" />
+                <h1 className="font-semibold text-foreground">Untitled Form</h1>
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+            <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("h-8 w-8 text-gray-500", deviceMode === "desktop" && "bg-white shadow-sm text-indigo-600")}
+                    className={cn("h-8 w-8 text-muted-foreground", deviceMode === "desktop" && "bg-background shadow-sm text-indigo-600")}
                     onClick={() => setDeviceMode("desktop")}
                 >
                     <Monitor className="w-4 h-4" />
@@ -65,7 +65,7 @@ function BuilderToolbar() {
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("h-8 w-8 text-gray-500", deviceMode === "tablet" && "bg-white shadow-sm text-indigo-600")}
+                    className={cn("h-8 w-8 text-muted-foreground", deviceMode === "tablet" && "bg-background shadow-sm text-indigo-600")}
                     onClick={() => setDeviceMode("tablet")}
                 >
                     <Tablet className="w-4 h-4" />
@@ -73,7 +73,7 @@ function BuilderToolbar() {
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("h-8 w-8 text-gray-500", deviceMode === "mobile" && "bg-white shadow-sm text-indigo-600")}
+                    className={cn("h-8 w-8 text-muted-foreground", deviceMode === "mobile" && "bg-background shadow-sm text-indigo-600")}
                     onClick={() => setDeviceMode("mobile")}
                 >
                     <Smartphone className="w-4 h-4" />
@@ -87,7 +87,7 @@ function BuilderToolbar() {
                  <Button variant="ghost" size="icon" disabled={!canRedo} onClick={redo}>
                     <Redo2 className="w-4 h-4" />
                  </Button>
-                 <div className="h-6 w-px bg-gray-200 mx-2" />
+                 <div className="h-6 w-px bg-border mx-2" />
                  <Button variant="outline" size="sm" className="hidden sm:flex">
                     <Sparkles className="w-3.5 h-3.5 mr-2 text-indigo-500" /> 
                     AI Assistant
@@ -159,7 +159,7 @@ export function BuilderLayout() {
             onDragStart={handleDragStart} 
             onDragEnd={handleDragEnd}
         >
-            <div className="h-screen flex flex-col bg-white">
+            <div className="h-screen flex flex-col bg-background">
                 <BuilderToolbar />
                 <div className="flex-1 flex overflow-hidden">
                     <FieldLibrary />
@@ -169,7 +169,7 @@ export function BuilderLayout() {
             </div>
             <DragOverlay>
                 {activeDragItem ? (
-                     <div className="p-4 bg-white border border-indigo-500 shadow-lg rounded-lg opacity-80 w-64">
+                     <div className="p-4 bg-background border border-indigo-500 shadow-lg rounded-lg opacity-80 w-64">
                         {activeDragItem.isLibraryItem ? (
                             <span className="font-medium">{activeDragItem.type}</span>
                         ) : (

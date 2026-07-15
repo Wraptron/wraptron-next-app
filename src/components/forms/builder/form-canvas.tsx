@@ -19,10 +19,10 @@ import { Trash2, GripVertical, Copy } from "lucide-react";
 function EmptyState() {
   const { addField } = useFormBuilder();
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 m-8">
+    <div className="flex flex-col items-center justify-center h-full text-center p-8 border-2 border-dashed border-border rounded-xl bg-muted/50 m-8">
       <div className="max-w-md space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Start building your form</h3>
-        <p className="text-gray-500">Drag fields from the left or choose a template to get started.</p>
+        <h3 className="text-xl font-bold text-foreground">Start building your form</h3>
+        <p className="text-muted-foreground">Drag fields from the left or choose a template to get started.</p>
         <div className="grid grid-cols-1 gap-2 pt-4">
            <Button variant="outline" className="w-full justify-start" onClick={() => {
               addField("short-text"); addField("email"); addField("long-text");
@@ -68,9 +68,9 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
       case "email":
       case "phone":
       case "calculated":
-        return <Input placeholder={field.placeholder || "Short answer text"} className="bg-white" disabled />;
+        return <Input placeholder={field.placeholder || "Short answer text"} className="bg-background" disabled />;
       case "long-text":
-        return <Textarea placeholder={field.placeholder || "Long answer text"} className="bg-white min-h-[100px]" disabled />;
+        return <Textarea placeholder={field.placeholder || "Long answer text"} className="bg-background min-h-[100px]" disabled />;
       case "radio":
         return (
             <RadioGroup disabled>
@@ -96,7 +96,7 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
       case "dropdown":
         return (
             <Select disabled>
-                <SelectTrigger className="bg-white">
+                <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Select an option" />
                 </SelectTrigger>
                 <SelectContent>
@@ -109,12 +109,12 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
       case "section":
         return null; // Handled in label area mostly, but maybe a separator?
       case "divider":
-        return <hr className="my-4 border-gray-200" />;
+        return <hr className="my-4 border-border" />;
       case "spacer":
         return <div className="h-8" />;
        // ... other types
       default:
-        return <div className="p-4 bg-gray-100 rounded text-gray-500 text-sm">Unsupported field type: {field.type}</div>;
+        return <div className="p-4 bg-muted rounded text-muted-foreground text-sm">Unsupported field type: {field.type}</div>;
     }
   })();
 
@@ -128,18 +128,18 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
                         onChange={(e) => updateField(field.id, { label: e.target.value })}
                         onBlur={handleLabelBlur}
                         onKeyDown={handleLabelKeyDown}
-                        className="text-2xl font-bold border-indigo-300 focus:ring-indigo-500 bg-white"
+                        className="text-2xl font-bold border-indigo-300 focus:ring-indigo-500 bg-background"
                     />
                 ) : (
                     <h2 
-                        className="text-2xl font-bold text-gray-900 cursor-text hover:bg-gray-50 px-1 -mx-1 rounded"
+                        className="text-2xl font-bold text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded"
                         onClick={(e) => { e.stopPropagation(); setIsEditingLabel(true); }}
                     >
                         {field.label}
                     </h2>
                  )}
-                 {field.helpText && <p className="text-gray-500 mt-1">{field.helpText}</p>}
-                 <hr className="mt-2 border-gray-200" />
+                 {field.helpText && <p className="text-muted-foreground mt-1">{field.helpText}</p>}
+                 <hr className="mt-2 border-border" />
              </div>
         );
     }
@@ -155,11 +155,11 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
                     onChange={(e) => updateField(field.id, { label: e.target.value })}
                     onBlur={handleLabelBlur}
                     onKeyDown={handleLabelKeyDown}
-                    className="font-medium h-8 py-1 px-2 w-full border-indigo-300 focus:ring-indigo-500 bg-white"
+                    className="font-medium h-8 py-1 px-2 w-full border-indigo-300 focus:ring-indigo-500 bg-background"
                 />
              ) : (
                 <Label 
-                    className="text-sm font-medium text-gray-900 cursor-text hover:text-indigo-600 transition-colors"
+                    className="text-sm font-medium text-foreground cursor-text hover:text-indigo-600 transition-colors"
                     onClick={(e) => { e.stopPropagation(); setIsEditingLabel(true); }}
                 >
                     {field.label}
@@ -169,7 +169,7 @@ function FieldRenderer({ field, isSelected }: { field: FormField; isSelected: bo
         </div>
       )}
       {content}
-      {field.helpText && <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>}
+      {field.helpText && <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p>}
     </div>
   );
 }
@@ -202,8 +202,8 @@ function SortableFieldWrapper({ field }: { field: FormField }) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex items-start gap-2 p-4 rounded-lg border-2 bg-white transition-all mb-4",
-        isSelected ? "border-indigo-500 shadow-md ring-1 ring-indigo-500 z-10" : "border-transparent hover:border-gray-300",
+        "group relative flex items-start gap-2 p-4 rounded-lg border-2 bg-background transition-all mb-4",
+        isSelected ? "border-indigo-500 shadow-md ring-1 ring-indigo-500 z-10" : "border-transparent hover:border-border",
         isDragging && "opacity-50 z-50",
          // "Click label to edit text" handled in renderer, "Double-click field to open properties" handled here
       )}
@@ -222,7 +222,7 @@ function SortableFieldWrapper({ field }: { field: FormField }) {
             {...attributes} 
             {...listeners}
             className={cn(
-                "absolute left-2 top-1/2 -translate-y-1/2 cursor-grab text-gray-400 p-1 rounded hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity",
+                "absolute left-2 top-1/2 -translate-y-1/2 cursor-grab text-gray-400 p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity",
                 isSelected && "opacity-100"
             )}
         >
@@ -237,9 +237,9 @@ function SortableFieldWrapper({ field }: { field: FormField }) {
         {/* Actions - Only visible on selection or hover */}
         <div className={cn(
             "absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
-            isSelected && "opacity-100 bg-white shadow-sm p-1 rounded-md border border-gray-100"
+            isSelected && "opacity-100 bg-background shadow-sm p-1 rounded-md border border-border"
         )}>
-             <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-indigo-600" onClick={handleDuplicate}>
+             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-indigo-600" onClick={handleDuplicate}>
                 <Copy className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={(e) => {
@@ -267,13 +267,13 @@ export function FormCanvas() {
 
   return (
     <div 
-        className="flex-1 bg-gray-100 h-full overflow-y-auto flex flex-col items-center py-8 relative transition-all"
+        className="flex-1 bg-muted h-full overflow-y-auto flex flex-col items-center py-8 relative transition-all"
         onClick={() => selectField(null)} // Deselect when clicking background
     >
       <div
         ref={setNodeRef}
         className={cn(
-          "w-full bg-white min-h-[800px] shadow-sm rounded-xl transition-all duration-300 ease-in-out p-8 border border-gray-200",
+          "w-full bg-background min-h-[800px] shadow-sm rounded-xl transition-all duration-300 ease-in-out p-8 border border-border",
           maxWidthClass
         )}
       >

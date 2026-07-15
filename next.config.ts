@@ -81,6 +81,24 @@ const nextConfig: NextConfig = {
         destination: "/customer-onboarding",
         permanent: true,
       },
+      // PPM module retired: projects live at /projects, tasks at /tasks.
+      {
+        source: "/ppm/projects/tasks",
+        destination: "/tasks",
+        permanent: true,
+      },
+      {
+        source: "/ppm/projects/:id/tasks/:taskId",
+        destination: "/projects/:id/tasks/:taskId",
+        permanent: true,
+      },
+      {
+        source: "/ppm/projects/:path*",
+        destination: "/projects/:path*",
+        permanent: true,
+      },
+      { source: "/ppm", destination: "/projects", permanent: true },
+      { source: "/projects/tasks", destination: "/tasks", permanent: true },
     ];
   },
   async rewrites() {
@@ -93,9 +111,6 @@ const nextConfig: NextConfig = {
         source: "/ingest/:path*",
         destination: `${posthogHost}/:path*`,
       },
-      { source: "/projects", destination: "/ppm/projects" },
-      { source: "/projects/tasks", destination: "/ppm/projects/tasks" },
-      { source: "/projects/:path*", destination: "/ppm/projects/:path*" },
     ];
   },
   webpack: (config, { isServer }) => {

@@ -50,7 +50,7 @@ export function FormToolbar({
   };
 
   return (
-    <div className="border-b bg-white px-4 py-2 flex items-center justify-between">
+    <div className="border-b bg-background px-4 py-2 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo}>
           <Undo2 className="h-4 w-4" />
@@ -58,7 +58,7 @@ export function FormToolbar({
         <Button variant="ghost" size="sm" onClick={onRedo} disabled={!canRedo}>
           <Redo2 className="h-4 w-4" />
         </Button>
-        <div className="h-6 w-px bg-gray-300 mx-2" />
+        <div className="h-6 w-px bg-muted mx-2" />
         <Button variant="ghost" size="sm" onClick={onTest}>
           <Play
             className={cn("h-4 w-4 mr-2", isTestMode && "text-green-600")}
@@ -78,13 +78,13 @@ export function FormToolbar({
 
       <div className="flex items-center gap-4">
         {isAutoSaving && (
-          <span className="text-xs text-gray-500 flex items-center gap-1">
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
             <span className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
             Saving...
           </span>
         )}
         {lastSaved && !isAutoSaving && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             Saved {formatLastSaved()}
           </span>
         )}

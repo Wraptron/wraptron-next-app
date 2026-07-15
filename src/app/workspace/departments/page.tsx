@@ -77,7 +77,7 @@ export default function DepartmentsPage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-blue-50 rounded-lg">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                         <Building2 className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>

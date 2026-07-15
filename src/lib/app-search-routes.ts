@@ -79,7 +79,7 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     section: "Projects",
   },
   {
-    href: "/projects/tasks",
+    href: "/tasks",
     label: "Project tasks",
     keywords: "ppm todos",
     section: "Projects",
@@ -258,10 +258,12 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     label: "Departments",
     section: "Workspace",
   },
-  { href: "/ppm", label: "PPM", keywords: "portfolio", section: "PPM" },
-  { href: "/ppm/projects", label: "PPM projects", section: "PPM" },
-  { href: "/ppm/projects/new", label: "PPM — New project", section: "PPM" },
-  { href: "/ppm/projects/tasks", label: "PPM — Tasks", section: "PPM" },
+  {
+    href: "/tasks",
+    label: "Tasks board",
+    keywords: "kanban backlog in progress review done ppm",
+    section: "Tasks",
+  },
   {
     href: "/settings",
     label: "Settings",

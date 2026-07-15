@@ -187,10 +187,10 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
           {/* Header Info */}
           <div>
             <h1 className="text-2xl font-bold">{project.project_name}</h1>
-            <div className="text-gray-500 text-sm mt-1">
+            <div className="text-muted-foreground text-sm mt-1">
               Generated on {new Date().toLocaleDateString()}
             </div>
-            <div className="mt-4 flex gap-6 text-sm text-gray-600">
+            <div className="mt-4 flex gap-6 text-sm text-muted-foreground">
               <div>
                 <span className="font-semibold">ID:</span> {project.id}
               </div>
@@ -209,7 +209,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
             <h2 className="text-lg font-semibold border-b pb-2 mb-3">
               1. Executive Summary
             </h2>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-foreground">
               This project, <strong>{project.project_name}</strong>, aims to
               deliver {project.services_offered.join(", ")}
               {project.other_service_description
@@ -227,7 +227,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               <h2 className="text-lg font-semibold border-b pb-2 mb-3">
                 2. Scope of Work (In Scope)
               </h2>
-              <ul className="list-disc list-inside text-sm text-gray-600">
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
                 {project.services_offered.map((s, i) => (
                   <li key={i}>{s}</li>
                 ))}
@@ -241,7 +241,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               <h2 className="text-lg font-semibold border-b pb-2 mb-3">
                 Out of Scope
               </h2>
-              <ul className="list-disc list-inside text-sm text-gray-500 italic">
+              <ul className="list-disc list-inside text-sm text-muted-foreground italic">
                 {outOfScope.map((s, i) => (
                   <li key={i}>{s}</li>
                 ))}
@@ -259,18 +259,18 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               {/* Target Users & Tech Stack */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Target Users
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {project.target_users || "Not specified"}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Technology Stack
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {project.technology_stack || "Not specified"}
                   </p>
                 </div>
@@ -279,15 +279,15 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               {/* Requirements */}
               <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Business Requirements
                   </h3>
                   {project.functional_requirements ? (
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {project.functional_requirements}
                     </p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-muted-foreground italic">
                       None specified
                     </p>
                   )}
@@ -300,7 +300,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Functional Requirements
                   </h3>
                   {/* Since we mapped functional_requirements to "Business Requirements" above (often interchangeable in simple schemas), 
@@ -308,26 +308,26 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
                              and maybe use `business_objectives` for Business Requirements? The user explicitly said "Success criteria with business goals".
                              Let's use `functional_requirements` here. */}
                   {project.functional_requirements ? (
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {project.functional_requirements}
                     </p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-muted-foreground italic">
                       None specified
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Non-Functional Requirements
                   </h3>
                   {project.non_functional_requirements ? (
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {project.non_functional_requirements}
                     </p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-muted-foreground italic">
                       None specified
                     </p>
                   )}
@@ -337,7 +337,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
               {/* Pages / Views and UX */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Pages / Views
                   </h3>
                   {project.pages_views && project.pages_views.length > 0 ? (
@@ -349,16 +349,16 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-muted-foreground italic">
                       No pages defined.
                     </p>
                   )}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     UX Design Preferences
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {project.ux_preference || "Not specified"}
                   </p>
                 </div>
@@ -371,12 +371,12 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
             <h2 className="text-lg font-semibold border-b pb-2 mb-3">
               4. Milestones & Releases
             </h2>
-            <div className="text-sm text-gray-600">
-              <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
+            <div className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between py-2 border-b border-border max-w-md">
                 <span className="font-medium">Project Start</span>
                 <span>{formatDate(project.start_date)}</span>
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-100 max-w-md">
+              <div className="flex items-center justify-between py-2 border-b border-border max-w-md">
                 <span className="font-medium">Target Completion</span>
                 <span>{formatDate(project.target_date)}</span>
               </div>
@@ -391,26 +391,26 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
             </h2>
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-gray-700">
+                <h3 className="text-sm font-semibold text-foreground">
                   Business Goals
                 </h3>
                 {project.business_objectives &&
                 project.business_objectives.length > 0 ? (
-                  <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
+                  <ul className="list-disc list-inside text-sm text-muted-foreground mt-1">
                     {project.business_objectives.map((obj, i) => (
                       <li key={i}>{obj}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">None defined</p>
+                  <p className="text-sm text-muted-foreground italic">None defined</p>
                 )}
               </div>
               {project.kpi && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Key Performance Indicators (KPIs)
                   </h3>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {project.kpi}
                   </p>
                 </div>
@@ -542,7 +542,7 @@ export default function ProjectPage() {
               >
                 {project.status}
               </Badge>
-              <span className="text-sm text-gray-500 truncate">
+              <span className="text-sm text-muted-foreground truncate">
                 Created {formatDate(project.created_at)}
               </span>
             </div>
@@ -627,7 +627,7 @@ export default function ProjectPage() {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Services Offered
                     </p>
                     <div className="flex flex-wrap gap-2 mt-1">
@@ -644,27 +644,27 @@ export default function ProjectPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Start Date
                     </p>
                     <p className="text-sm">{formatDate(project.start_date)}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Target Date
                     </p>
                     <p className="text-sm">{formatDate(project.target_date)}</p>
                   </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <p className="text-sm font-medium text-gray-900 mb-4">
+                  <p className="text-sm font-medium text-foreground mb-4">
                     Additional Information
                   </p>
                   <div className="space-y-4">
                     {project.business_objectives &&
                       project.business_objectives.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium text-gray-500 mb-2">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
                             Project Objectives
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -680,11 +680,11 @@ export default function ProjectPage() {
                       )}
                     {project.kpi && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 mb-2">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
                           Goals & KPIs
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 rounded overflow-x-auto max-w-full">
                             {project.kpi}
                           </pre>
                         </div>
@@ -692,11 +692,11 @@ export default function ProjectPage() {
                     )}
                     {project.target_users && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 mb-2">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
                           Target Users
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 rounded overflow-x-auto max-w-full">
                             {project.target_users}
                           </pre>
                         </div>
@@ -704,11 +704,11 @@ export default function ProjectPage() {
                     )}
                     {project.project_references && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 mb-2">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
                           References
                         </p>
                         <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 rounded overflow-x-auto max-w-full">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 rounded overflow-x-auto max-w-full">
                             {project.project_references}
                           </pre>
                         </div>
@@ -729,7 +729,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.ux_preference}
                       </pre>
                     </div>
@@ -755,7 +755,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.functional_requirements}
                       </pre>
                     </div>
@@ -770,7 +770,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.non_functional_requirements}
                       </pre>
                     </div>
@@ -785,7 +785,7 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-gray-50 p-3 sm:p-4 rounded overflow-x-auto max-w-full">
+                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
                         {project.technology_stack}
                       </pre>
                     </div>
@@ -799,7 +799,7 @@ export default function ProjectPage() {
                 !project.technology_stack && (
                   <Card>
                     <CardContent className="pt-6">
-                      <p className="text-gray-500 text-center">
+                      <p className="text-muted-foreground text-center">
                         No requirements specified yet.
                       </p>
                     </CardContent>
@@ -834,7 +834,7 @@ export default function ProjectPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500">
+                <p className="text-muted-foreground">
                   Team management will appear here.
                 </p>
               </CardContent>
@@ -1711,7 +1711,7 @@ function TaskCalendarView({
     days.push(
       <div
         key={`empty-${i}`}
-        className="h-32 bg-gray-50/50 border-b border-r"
+        className="h-32 bg-muted/50 border-b border-r"
       />,
     );
   }
@@ -1749,10 +1749,10 @@ function TaskCalendarView({
     days.push(
       <div
         key={`day-${d}`}
-        className={`h-32 border-b border-r p-2 overflow-y-auto ${isToday ? "bg-blue-50" : "bg-white"}`}
+        className={`h-32 border-b border-r p-2 overflow-y-auto ${isToday ? "bg-blue-50 dark:bg-blue-950/30" : "bg-background"}`}
       >
         <div
-          className={`text-sm font-medium mb-1 ${isToday ? "text-blue-600" : "text-gray-700"}`}
+          className={`text-sm font-medium mb-1 ${isToday ? "text-blue-600" : "text-foreground"}`}
         >
           {d}
         </div>
@@ -1792,7 +1792,7 @@ function TaskCalendarView({
     <Card>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-foreground">
             {monthNames[month]} {year}
           </h2>
           <div className="flex items-center border rounded-md">
@@ -1800,7 +1800,7 @@ function TaskCalendarView({
               variant="ghost"
               size="icon"
               onClick={prevMonth}
-              className="h-8 w-8 hover:bg-gray-100"
+              className="h-8 w-8 hover:bg-muted"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -1808,7 +1808,7 @@ function TaskCalendarView({
               variant="ghost"
               size="icon"
               onClick={nextMonth}
-              className="h-8 w-8 hover:bg-gray-100"
+              className="h-8 w-8 hover:bg-muted"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -1823,11 +1823,11 @@ function TaskCalendarView({
         </Button>
       </div>
       <CardContent className="p-0">
-        <div className="grid grid-cols-7 border-b bg-gray-50">
+        <div className="grid grid-cols-7 border-b bg-muted">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
               key={day}
-              className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r last:border-r-0"
+              className="py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r last:border-r-0"
             >
               {day}
             </div>
@@ -1962,14 +1962,14 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
     return (
       <div key={node.fullPath} className="select-none">
         <div
-          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-md transition-colors group cursor-pointer"
+          className="flex items-center py-2 px-3 hover:bg-muted rounded-md transition-colors group cursor-pointer"
           style={{ paddingLeft: `${indent + 12}px` }}
           onClick={() => hasChildren && toggleNode(node.fullPath)}
         >
           {hasChildren ? (
             <button
               type="button"
-              className="mr-1 flex-shrink-0 text-gray-400 hover:text-gray-600"
+              className="mr-1 flex-shrink-0 text-gray-400 hover:text-muted-foreground"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleNode(node.fullPath);
@@ -1989,7 +1989,7 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
           ) : (
             <File className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
           )}
-          <span className="text-sm text-gray-700 font-medium">{node.name}</span>
+          <span className="text-sm text-foreground font-medium">{node.name}</span>
           {node.fullPath.includes(" -> ") && (
             <span className="text-xs text-gray-400 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
               ({node.fullPath})
@@ -1998,7 +1998,7 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
         </div>
         {hasChildren && isExpanded && (
           <div
-            className="border-l border-gray-200 ml-6"
+            className="border-l border-border ml-6"
             style={{ marginLeft: `${indent + 24}px` }}
           >
             {node.children.map((child) => renderTreeNode(child, level + 1))}
@@ -2009,10 +2009,10 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
+    <div className="border border-border rounded-lg bg-background">
       <div className="p-3 space-y-1">
         {tree.length === 0 ? (
-          <div className="text-sm text-gray-500 py-2">No pages/views</div>
+          <div className="text-sm text-muted-foreground py-2">No pages/views</div>
         ) : (
           tree.map((node) => renderTreeNode(node))
         )}
@@ -2177,10 +2177,10 @@ function CommitsView({ projectId }: { projectId: number }) {
         <CardContent>
           <div className="text-center py-8">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
+            <p className="text-muted-foreground mb-2">
               No GitHub integration configured
             </p>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Configure GitHub integration in the Integrations tab to view
               commits
             </p>
@@ -2208,20 +2208,20 @@ function CommitsView({ projectId }: { projectId: number }) {
       </CardHeader>
       <CardContent>
         {commits.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No commits found</p>
+          <p className="text-muted-foreground text-center py-8">No commits found</p>
         ) : (
           <div className="space-y-4">
             {commits.map((commit) => (
               <div
                 key={commit.sha}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border rounded-lg p-4 hover:bg-muted transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="font-medium text-sm mb-1">
                       {commit.commit.message.split("\n")[0]}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       {commit.author && (
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -2236,7 +2236,7 @@ function CommitsView({ projectId }: { projectId: number }) {
                           ).toLocaleDateString()}
                         </span>
                       </div>
-                      <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono">
                         {commit.sha.substring(0, 7)}
                       </code>
                     </div>
@@ -2313,7 +2313,7 @@ function IntegrationsView({ projectId }: { projectId: number }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* GitHub Integration Card */}
             <div
-              className={`border rounded-lg p-4 ${githubIntegration ? "bg-green-50 border-green-200" : "bg-gray-50"}`}
+              className={`border rounded-lg p-4 ${githubIntegration ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" : "bg-muted"}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -2322,7 +2322,7 @@ function IntegrationsView({ projectId }: { projectId: number }) {
                   </div>
                   <div>
                     <h3 className="font-medium">GitHub</h3>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       {githubIntegration ? "Connected" : "Not connected"}
                     </p>
                   </div>
@@ -2338,11 +2338,11 @@ function IntegrationsView({ projectId }: { projectId: number }) {
               </div>
               {githubIntegration && (
                 <div className="mt-3 pt-3 border-t text-sm space-y-1">
-                  <p className="font-mono text-xs text-gray-600">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {githubIntegration.config.repo_owner}/
                     {githubIntegration.config.repo_name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Branch: {githubIntegration.config.branch || "main"}
                   </p>
                 </div>
@@ -2557,7 +2557,7 @@ function GitHubIntegrationDialog({
           <div className="space-y-2">
             <Label htmlFor="access-token">
               Access Token{" "}
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 (Optional for public repos)
               </span>
             </Label>
@@ -2568,7 +2568,7 @@ function GitHubIntegrationDialog({
               onChange={(e) => setAccessToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Generate a personal access token at{" "}
               <a
                 href="https://github.com/settings/tokens"

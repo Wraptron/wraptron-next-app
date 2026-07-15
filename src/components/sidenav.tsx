@@ -85,6 +85,12 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/projects",
   },
   {
+    id: "tasks",
+    label: "Tasks",
+    icon: CheckSquare,
+    href: "/tasks",
+  },
+  {
     id: "products",
     label: "Products",
     icon: Store,
@@ -190,7 +196,7 @@ const PROJECTS_MENU_ITEMS: MenuItem[] = [
     id: "projects-tasks",
     label: "Tasks",
     icon: CheckSquare,
-    href: "/projects/tasks",
+    href: "/tasks",
   },
 ];
 
@@ -437,8 +443,9 @@ export default function SideNav() {
     return filterByStaffAccess(MAIN_MENU_ITEMS, user?.role);
   }, [user?.role]);
 
-  // When on /projects, show Projects and Tasks in sidebar
-  const isProjectsPage = pathname?.startsWith("/projects");
+  // When on /projects or /tasks, show Projects and Tasks in sidebar
+  const isProjectsPage =
+    pathname?.startsWith("/projects") || pathname?.startsWith("/tasks");
   // When on /products or /product/..., show Products submenu (catalog + section pages)
   const isProductNavContext =
     pathname === "/product" ||

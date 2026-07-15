@@ -73,7 +73,7 @@ const getRoleColor = (role: string) => {
     admin: "bg-purple-100 text-purple-800",
     customer: "bg-amber-100 text-amber-800",
   };
-  return colors[role] || "bg-gray-100 text-gray-800";
+  return colors[role] || "bg-muted text-gray-800";
 };
 
 const getRoleLabel = (value: string) =>
@@ -428,7 +428,7 @@ export function SettingsUserManagement() {
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-muted-foreground">No users found</div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -469,10 +469,10 @@ export function SettingsUserManagement() {
                             {user.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatDate(user.last_login)}
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatDate(user.created_at)}
                         </TableCell>
                         <TableCell className="text-right">
@@ -504,7 +504,7 @@ export function SettingsUserManagement() {
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Showing {page * limit + 1} to{" "}
                     {Math.min((page + 1) * limit, total)} of {total} users
                   </div>

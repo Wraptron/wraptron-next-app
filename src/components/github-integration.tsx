@@ -235,7 +235,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
     <div className="space-y-4">
       {/* Success Message */}
       {successMessage && (
-        <Alert className="bg-green-50 border-green-200">
+        <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
         </Alert>
@@ -313,7 +313,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
             <div className="text-center py-12">
               <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No GitHub connections</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Set up a global GitHub connection in Settings first
               </p>
               <Link href="/settings">
@@ -327,7 +327,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
             <div className="text-center py-12">
               <Github className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No repositories linked</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Link repositories from your GitHub connections to this project
               </p>
               <Button onClick={openLinkDialog}>
@@ -340,12 +340,12 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
               {linkedRepos.map((repo) => (
                 <div
                   key={repo.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Github className="h-4 w-4 text-gray-600" />
+                        <Github className="h-4 w-4 text-muted-foreground" />
                         <span className="font-mono text-sm font-medium">
                           {repo.repo_owner}/{repo.repo_name}
                         </span>
@@ -358,10 +358,10 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                             Syncing
                           </Badge>
                         ) : (
-                          <Badge className="bg-gray-100 text-gray-800">Paused</Badge>
+                          <Badge className="bg-muted text-gray-800">Paused</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Branch: {repo.branch}</span>
                         <span>Connection: {repo.connection_name}</span>
                         {repo.last_synced_at && (
@@ -433,7 +433,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                     </div>
                   ) : availableRepos.length === 0 && !loadingRepos ? (
                     <div className="text-center py-8">
-                      <p className="text-gray-500 mb-2">
+                      <p className="text-muted-foreground mb-2">
                         {githubTokenError
                           ? "Could not load repositories for this connection"
                           : "No repositories found"}
@@ -450,7 +450,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                         ) : (
                           <>
                             Make sure your GitHub token has the{" "}
-                            <code className="bg-gray-100 px-1 py-0.5 rounded">repo</code> scope
+                            <code className="bg-muted px-1 py-0.5 rounded">repo</code> scope
                           </>
                         )}
                       </p>
@@ -483,19 +483,19 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                     {(() => {
                       const repo = availableRepos.find(r => r.id.toString() === selectedRepoId);
                       return repo ? (
-                        <div className="rounded-lg border p-4 bg-gray-50">
+                        <div className="rounded-lg border p-4 bg-muted">
                           <div className="flex items-start gap-3">
-                            <Github className="h-5 w-5 text-gray-600 mt-0.5" />
+                            <Github className="h-5 w-5 text-muted-foreground mt-0.5" />
                             <div className="flex-1 space-y-2">
                               <div>
                                 <h4 className="font-medium">{repo.name}</h4>
                                 {repo.description && (
-                                  <p className="text-sm text-gray-600 mt-1">
+                                  <p className="text-sm text-muted-foreground mt-1">
                                     {repo.description}
                                   </p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 {repo.language && <span>{repo.language}</span>}
                                 <span className="flex items-center gap-1">
                                   <Star className="h-3 w-3" />
@@ -532,7 +532,7 @@ export function GitHubIntegration({ projectId }: GitHubIntegrationProps) {
                         id="is-primary"
                         checked={isPrimary}
                         onChange={(e) => setIsPrimary(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-border"
                       />
                       <Label htmlFor="is-primary" className="cursor-pointer">
                         Set as primary repository

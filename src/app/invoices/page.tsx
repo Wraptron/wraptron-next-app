@@ -253,9 +253,9 @@ export default function InvoicesPage() {
             {loading ? (
               <div className="py-8 text-center">Loading invoices...</div>
             ) : rows.length === 0 ? (
-              <div className="py-8 text-center text-gray-600">No invoices created yet.</div>
+              <div className="py-8 text-center text-muted-foreground">No invoices created yet.</div>
             ) : (
-              <div className="rounded-md border bg-white">
+              <div className="rounded-md border bg-background">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -499,7 +499,7 @@ export default function InvoicesPage() {
                     setDraft((p) => ({ ...p, authorized_signature: e.target.value }))
                   }
                 />
-                <div className="rounded-md border bg-gray-50 p-3 text-sm space-y-1">
+                <div className="rounded-md border bg-muted p-3 text-sm space-y-1">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>{money(calcSummary.subtotal)}</span>

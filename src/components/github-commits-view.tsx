@@ -134,7 +134,7 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">No repositories linked</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Link GitHub repositories in the Integrations tab to view commits
             </p>
           </div>
@@ -147,7 +147,7 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
     <div className="space-y-4">
       {/* Success/Error Messages */}
       {successMessage && (
-        <Alert className="bg-green-50 border-green-200">
+        <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
         </Alert>
@@ -215,7 +215,7 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
         </CardHeader>
         <CardContent>
           {selectedRepo && (
-            <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+            <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="outline" className="font-mono">
                 <Github className="h-3 w-3 mr-1" />
                 {selectedRepo.repo_owner}/{selectedRepo.repo_name}
@@ -239,14 +239,14 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
             </div>
           ) : commits.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No commits found</p>
+              <p className="text-muted-foreground">No commits found</p>
             </div>
           ) : (
             <div className="space-y-3">
               {commits.map((commit) => (
                 <div
                   key={commit.sha}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -254,11 +254,11 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
                         {commit.commit.message.split('\n')[0]}
                       </p>
                       {commit.commit.message.includes('\n') && (
-                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
                           {commit.commit.message.split('\n').slice(1).join(' ')}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                         {commit.author && (
                           <div className="flex items-center gap-1">
                             {commit.author.avatar_url && (
@@ -278,7 +278,7 @@ export function GitHubCommitsView({ projectId }: GitHubCommitsViewProps) {
                             {new Date(commit.commit.author.date).toLocaleString()}
                           </span>
                         </div>
-                        <code className="bg-gray-100 px-2 py-0.5 rounded font-mono text-xs">
+                        <code className="bg-muted px-2 py-0.5 rounded font-mono text-xs">
                           {commit.sha.substring(0, 7)}
                         </code>
                       </div>

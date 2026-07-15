@@ -324,7 +324,7 @@ export default function NewProjectPage() {
             </Button>
           </Link>
           <h1 className="text-3xl font-bold">Create New Project</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-muted-foreground mt-2">
             Fill in the details to create a new project
           </p>
         </div>
@@ -347,7 +347,7 @@ export default function NewProjectPage() {
                 className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                   currentPage >= 1
                     ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
+                    : "border-border"
                 }`}
               >
                 1
@@ -356,7 +356,7 @@ export default function NewProjectPage() {
             </div>
             <div
               className={`h-0.5 w-16 ${
-                currentPage >= 2 ? "bg-blue-600" : "bg-gray-300"
+                currentPage >= 2 ? "bg-blue-600" : "bg-muted"
               }`}
             />
             <div
@@ -370,7 +370,7 @@ export default function NewProjectPage() {
                     ? "bg-blue-600 border-blue-600 text-white"
                     : currentPage > 2
                       ? "bg-blue-600 border-blue-600 text-white"
-                      : "border-gray-300"
+                      : "border-border"
                 }`}
               >
                 2
@@ -379,7 +379,7 @@ export default function NewProjectPage() {
             </div>
             <div
               className={`h-0.5 w-16 ${
-                currentPage >= 3 ? "bg-blue-600" : "bg-gray-300"
+                currentPage >= 3 ? "bg-blue-600" : "bg-muted"
               }`}
             />
             <div
@@ -391,7 +391,7 @@ export default function NewProjectPage() {
                 className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                   currentPage >= 3
                     ? "bg-blue-600 border-blue-600 text-white"
-                    : "border-gray-300"
+                    : "border-border"
                 }`}
               >
                 3
@@ -474,8 +474,8 @@ export default function NewProjectPage() {
                               text-left cursor-pointer
                               ${
                                 isSelected
-                                  ? "border-blue-600 bg-blue-50 shadow-md"
-                                  : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                                  ? "border-blue-600 bg-blue-50 dark:bg-blue-950/30 shadow-md"
+                                  : "border-border bg-background hover:border-border hover:bg-muted"
                               }
                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                             `}
@@ -487,7 +487,7 @@ export default function NewProjectPage() {
                                     className={`text-sm font-medium capitalize ${
                                       isSelected
                                         ? "text-blue-900"
-                                        : "text-gray-700"
+                                        : "text-foreground"
                                     }`}
                                   >
                                     {service}
@@ -512,7 +512,7 @@ export default function NewProjectPage() {
                                   className={`text-xs mt-1 ${
                                     isSelected
                                       ? "text-blue-700"
-                                      : "text-gray-500"
+                                      : "text-muted-foreground"
                                   }`}
                                 >
                                   {SERVICE_DESCRIPTIONS[service]}
@@ -524,7 +524,7 @@ export default function NewProjectPage() {
                       })}
                     </div>
                     {!formData.services_offered && (
-                      <p className="text-sm text-gray-500 mt-2">
+                      <p className="text-sm text-muted-foreground mt-2">
                         Select a service
                       </p>
                     )}
@@ -547,7 +547,7 @@ export default function NewProjectPage() {
                           className="mt-2"
                           required
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           Provide details about the custom service you need
                         </p>
                       </div>
@@ -589,7 +589,7 @@ export default function NewProjectPage() {
 
                   <div>
                     <Label>Project Objectives</Label>
-                    <p className="text-xs text-gray-500 mt-1 mb-3">
+                    <p className="text-xs text-muted-foreground mt-1 mb-3">
                       Search and select all applicable business objectives for
                       this project
                     </p>
@@ -615,7 +615,7 @@ export default function NewProjectPage() {
                                     ),
                                 });
                               }}
-                              className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                              className="ml-1 hover:bg-muted rounded-full p-0.5"
                               aria-label={`Remove ${objective}`}
                             >
                               <X className="h-3 w-3" />
@@ -693,7 +693,7 @@ export default function NewProjectPage() {
                               setObjectiveSearch("");
                             }}
                           />
-                          <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                          <div className="absolute z-20 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
                             {(() => {
                               const filteredOptions =
                                 availableObjectives.filter(
@@ -724,7 +724,7 @@ export default function NewProjectPage() {
                                 !canAddCustom
                               ) {
                                 return (
-                                  <div className="px-4 py-3 text-sm text-gray-500">
+                                  <div className="px-4 py-3 text-sm text-muted-foreground">
                                     {objectiveSearch
                                       ? "No matching objectives found"
                                       : "All objectives selected"}
@@ -749,7 +749,7 @@ export default function NewProjectPage() {
                                         setObjectiveSearch("");
                                         setShowObjectiveDropdown(false);
                                       }}
-                                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm transition-colors"
+                                      className="w-full text-left px-4 py-2 hover:bg-muted text-sm transition-colors"
                                     >
                                       {objective}
                                     </button>
@@ -768,7 +768,7 @@ export default function NewProjectPage() {
                                         setObjectiveSearch("");
                                         setShowObjectiveDropdown(false);
                                       }}
-                                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm transition-colors border-t border-gray-200 flex items-center gap-2"
+                                      className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/30 text-sm transition-colors border-t border-border flex items-center gap-2"
                                     >
                                       <span className="text-blue-600">
                                         Add "{objectiveSearch.trim()}"
@@ -799,7 +799,7 @@ export default function NewProjectPage() {
                       rows={12}
                       className="font-mono text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Define Specific, Measurable, Achievable, Relevant, and
                       Time-bound goals along with Key Performance Indicators
                     </p>
@@ -820,7 +820,7 @@ export default function NewProjectPage() {
                       rows={12}
                       className="font-mono text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Describe your target users, including demographics,
                       personas, goals, and pain points
                     </p>
@@ -841,7 +841,7 @@ export default function NewProjectPage() {
                       rows={10}
                       className="font-mono text-sm h-80"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Add links to design inspirations, competitor websites,
                       brand guidelines, or any other relevant references
                     </p>
@@ -856,7 +856,7 @@ export default function NewProjectPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Requirements</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Use Markdown format to document your requirements
                 </p>
               </CardHeader>
@@ -876,7 +876,7 @@ export default function NewProjectPage() {
                     rows={8}
                     className="font-mono text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Supports Markdown formatting (headers, lists, bold, italic,
                     etc.)
                   </p>
@@ -884,7 +884,7 @@ export default function NewProjectPage() {
 
                 <div>
                   <Label>Pages/Views</Label>
-                  <p className="text-xs text-gray-500 mt-1 mb-3">
+                  <p className="text-xs text-muted-foreground mt-1 mb-3">
                     Search and add all pages or views required for this project
                   </p>
 
@@ -908,7 +908,7 @@ export default function NewProjectPage() {
                                 ),
                               });
                             }}
-                            className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                            className="ml-1 hover:bg-muted rounded-full p-0.5"
                             aria-label={`Remove ${pageView}`}
                           >
                             <X className="h-3 w-3" />
@@ -964,7 +964,7 @@ export default function NewProjectPage() {
                             setPageViewSearch("");
                           }}
                         />
-                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-20 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
                           {(() => {
                             const canAddCustom =
                               pageViewSearch.trim() &&
@@ -976,7 +976,7 @@ export default function NewProjectPage() {
 
                             if (!canAddCustom) {
                               return (
-                                <div className="px-4 py-3 text-sm text-gray-500">
+                                <div className="px-4 py-3 text-sm text-muted-foreground">
                                   {pageViewSearch
                                     ? "This page/view is already added"
                                     : "Type to add a new page/view"}
@@ -998,7 +998,7 @@ export default function NewProjectPage() {
                                   setPageViewSearch("");
                                   setShowPageViewDropdown(false);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm transition-colors flex items-center gap-2"
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:bg-blue-950/30 dark:hover:bg-blue-950/30 text-sm transition-colors flex items-center gap-2"
                               >
                                 <span className="text-blue-600">
                                   Add "{pageViewSearch.trim()}"
@@ -1029,7 +1029,7 @@ export default function NewProjectPage() {
                     rows={12}
                     className="font-mono text-sm h-80"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Use Markdown to structure your functional requirements
                   </p>
                 </div>
@@ -1051,7 +1051,7 @@ export default function NewProjectPage() {
                     rows={12}
                     className="font-mono text-sm h-80"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Document performance, security, scalability, and other
                     non-functional requirements
                   </p>
@@ -1072,7 +1072,7 @@ export default function NewProjectPage() {
                     rows={12}
                     className="font-mono text-sm h-80"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Specify the technologies, frameworks, libraries, and tools
                     to be used in this project
                   </p>
@@ -1086,7 +1086,7 @@ export default function NewProjectPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Support Configuration</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Configure support coverage, engagement models, and
                   communication preferences
                 </p>
@@ -1121,7 +1121,7 @@ export default function NewProjectPage() {
                           }
                           className="w-4 h-4 text-blue-600"
                         />
-                        <span className="text-sm text-gray-700">{option}</span>
+                        <span className="text-sm text-foreground">{option}</span>
                       </label>
                     ))}
                   </div>
@@ -1248,7 +1248,7 @@ export default function NewProjectPage() {
                           }}
                           className="w-4 h-4 text-blue-600"
                         />
-                        <span className="text-sm text-gray-700">{option}</span>
+                        <span className="text-sm text-foreground">{option}</span>
                       </label>
                     ))}
                   </div>
@@ -1291,7 +1291,7 @@ export default function NewProjectPage() {
                           }}
                           className="w-4 h-4 text-blue-600"
                         />
-                        <span className="text-sm text-gray-700">{option}</span>
+                        <span className="text-sm text-foreground">{option}</span>
                       </label>
                     ))}
                   </div>
@@ -1330,7 +1330,7 @@ export default function NewProjectPage() {
                           }}
                           className="w-4 h-4 text-blue-600"
                         />
-                        <span className="text-sm text-gray-700">{option}</span>
+                        <span className="text-sm text-foreground">{option}</span>
                       </label>
                     ))}
                   </div>

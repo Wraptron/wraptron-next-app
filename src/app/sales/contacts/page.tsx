@@ -332,7 +332,7 @@ const ContactCard = ({
             {contact.first_name} {contact.last_name || ""}
           </CardTitle>
           {contact.title && (
-            <p className="text-sm text-gray-600 mt-1">{contact.title}</p>
+            <p className="text-sm text-muted-foreground mt-1">{contact.title}</p>
           )}
         </div>
         <div className="flex gap-1">
@@ -365,24 +365,24 @@ const ContactCard = ({
       <div className="space-y-2 text-sm">
         {contact.email && (
           <div className="flex justify-between">
-            <span className="text-gray-500">Email:</span>
+            <span className="text-muted-foreground">Email:</span>
             <span>{contact.email}</span>
           </div>
         )}
         {contact.phone && (
           <div className="flex justify-between">
-            <span className="text-gray-500">Phone:</span>
+            <span className="text-muted-foreground">Phone:</span>
             <span>{contact.phone}</span>
           </div>
         )}
         {contact.company && (
           <div className="flex justify-between">
-            <span className="text-gray-500">Company:</span>
+            <span className="text-muted-foreground">Company:</span>
             <span>{contact.company}</span>
           </div>
         )}
         <div className="flex justify-between">
-          <span className="text-gray-500">Status:</span>
+          <span className="text-muted-foreground">Status:</span>
           <Badge className={statusBadgeClass(contact.status)}>
             {contact.status || "N/A"}
           </Badge>

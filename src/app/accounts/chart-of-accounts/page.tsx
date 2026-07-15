@@ -20,8 +20,8 @@ export default function ChartOfAccountsPage() {
     <PageShell fill className="bg-background text-foreground">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Chart of Accounts</h1>
-            <p className="text-gray-600 mt-1">Manage your accounting structure</p>
+            <h1 className="text-2xl font-bold text-foreground">Chart of Accounts</h1>
+            <p className="text-muted-foreground mt-1">Manage your accounting structure</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={loading}>
@@ -39,10 +39,10 @@ export default function ChartOfAccountsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-center py-12">
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Chart of accounts management is coming soon.
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 This page will allow you to manage your chart of accounts and accounting structure.
               </p>
             </div>

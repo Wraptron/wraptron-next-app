@@ -77,7 +77,7 @@ export function TestModePanel({ fields, isTestMode }: TestModePanelProps) {
   if (!isTestMode) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 border-t bg-white p-4 shadow-lg">
+    <div className="absolute bottom-0 left-0 right-0 border-t bg-background p-4 shadow-lg">
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -106,10 +106,10 @@ export function TestModePanel({ fields, isTestMode }: TestModePanelProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <pre className="text-xs bg-gray-50 p-3 rounded border overflow-x-auto max-h-48 overflow-y-auto font-mono">
+          <pre className="text-xs bg-muted p-3 rounded border overflow-x-auto max-h-48 overflow-y-auto font-mono">
             {payloadJson}
           </pre>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             This is the data structure that will be submitted when the form is filled with test data.
           </p>
         </CardContent>

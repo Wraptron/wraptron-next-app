@@ -317,7 +317,7 @@ export default function CustomerOnboardingPage() {
                 className="brightness-0 invert drop-shadow-md"
               />
             </Link>
-            <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-white/95 dark:border-border/50 dark:bg-card/95 p-8 shadow-xl backdrop-blur-sm md:p-10">
+            <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-background/95 dark:border-border/50 dark:bg-card/95 p-8 shadow-xl backdrop-blur-sm md:p-10">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
                 Understanding the customer
               </h1>
@@ -425,7 +425,7 @@ export default function CustomerOnboardingPage() {
                             className={cn(
                               "relative flex cursor-pointer rounded-xl border-2 p-4 transition-all",
                               selected
-                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
+                                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/30/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
                                 : "border-border bg-card hover:border-muted-foreground/40",
                             )}
                           >
@@ -607,7 +607,7 @@ export default function CustomerOnboardingPage() {
                             className={cn(
                               "flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-all",
                               selected
-                                ? "border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
+                                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/30/50 ring-2 ring-blue-600/20 dark:border-blue-500 dark:bg-blue-950/40 dark:ring-blue-500/20"
                                 : "border-border bg-card hover:border-muted-foreground/40",
                             )}
                           >

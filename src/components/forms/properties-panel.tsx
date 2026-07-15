@@ -41,7 +41,7 @@ export function PropertiesPanel({
 
   if (!field) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-muted-foreground">
         <p className="text-sm">Select a field to edit its properties</p>
       </div>
     );
@@ -91,7 +91,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="Enter placeholder text"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Text shown when the field is empty
               </p>
             </div>
@@ -119,7 +119,7 @@ export function PropertiesPanel({
                 rows={2}
                 placeholder="Additional guidance for users"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Optional text shown below the field to help users
               </p>
             </div>
@@ -180,7 +180,7 @@ export function PropertiesPanel({
                 className="mt-1 font-mono text-xs"
                 placeholder="^[A-Za-z]+$"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Regular expression pattern for validation
               </p>
             </div>
@@ -195,7 +195,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="This field is invalid"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Message shown when validation fails
               </p>
             </div>
@@ -220,7 +220,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="e.g., 'age' field is greater than 18"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enter a condition in plain English. Example: "age field is greater than 18"
               </p>
             </div>
@@ -235,7 +235,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="e.g., 'newsletter' checkbox is checked"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enter a condition in plain English. Example: "newsletter checkbox is checked"
               </p>
             </div>
@@ -250,7 +250,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="e.g., 'terms' checkbox is checked"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enter a condition in plain English. Example: "terms checkbox is checked"
               </p>
             </div>
@@ -275,7 +275,7 @@ export function PropertiesPanel({
                 className="mt-1"
                 placeholder="Pre-filled value"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Value shown when the form loads
               </p>
             </div>
@@ -300,7 +300,7 @@ export function PropertiesPanel({
                 checked={field.hidden || false}
                 onCheckedChange={(checked) => updateField({ hidden: checked })}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Field is hidden but still submitted
               </p>
             </div>
@@ -315,7 +315,7 @@ export function PropertiesPanel({
                 className="mt-1 font-mono text-xs"
                 placeholder="unique-field-id"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Unique identifier for this field
               </p>
             </div>
@@ -330,7 +330,7 @@ export function PropertiesPanel({
                 className="mt-1 font-mono text-xs"
                 placeholder="api_field_key"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Key used in API submissions (snake_case recommended)
               </p>
             </div>
@@ -371,9 +371,9 @@ function Section({
     <div className="border rounded-lg overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors"
       >
-        <span className="text-sm font-medium text-gray-700">{title}</span>
+        <span className="text-sm font-medium text-foreground">{title}</span>
         {isOpen ? (
           <ChevronDown className="h-4 w-4 text-gray-400" />
         ) : (

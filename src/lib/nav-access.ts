@@ -6,6 +6,7 @@
 export const STAFF_ONLY_MENU_IDS = new Set([
   "customers",
   "projects",
+  "tasks",
   "products",
   "hiring",
   "accounts",
@@ -21,7 +22,7 @@ const STAFF_ONLY_PATH_PREFIXES = [
   "/sales",
   "/customer-onboarding",
   "/projects",
-  "/ppm",
+  "/tasks",
   "/products",
   "/product",
   "/accounts",

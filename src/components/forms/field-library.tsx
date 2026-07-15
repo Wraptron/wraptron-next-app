@@ -132,12 +132,12 @@ function DraggableField({ field, onAddField }: DraggableFieldProps) {
       {...attributes}
       onClick={handleClick}
       className={cn(
-        "flex items-center gap-2 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-50 transition-colors",
+        "flex items-center gap-2 p-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-muted transition-colors",
         isDragging && "opacity-50",
       )}
     >
-      <Icon className="h-5 w-5 text-gray-600 flex-shrink-0" />
-      <span className="text-sm font-medium text-gray-700">{field.label}</span>
+      <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+      <span className="text-sm font-medium text-foreground">{field.label}</span>
     </div>
   );
 }
@@ -165,7 +165,7 @@ export function FieldLibrary({ onAddField }: FieldLibraryProps) {
 
   return (
     <div className="p-4">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">
+      <h2 className="text-sm font-semibold text-foreground mb-4">
         Field Library
       </h2>
       <div className="space-y-2">
@@ -182,9 +182,9 @@ export function FieldLibrary({ onAddField }: FieldLibraryProps) {
             >
               <button
                 onClick={() => toggleCategory(category.id)}
-                className="w-full flex items-center justify-between p-2 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between p-2 hover:bg-muted transition-colors"
               >
-                <span className="text-xs font-medium text-gray-700 uppercase">
+                <span className="text-xs font-medium text-foreground uppercase">
                   {category.label}
                 </span>
                 <ChevronRight

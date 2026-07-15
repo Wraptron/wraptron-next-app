@@ -351,7 +351,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
     <div className="space-y-4">
       {/* Success/Error Messages */}
       {successMessage && (
-        <Alert className="bg-green-50 border-green-200">
+        <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
         </Alert>
@@ -397,7 +397,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
             <div className="text-center py-12">
               <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No GitHub connections</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Set up a global GitHub connection in Settings first
               </p>
               <Link href="/settings">
@@ -411,7 +411,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
             <div className="text-center py-12">
               <Github className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No GitHub Projects linked</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Link GitHub Projects to sync items and map them to tasks
               </p>
               <Button onClick={() => setLinkDialogOpen(true)}>
@@ -424,12 +424,12 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
               {linkedProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Github className="h-4 w-4 text-gray-600" />
+                        <Github className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{project.github_project_title}</span>
                         <Badge variant="outline" className="text-xs">
                           {project.github_owner_name}
@@ -441,7 +441,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Connection: {project.connection_name}</span>
                         {project.last_synced_at && (
                           <>
@@ -586,11 +586,11 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                 ) : availableProjects.length === 0 ? (
                   <div className="text-center py-8">
                     <AlertCircle className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-gray-600 font-medium mb-2">No GitHub Projects found</p>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-muted-foreground font-medium mb-2">No GitHub Projects found</p>
+                    <p className="text-sm text-muted-foreground mb-4">
                       GitHub Projects (V2) are different from repositories. You need to create a project first.
                     </p>
-                    <div className="space-y-2 text-sm text-left bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="space-y-2 text-sm text-left bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-4 mb-4">
                       <p className="font-medium text-blue-900">How to create a GitHub Project:</p>
                       <ol className="list-decimal list-inside space-y-1 text-blue-800">
                         <li>Go to <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="underline">GitHub.com</a></li>
@@ -600,9 +600,9 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                         <li>Come back here and click "Refresh"</li>
                       </ol>
                     </div>
-                    <div className="text-xs text-gray-500 space-y-1 mb-4">
+                    <div className="text-xs text-muted-foreground space-y-1 mb-4">
                       <p>
-                        Make sure your GitHub token has the <code className="bg-gray-100 px-1 py-0.5 rounded">project</code> scope
+                        Make sure your GitHub token has the <code className="bg-muted px-1 py-0.5 rounded">project</code> scope
                       </p>
                       <p>
                         Update your token in <Link href="/settings" className="text-blue-600 hover:underline">Settings</Link> if needed
@@ -679,7 +679,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
               </div>
             ) : projectItems.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500">No items found</p>
+                <p className="text-muted-foreground">No items found</p>
                 <Button
                   className="mt-4"
                   onClick={() => selectedProject && handleSync(selectedProject.id)}
@@ -811,7 +811,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                 <>
                   Change the task mapping for "{selectedItem?.title}"
                   {selectedItem.mapped_to_task && (
-                    <span className="block mt-1 text-sm text-gray-500">
+                    <span className="block mt-1 text-sm text-muted-foreground">
                       Currently mapped to: Task #{selectedItem.mapped_to_task}
                     </span>
                   )}
@@ -828,7 +828,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
               </div>
             ) : tasks.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No tasks available in this project</p>
+                <p className="text-muted-foreground mb-4">No tasks available in this project</p>
                 <p className="text-sm text-gray-400">
                   Create tasks in the Tasks tab to map GitHub Project items
                 </p>
@@ -854,7 +854,7 @@ export function GitHubProjectsIntegration({ projectId }: GitHubProjectsIntegrati
                   </SelectContent>
                 </Select>
                 {selectedItem?.mapped_to_task && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Selecting a different task will update the mapping
                   </p>
                 )}

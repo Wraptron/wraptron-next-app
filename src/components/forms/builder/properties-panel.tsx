@@ -23,7 +23,7 @@ export function PropertiesPanel() {
 
   if (!selectedField) {
     return (
-      <div className="w-80 border-l bg-white h-full p-6 flex flex-col items-center justify-center text-center text-gray-500">
+      <div className="w-80 border-l bg-background h-full p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
         <p>Select a field to edit its properties</p>
       </div>
     );
@@ -38,15 +38,15 @@ export function PropertiesPanel() {
   const isNumberType = selectedField.type === "rating"; // Simplified
 
   return (
-    <div className="w-80 border-l bg-white h-full flex flex-col">
+    <div className="w-80 border-l bg-background h-full flex flex-col">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-1">
-             <h2 className="font-semibold text-gray-900">Properties</h2>
+             <h2 className="font-semibold text-foreground">Properties</h2>
              <Badge variant="secondary" className="text-xs font-normal">
                 {selectedField.type.replace("-", " ")}
              </Badge>
         </div>
-        <div className="text-xs text-gray-500 font-mono">{selectedField.id}</div>
+        <div className="text-xs text-muted-foreground font-mono">{selectedField.id}</div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -110,7 +110,7 @@ export function PropertiesPanel() {
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-9 w-9 text-gray-500 hover:text-red-500"
+                                className="h-9 w-9 text-muted-foreground hover:text-red-500"
                                 onClick={() => {
                                     const newOptions = (selectedField.options || []).filter((_, i) => i !== index);
                                     handleUpdate({ options: newOptions });
@@ -186,7 +186,7 @@ export function PropertiesPanel() {
             <AccordionItem value="logic">
                 <AccordionTrigger>Logic</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
-                     <div className="p-3 bg-gray-50 rounded text-sm text-gray-500">
+                     <div className="p-3 bg-muted rounded text-sm text-muted-foreground">
                         <p>Configure visibility rules based on other field values.</p>
                      </div>
                      <Button variant="outline" size="sm" className="w-full">
@@ -213,7 +213,7 @@ export function PropertiesPanel() {
                             id="fieldId" 
                             value={selectedField.fieldId || selectedField.id} 
                             readOnly
-                            className="bg-gray-50 font-mono text-xs"
+                            className="bg-muted font-mono text-xs"
                         />
                         <p className="text-[10px] text-gray-400">Used for API submissions</p>
                     </div>

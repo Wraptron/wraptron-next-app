@@ -68,13 +68,13 @@ function DraggableLibraryItem({ item }: { item: LibraryItem }) {
       {...listeners}
       {...attributes}
       className={cn(
-        "flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 bg-white hover:border-indigo-500 hover:shadow-sm transition-all text-sm gap-2 cursor-grab active:cursor-grabbing h-24 w-full",
+        "flex flex-col items-center justify-center p-3 rounded-lg border border-border bg-background hover:border-indigo-500 hover:shadow-sm transition-all text-sm gap-2 cursor-grab active:cursor-grabbing h-24 w-full",
         isDragging && "opacity-50 border-dashed"
       )}
       onClick={() => addField(item.type)}
     >
-      <item.icon className="w-6 h-6 text-gray-500" />
-      <span className="text-gray-700 font-medium text-xs text-center">{item.label}</span>
+      <item.icon className="w-6 h-6 text-muted-foreground" />
+      <span className="text-foreground font-medium text-xs text-center">{item.label}</span>
       {/* Visual cue for drag */}
     </button>
   );
@@ -90,14 +90,14 @@ export function FieldLibrary() {
   );
 
   return (
-    <div className="w-80 border-r bg-gray-50/50 flex flex-col h-full bg-slate-50">
-      <div className="p-4 border-b bg-white">
-        <h2 className="font-semibold text-gray-900 mb-2">Form Elements</h2>
+    <div className="w-80 border-r bg-muted/50 flex flex-col h-full bg-slate-50">
+      <div className="p-4 border-b bg-background">
+        <h2 className="font-semibold text-foreground mb-2">Form Elements</h2>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
           <Input 
             placeholder="Search fields..." 
-            className="pl-9 bg-gray-50 border-gray-200"
+            className="pl-9 bg-muted border-border"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -112,7 +112,7 @@ export function FieldLibrary() {
 
             return (
               <div key={category}>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1">{category}</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">{category}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {items.map((item) => (
                     <DraggableLibraryItem key={item.type} item={item} />

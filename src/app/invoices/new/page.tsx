@@ -282,7 +282,7 @@ export default function NewInvoicePage() {
                     setDraft((p) => ({ ...p, authorized_signature: e.target.value }))
                   }
                 />
-                <div className="rounded-md border bg-gray-50 p-3 text-sm space-y-1">
+                <div className="rounded-md border bg-muted p-3 text-sm space-y-1">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>{money(calcSummary.subtotal)}</span>
