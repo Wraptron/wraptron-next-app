@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
+import { NoOrganizationScreen } from "@/components/org-switcher";
 import {
   canAccessStaffRoutes,
   isStaffOnlyPath,
@@ -17,6 +19,7 @@ const PUBLIC_ROUTES = ["/login", "/signup", "/customer-onboarding"];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isAuthenticated, loading } = useAuth();
+  const { activeOrg, isSuperAdmin, loaded: orgsLoaded } = useOrganization();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -77,6 +80,19 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
+  }
+
+  // Authenticated users without any org membership can't load org-scoped
+  // data — show a clear notice instead of a wall of failed requests.
+  const isPublic = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+  if (
+    isAuthenticated &&
+    orgsLoaded &&
+    !activeOrg &&
+    !isSuperAdmin &&
+    !isPublic
+  ) {
+    return <NoOrganizationScreen />;
   }
 
   return <>{children}</>;

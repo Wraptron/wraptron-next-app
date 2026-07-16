@@ -43,6 +43,26 @@ export function setAuthToken(token: string | null): void {
   }
 }
 
+// Active organization (multi-tenancy): persisted id sent as X-Organization-Id
+const ACTIVE_ORG_KEY = "active_org_id";
+
+export function getActiveOrgId(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(ACTIVE_ORG_KEY);
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function setActiveOrgId(orgId: number | null): void {
+  if (typeof window === "undefined") return;
+  if (orgId == null) {
+    localStorage.removeItem(ACTIVE_ORG_KEY);
+  } else {
+    localStorage.setItem(ACTIVE_ORG_KEY, String(orgId));
+  }
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit & { timeoutMs?: number },
@@ -59,6 +79,12 @@ async function fetchApi<T>(
   // Add auth token if available
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Add active organization header (multi-tenancy)
+  const activeOrgId = getActiveOrgId();
+  if (activeOrgId != null && !headers["X-Organization-Id"]) {
+    headers["X-Organization-Id"] = String(activeOrgId);
   }
 
   // Add timeout and better error handling
@@ -189,6 +215,131 @@ export interface AuthResponse {
   user: User;
   token: string;
 }
+
+export interface OrganizationSummary {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  role: "admin" | "staff" | "customer";
+  member_count?: number;
+}
+
+export interface OrganizationMember {
+  id: number;
+  user_id: number;
+  role: "admin" | "staff" | "customer";
+  is_active: boolean;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  created_at?: string;
+}
+
+export interface OrgRolePermissionEntry {
+  id: number;
+  name: string;
+  description?: string | null;
+  resource: string;
+  action: string;
+  default_granted: boolean;
+  override: boolean | null;
+  effective: boolean;
+}
+
+export const organizationsApi = {
+  getMine: async (): Promise<{
+    is_super_admin: boolean;
+    organizations: OrganizationSummary[];
+  }> => {
+    return fetchApi("/api/me/organizations");
+  },
+
+  list: async (): Promise<{ organizations: OrganizationSummary[] }> => {
+    return fetchApi("/api/organizations");
+  },
+
+  create: async (input: {
+    name: string;
+    slug: string;
+    first_admin_email?: string;
+  }): Promise<{ organization: OrganizationSummary }> => {
+    return fetchApi("/api/organizations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  update: async (
+    id: number,
+    input: { name?: string; slug?: string; is_active?: boolean },
+  ): Promise<{ organization: OrganizationSummary }> => {
+    return fetchApi(`/api/organizations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  deactivate: async (id: number): Promise<{ success: boolean }> => {
+    return fetchApi(`/api/organizations/${id}`, { method: "DELETE" });
+  },
+
+  listMembers: async (
+    orgId: number,
+  ): Promise<{ members: OrganizationMember[] }> => {
+    return fetchApi(`/api/organizations/${orgId}/members`);
+  },
+
+  addMember: async (
+    orgId: number,
+    input: { email: string; role: string },
+  ): Promise<{ member: OrganizationMember }> => {
+    return fetchApi(`/api/organizations/${orgId}/members`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateMember: async (
+    orgId: number,
+    memberId: number,
+    input: { role?: string; is_active?: boolean },
+  ): Promise<{ member: OrganizationMember }> => {
+    return fetchApi(`/api/organizations/${orgId}/members/${memberId}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  removeMember: async (
+    orgId: number,
+    memberId: number,
+  ): Promise<{ success: boolean }> => {
+    return fetchApi(`/api/organizations/${orgId}/members/${memberId}`, {
+      method: "DELETE",
+    });
+  },
+
+  getPermissions: async (orgId: number): Promise<{
+    organization_id: number;
+    roles: { staff: OrgRolePermissionEntry[]; customer: OrgRolePermissionEntry[] };
+  }> => {
+    return fetchApi(`/api/organizations/${orgId}/permissions`);
+  },
+
+  setPermissions: async (
+    orgId: number,
+    input: {
+      role: "staff" | "customer";
+      overrides: Array<{ permission_id: number; granted: boolean | null }>;
+    },
+  ): Promise<{ success: boolean }> => {
+    return fetchApi(`/api/organizations/${orgId}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+};
 
 export const authApi = {
   // Sign up a new user

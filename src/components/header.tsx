@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
@@ -103,8 +104,9 @@ export default function TopNavbar() {
           )}
         </div>
 
-        {/* Right side - Settings, notifications (portal), apps, profile */}
+        {/* Right side - Org switcher, settings, notifications (portal), apps, profile */}
         <div className="flex items-center space-x-4">
+          <OrgSwitcher />
           {!canAccessStaffRoutes(user?.role) ? (
             <Link href={PORTAL_NOTIFICATIONS_HREF}>
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Notifications">

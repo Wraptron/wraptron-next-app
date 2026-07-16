@@ -9,11 +9,23 @@ import React, {
 } from "react";
 import { authApi, setAuthToken, type User } from "@/lib/api";
 import { defaultPostLoginPath } from "@/lib/nav-access";
+import {
+  effectiveRole,
+  OrganizationProvider,
+  useOrganization,
+} from "@/contexts/organization-context";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 
+/** User as consumed by the app: `role` is the EFFECTIVE role within the
+ * active organization (super admins act as admin; no membership = user).
+ * The global account role is kept in `global_role`. */
+export interface EffectiveUser extends User {
+  global_role: string;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: EffectiveUser | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -55,23 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Verify token and get user
-      console.log("🔐 Checking authentication...");
       const response = await authApi.getMe();
       setUser(response.user);
-      console.log("✅ Authentication successful:", response.user.email);
     } catch (error) {
       console.error("❌ Auth check failed:", error);
       // Only clear token if it's actually invalid (401), not for network errors
       if (error instanceof Error && error.message.includes("401")) {
-        console.log("🔓 Invalid token - logging out");
         setUser(null);
         setAuthToken(null);
-      } else {
-        console.log(
-          "⚠️ Auth check failed but keeping existing session (network error)",
-        );
-        // Keep the user logged in for network errors
       }
       // Don't redirect here - let ProtectedRoute handle it
     } finally {
@@ -137,10 +140,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
+    <OrganizationProvider authenticated={!!user}>
+      <EffectiveAuthProvider
+        rawUser={user}
+        loading={loading}
+        login={login}
+        signup={signup}
+        logout={logout}
+        refreshUser={refreshUser}
+      >
+        {children}
+      </EffectiveAuthProvider>
+    </OrganizationProvider>
+  );
+}
+
+function EffectiveAuthProvider({
+  rawUser,
+  loading,
+  login,
+  signup,
+  logout,
+  refreshUser,
+  children,
+}: {
+  rawUser: User | null;
+  loading: boolean;
+  login: AuthContextType["login"];
+  signup: AuthContextType["signup"];
+  logout: AuthContextType["logout"];
+  refreshUser: AuthContextType["refreshUser"];
+  children: ReactNode;
+}) {
+  const { isSuperAdmin, orgRole, loaded } = useOrganization();
+
+  const user: EffectiveUser | null = rawUser
+    ? {
+      ...rawUser,
+      role: loaded ? effectiveRole(isSuperAdmin, orgRole) : rawUser.role,
+      global_role: rawUser.role,
+    }
+    : null;
+
+  return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
+        // Auth is "loading" until both the token check and the org
+        // memberships have resolved, so role gates don't flicker.
+        loading: loading || (!!rawUser && !loaded),
         isAuthenticated: !!user,
         login,
         signup,
