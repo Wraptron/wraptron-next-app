@@ -41,12 +41,17 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
-const ROLES = [
+/** Global account roles only — org roles (admin/staff/customer) live on membership. */
+const GLOBAL_ROLES = [
   { value: "user", label: "User" },
-  { value: "staff", label: "Staff" },
-  { value: "admin", label: "Admin" },
-  { value: "customer", label: "Customer" },
-];
+  { value: "super_admin", label: "Super admin" },
+] as const;
+
+const GLOBAL_ROLE_VALUES = new Set<string>(GLOBAL_ROLES.map((r) => r.value));
+
+function toGlobalRole(role: string): "user" | "super_admin" {
+  return role === "super_admin" ? "super_admin" : "user";
+}
 
 const formatDate = (dateString?: string | null) => {
   if (!dateString || dateString === null || dateString === "null") {
@@ -69,15 +74,17 @@ const formatDate = (dateString?: string | null) => {
 const getRoleColor = (role: string) => {
   const colors: Record<string, string> = {
     user: "bg-blue-100 text-blue-800",
+    super_admin: "bg-purple-100 text-purple-800",
+    // Legacy global roles still in DB until migrated to org membership
     staff: "bg-green-100 text-green-800",
-    admin: "bg-purple-100 text-purple-800",
+    admin: "bg-violet-100 text-violet-800",
     customer: "bg-amber-100 text-amber-800",
   };
   return colors[role] || "bg-muted text-gray-800";
 };
 
 const getRoleLabel = (value: string) =>
-  ROLES.find((r) => r.value === value)?.label ?? value;
+  GLOBAL_ROLES.find((r) => r.value === value)?.label ?? value;
 
 export function SettingsUserManagement() {
   const { user: currentUser } = useAuth();
@@ -153,7 +160,7 @@ export function SettingsUserManagement() {
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
-        role: formData.role,
+        role: toGlobalRole(formData.role ?? "user"),
       });
       setCreateDialogOpen(false);
       resetForm();
@@ -173,7 +180,7 @@ export function SettingsUserManagement() {
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
-        role: formData.role,
+        role: toGlobalRole(formData.role ?? "user"),
         is_active: formData.is_active,
       });
       setEditDialogOpen(false);
@@ -204,7 +211,8 @@ export function SettingsUserManagement() {
       first_name: user.first_name || "",
       last_name: user.last_name || "",
       phone_number: user.phone_number || "",
-      role: user.role,
+      // Coerce legacy org-style global roles so the select + API stay valid
+      role: toGlobalRole(user.role),
       is_active: user.is_active,
     });
     setEditDialogOpen(true);
@@ -246,7 +254,8 @@ export function SettingsUserManagement() {
         <div>
           <h2 className="text-2xl font-bold">User Management</h2>
           <p className="text-muted-foreground mt-1">
-            Manage users, roles, and permissions
+            Manage accounts and global roles (user / super admin). Assign
+            admin, staff, or customer roles under Settings → Organization.
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -338,22 +347,32 @@ export function SettingsUserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Role *</Label>
+                <Label htmlFor="role">Global role *</Label>
                 <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  value={
+                    GLOBAL_ROLE_VALUES.has(formData.role ?? "")
+                      ? formData.role
+                      : "user"
+                  }
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, role: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.map((r) => (
+                    {GLOBAL_ROLES.map((r) => (
                       <SelectItem key={r.value} value={r.value}>
                         {r.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Org roles (admin / staff / customer) are set on organization
+                  membership.
+                </p>
               </div>
               {error && <div className="text-red-600 text-sm">{error}</div>}
               <div className="flex justify-end gap-2">
@@ -387,7 +406,7 @@ export function SettingsUserManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                {ROLES.map((r) => (
+                {GLOBAL_ROLES.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>
@@ -607,22 +626,32 @@ export function SettingsUserManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="edit-role">Role *</Label>
+              <Label htmlFor="edit-role">Global role *</Label>
               <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                value={
+                  GLOBAL_ROLE_VALUES.has(formData.role ?? "")
+                    ? formData.role
+                    : "user"
+                }
+                onValueChange={(value) =>
+                  setFormData({ ...formData, role: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => (
+                  {GLOBAL_ROLES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       {r.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Org roles (admin / staff / customer) are set on organization
+                membership.
+              </p>
             </div>
             <div>
               <Label htmlFor="edit-is_active">Status</Label>

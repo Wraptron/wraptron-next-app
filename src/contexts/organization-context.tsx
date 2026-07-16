@@ -45,9 +45,12 @@ const OrganizationContext = createContext<OrganizationContextType | undefined>(
 
 export function OrganizationProvider({
   authenticated,
+  authLoading = false,
   children,
 }: {
   authenticated: boolean;
+  /** While true, do not clear the persisted active org (avoids wipe on reload). */
+  authLoading?: boolean;
   children: ReactNode;
 }) {
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>(
@@ -63,11 +66,10 @@ export function OrganizationProvider({
       setOrganizations(orgs);
       setIsSuperAdmin(superAdmin);
       const persisted = getActiveOrgId();
-      const valid = orgs.find((o) => o.id === persisted) ??
-        orgs[0] ??
-        null;
+      const valid =
+        orgs.find((o) => Number(o.id) === persisted) ?? orgs[0] ?? null;
       setActiveOrg(valid);
-      setActiveOrgId(valid?.id ?? null);
+      setActiveOrgId(valid?.id != null ? Number(valid.id) : null);
     },
     [],
   );
@@ -87,6 +89,10 @@ export function OrganizationProvider({
   }, [applyOrgs]);
 
   useEffect(() => {
+    // Wait for auth to resolve. Clearing active_org_id while auth is still
+    // loading would wipe a just-switched org on every full page reload.
+    if (authLoading) return;
+
     if (authenticated) {
       void refreshOrganizations();
     } else {
@@ -96,13 +102,14 @@ export function OrganizationProvider({
       setLoaded(false);
       setActiveOrgId(null);
     }
-  }, [authenticated, refreshOrganizations]);
+  }, [authenticated, authLoading, refreshOrganizations]);
 
   const switchOrg = useCallback(
     (orgId: number) => {
-      const target = organizations.find((o) => o.id === orgId);
+      const id = Number(orgId);
+      const target = organizations.find((o) => Number(o.id) === id);
       if (!target) return;
-      setActiveOrgId(orgId);
+      setActiveOrgId(id);
       setActiveOrg(target);
       // Full reload: every fetched dataset is org-scoped, so a clean
       // slate beats invalidating every cache by hand.

@@ -46,13 +46,15 @@ export function OrgSwitcher() {
         {organizations.map((org) => (
           <DropdownMenuItem
             key={org.id}
-            onClick={() => {
-              if (org.id !== activeOrg?.id) switchOrg(org.id);
+            onSelect={() => {
+              if (org.id !== activeOrg?.id) switchOrg(Number(org.id));
             }}
             className="flex items-center justify-between"
           >
             <span className="truncate">{org.name}</span>
-            {org.id === activeOrg?.id && <Check className="h-4 w-4" />}
+            {Number(org.id) === Number(activeOrg?.id) && (
+              <Check className="h-4 w-4" />
+            )}
           </DropdownMenuItem>
         ))}
         {isSuperAdmin && (

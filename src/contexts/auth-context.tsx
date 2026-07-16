@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <OrganizationProvider authenticated={!!user}>
+    <OrganizationProvider authenticated={!!user} authLoading={loading}>
       <EffectiveAuthProvider
         rawUser={user}
         loading={loading}
