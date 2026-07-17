@@ -144,7 +144,8 @@ async function fetchApi<T>(
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login") &&
-        !window.location.pathname.startsWith("/signup")
+        !window.location.pathname.startsWith("/signup") &&
+        !window.location.pathname.startsWith("/invite")
       ) {
         window.location.href = "/login";
       }
