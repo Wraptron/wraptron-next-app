@@ -355,10 +355,21 @@ const CLIENT_SETTINGS_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+const ORG_TEAM_SETTINGS_ITEM: MenuItem = {
+  id: "settings-organization-team",
+  label: "Organization",
+  icon: Users,
+  href: "/settings/organization",
+};
+
 function getSettingsMenuItems(access: ReturnType<typeof buildNavAccess>) {
-  return canAccessInternalNav(access)
+  const base = canAccessInternalNav(access)
     ? SETTINGS_MENU_ITEMS
     : CLIENT_SETTINGS_MENU_ITEMS;
+  if (access.isOwner) {
+    return [ORG_TEAM_SETTINGS_ITEM, ...base];
+  }
+  return base;
 }
 
 const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
@@ -633,6 +644,13 @@ export default function SideNav() {
 
     if (isSettingsPage) {
       const currentSettingsItems = getSettingsMenuItems(navAccess);
+      if (pathname?.startsWith("/settings/organization")) {
+        const orgItem = currentSettingsItems.find(
+          (item) => item.href === "/settings/organization",
+        );
+        setActiveItem(orgItem?.id || currentSettingsItems[0]?.id || "");
+        return;
+      }
       const section = searchParams.get("section") || "general";
       const settingsItem = currentSettingsItems.find((item) =>
         item.href.includes(`section=${section}`),
