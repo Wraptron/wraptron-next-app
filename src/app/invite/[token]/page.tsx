@@ -10,6 +10,7 @@ import {
   authApi,
   getApiErrorMessage,
   invitesApi,
+  organizationsApi,
   setActiveOrgId,
   setAuthToken,
   type InvitePreview,
@@ -124,6 +125,7 @@ export default function InvitePage() {
   const token = params.token;
   const router = useRouter();
   const {
+    user,
     isAuthenticated,
     loading: authLoading,
     refreshUser,
@@ -190,11 +192,22 @@ export default function InvitePage() {
 
   const redirectAfterJoin = async (organizationId: number) => {
     setActiveOrgId(organizationId);
-    await refreshOrganizations();
-    await refreshUser();
+    const [meRes, orgsRes] = await Promise.all([
+      authApi.getMe(),
+      organizationsApi.getMine(),
+    ]);
+    await Promise.all([refreshUser(), refreshOrganizations()]);
+    const joinedOrg = orgsRes.organizations.find(
+      (o) => Number(o.id) === organizationId,
+    );
     router.push(
       defaultPostLoginPath(
-        buildNavAccess({ globalRole: "user" }),
+        buildNavAccess({
+          permissions: joinedOrg?.permissions ?? [],
+          isOwner:
+            orgsRes.is_super_admin || joinedOrg?.role_type === "owner",
+          globalRole: meRes.user.role,
+        }),
       ),
     );
   };
@@ -367,16 +380,32 @@ export default function InvitePage() {
       <InviteSummary preview={preview} />
       {actionError && <ErrorAlert message={actionError} />}
       {isAuthenticated ? (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            You&apos;re signed in. Accept this invite to join{" "}
-            <span className="font-medium text-foreground">{preview.org_name}</span>{" "}
-            as <span className="font-medium text-foreground">{preview.role_name}</span>.
-          </p>
-          <PrimaryButton loading={actionLoading} onClick={() => void handleAccept()}>
-            Accept invite
-          </PrimaryButton>
-        </div>
+        user?.email.toLowerCase() !== preview.email.toLowerCase() ? (
+          <div className="space-y-4">
+            <ErrorAlert
+              message={`This invite is for ${preview.email}, but you're signed in as ${user?.email}. Log out and sign in with the invited account to accept.`}
+            />
+            <PrimaryButton
+              onClick={() => {
+                setAuthToken(null);
+                void refreshUser();
+              }}
+            >
+              Log out
+            </PrimaryButton>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You&apos;re signed in. Accept this invite to join{" "}
+              <span className="font-medium text-foreground">{preview.org_name}</span>{" "}
+              as <span className="font-medium text-foreground">{preview.role_name}</span>.
+            </p>
+            <PrimaryButton loading={actionLoading} onClick={() => void handleAccept()}>
+              Accept invite
+            </PrimaryButton>
+          </div>
+        )
       ) : (
         <form className="space-y-4 md:space-y-6" onSubmit={handleLogin}>
           <p className="text-sm text-muted-foreground">

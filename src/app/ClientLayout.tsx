@@ -25,10 +25,19 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const isSignupPage = pathname?.startsWith("/signup") ?? false;
   const isCustomerOnboardingPage =
     pathname?.startsWith("/customer-onboarding") ?? false;
+  const isInvitePage = pathname?.startsWith("/invite") ?? false;
   const shouldHideSidebar =
-    isHomePage || isLoginPage || isSignupPage || isCustomerOnboardingPage;
+    isHomePage ||
+    isLoginPage ||
+    isSignupPage ||
+    isCustomerOnboardingPage ||
+    isInvitePage;
   const shouldHideHeader =
-    isHomePage || isLoginPage || isSignupPage || isCustomerOnboardingPage;
+    isHomePage ||
+    isLoginPage ||
+    isSignupPage ||
+    isCustomerOnboardingPage ||
+    isInvitePage;
 
   if (shouldHideSidebar) {
     return (
