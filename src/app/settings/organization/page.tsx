@@ -8,7 +8,7 @@ import {
   organizationsApi,
   getApiErrorMessage,
   type OrganizationMember,
-  type OrgRolePermissionEntry,
+  type OrganizationRole,
 } from "@/lib/api";
 import {
   Card,
@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -29,39 +28,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const MEMBER_ROLES = ["admin", "staff", "customer"] as const;
-
 export default function OrganizationSettingsPage() {
-  const { activeOrg, orgRole, isSuperAdmin } = useOrganization();
+  const { activeOrg, isOwner, isSuperAdmin } = useOrganization();
   const { setTitle } = usePageTitle();
   useEffect(() => {
     setTitle("Organization");
     return () => setTitle(null);
   }, [setTitle]);
   const orgId = activeOrg?.id ?? null;
-  const canManage = isSuperAdmin || orgRole === "admin";
+  const canManage = isSuperAdmin || isOwner;
 
   const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [permissions, setPermissions] = useState<{
-    staff: OrgRolePermissionEntry[];
-    customer: OrgRolePermissionEntry[];
-  } | null>(null);
-  const [permRole, setPermRole] = useState<"staff" | "customer">("staff");
+  const [roles, setRoles] = useState<OrganizationRole[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<string>("staff");
+  const [newRoleId, setNewRoleId] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!orgId) return;
     setError(null);
     try {
-      const [m, p] = await Promise.all([
+      const [m, r] = await Promise.all([
         organizationsApi.listMembers(orgId),
-        organizationsApi.getPermissions(orgId),
+        organizationsApi.listRoles(orgId),
       ]);
       setMembers(m.members);
-      setPermissions(p.roles);
+      setRoles(r.roles);
+      if (!newRoleId && r.roles.length > 0) {
+        const defaultRole =
+          r.roles.find((role) => role.role_type === "custom") ?? r.roles[0];
+        setNewRoleId(String(defaultRole.id));
+      }
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to load organization settings"));
     }
@@ -76,34 +74,36 @@ export default function OrganizationSettingsPage() {
     return (
       <PageShell>
         <div className="p-8 text-center text-muted-foreground">
-          Organization admin access required.
+          Organization owner access required.
         </div>
       </PageShell>
     );
   }
 
-  const addMember = async () => {
-    if (!orgId || !newEmail.trim()) return;
+  const inviteMember = async () => {
+    if (!orgId || !newEmail.trim() || !newRoleId) return;
     setBusy(true);
     setError(null);
     try {
-      await organizationsApi.addMember(orgId, {
+      await organizationsApi.createInvite(orgId, {
         email: newEmail.trim(),
-        role: newRole,
+        role_id: Number(newRoleId),
       });
       setNewEmail("");
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to add member"));
+      setError(getApiErrorMessage(err, "Failed to send invite"));
     } finally {
       setBusy(false);
     }
   };
 
-  const changeMemberRole = async (member: OrganizationMember, role: string) => {
+  const changeMemberRole = async (member: OrganizationMember, roleId: string) => {
     if (!orgId) return;
     try {
-      await organizationsApi.updateMember(orgId, member.id, { role });
+      await organizationsApi.updateMember(orgId, member.user_id, {
+        role_id: Number(roleId),
+      });
       await load();
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to update member"));
@@ -113,7 +113,7 @@ export default function OrganizationSettingsPage() {
   const toggleMemberActive = async (member: OrganizationMember) => {
     if (!orgId) return;
     try {
-      await organizationsApi.updateMember(orgId, member.id, {
+      await organizationsApi.updateMember(orgId, member.user_id, {
         is_active: !member.is_active,
       });
       await load();
@@ -122,24 +122,7 @@ export default function OrganizationSettingsPage() {
     }
   };
 
-  const toggleOverride = async (entry: OrgRolePermissionEntry) => {
-    if (!orgId) return;
-    // Cycle: effective on -> revoke; effective off -> grant. Clearing back to
-    // the default happens when the override matches the default again.
-    const nextGranted = !entry.effective;
-    const override = nextGranted === entry.default_granted ? null : nextGranted;
-    try {
-      await organizationsApi.setPermissions(orgId, {
-        role: permRole,
-        overrides: [{ permission_id: entry.id, granted: override }],
-      });
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to update permissions"));
-    }
-  };
-
-  const permEntries = permissions?.[permRole] ?? [];
+  const assignableRoles = roles.filter((role) => role.role_type !== "owner");
 
   return (
     <PageShell>
@@ -154,7 +137,7 @@ export default function OrganizationSettingsPage() {
           <CardHeader>
             <CardTitle className="text-base">Members</CardTitle>
             <CardDescription>
-              Add existing users to {activeOrg.name} and set their role.
+              Invite users to {activeOrg.name} and assign a role.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -166,24 +149,24 @@ export default function OrganizationSettingsPage() {
                 placeholder="user@example.com"
                 className="max-w-xs"
               />
-              <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
+              <Select value={newRoleId} onValueChange={setNewRoleId}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MEMBER_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
+                  {assignableRoles.map((role) => (
+                    <SelectItem key={role.id} value={String(role.id)}>
+                      {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Button
                 size="sm"
-                onClick={addMember}
-                disabled={busy || !newEmail.trim()}
+                onClick={inviteMember}
+                disabled={busy || !newEmail.trim() || !newRoleId}
               >
-                Add member
+                Send invite
               </Button>
             </div>
 
@@ -204,21 +187,25 @@ export default function OrganizationSettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {!m.is_active && <Badge variant="secondary">inactive</Badge>}
-                    <Select
-                      value={m.role}
-                      onValueChange={(role) => changeMemberRole(m, role)}
-                    >
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MEMBER_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {m.role_type === "owner" ? (
+                      <Badge>{m.role_name}</Badge>
+                    ) : (
+                      <Select
+                        value={String(m.role_id)}
+                        onValueChange={(roleId) => changeMemberRole(m, roleId)}
+                      >
+                        <SelectTrigger className="w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignableRoles.map((role) => (
+                            <SelectItem key={role.id} value={String(role.id)}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -232,63 +219,6 @@ export default function OrganizationSettingsPage() {
               {members.length === 0 && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   No members yet.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Role permissions</CardTitle>
-            <CardDescription>
-              Adjust what {permRole} members can do in this organization.
-              Admins always have full access. Checkboxes show the effective
-              permission; changes create org-level overrides.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Select
-              value={permRole}
-              onValueChange={(v) => setPermRole(v as "staff" | "customer")}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="staff">staff</SelectItem>
-                <SelectItem value="customer">customer</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="divide-y rounded-md border">
-              {permEntries.map((entry) => (
-                <label
-                  key={entry.id}
-                  className="flex cursor-pointer items-center justify-between gap-3 p-3"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">{entry.name}</div>
-                    {entry.description && (
-                      <div className="truncate text-xs text-muted-foreground">
-                        {entry.description}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {entry.override !== null && (
-                      <Badge variant="outline">override</Badge>
-                    )}
-                    <Checkbox
-                      checked={entry.effective}
-                      onCheckedChange={() => toggleOverride(entry)}
-                    />
-                  </div>
-                </label>
-              ))}
-              {permEntries.length === 0 && (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No permissions defined.
                 </div>
               )}
             </div>

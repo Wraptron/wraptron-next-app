@@ -4,10 +4,8 @@
  * Organization (multi-tenancy) context.
  *
  * Loads the caller's memberships, keeps the active organization in
- * localStorage (sent as X-Organization-Id by lib/api), and exposes the
- * caller's role within the active org. AuthProvider consumes this to
- * present `user.role` as the effective org role, so existing role-gated
- * UI keeps working unchanged.
+ * localStorage (sent as X-Organization-Id by lib/api), and exposes
+ * role + permission data for the active org.
  */
 import React, {
   createContext,
@@ -22,15 +20,18 @@ import {
   organizationsApi,
   setActiveOrgId,
   type OrganizationSummary,
+  type OrgRoleType,
 } from "@/lib/api";
-
-export type OrgRole = "admin" | "staff" | "customer";
 
 interface OrganizationContextType {
   organizations: OrganizationSummary[];
   activeOrg: OrganizationSummary | null;
-  /** Role within the active org; null when the user has no membership. */
-  orgRole: OrgRole | null;
+  /** Effective permissions for the active org membership. */
+  permissions: string[];
+  roleType: OrgRoleType | null;
+  roleName: string | null;
+  roleId: number | null;
+  isOwner: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
   /** True once memberships have been loaded for an authenticated user. */
@@ -89,8 +90,6 @@ export function OrganizationProvider({
   }, [applyOrgs]);
 
   useEffect(() => {
-    // Wait for auth to resolve. Clearing active_org_id while auth is still
-    // loading would wipe a just-switched org on every full page reload.
     if (authLoading) return;
 
     if (authenticated) {
@@ -111,8 +110,6 @@ export function OrganizationProvider({
       if (!target) return;
       setActiveOrgId(id);
       setActiveOrg(target);
-      // Full reload: every fetched dataset is org-scoped, so a clean
-      // slate beats invalidating every cache by hand.
       if (typeof window !== "undefined") {
         window.location.reload();
       }
@@ -120,14 +117,19 @@ export function OrganizationProvider({
     [organizations],
   );
 
-  const orgRole = (activeOrg?.role ?? null) as OrgRole | null;
+  const roleType = activeOrg?.role_type ?? null;
+  const isOwner = isSuperAdmin || roleType === "owner";
 
   return (
     <OrganizationContext.Provider
       value={{
         organizations,
         activeOrg,
-        orgRole,
+        permissions: activeOrg?.permissions ?? [],
+        roleType,
+        roleName: activeOrg?.role_name ?? null,
+        roleId: activeOrg?.role_id ?? null,
+        isOwner,
         isSuperAdmin,
         loading,
         loaded,
@@ -150,11 +152,18 @@ export function useOrganization() {
   return context;
 }
 
-/** Effective role for legacy role-gated UI: super admins act as org admins. */
+/** Legacy effective role string for components not yet on permission checks. */
 export function effectiveRole(
   isSuperAdmin: boolean,
-  orgRole: OrgRole | null,
+  roleType: OrgRoleType | null,
+  permissions: string[],
+  globalRole?: string | null,
 ): string {
-  if (isSuperAdmin) return "admin";
-  return orgRole ?? "user";
+  if (isSuperAdmin || roleType === "owner") return "admin";
+  if (permissions.some((p) => p.endsWith(".read"))) return "staff";
+  return normalizeGlobalRole(globalRole);
+}
+
+function normalizeGlobalRole(role?: string | null): string {
+  return (role ?? "user").toLowerCase();
 }

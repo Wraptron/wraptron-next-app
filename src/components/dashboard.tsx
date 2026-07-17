@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 import {
+  buildNavAccess,
   filterStaffOnlyModules,
   filterStaffOnlyQuickLinks,
 } from "@/lib/nav-access";
@@ -228,13 +230,23 @@ export function Dashboard({
   className,
 }: DashboardProps) {
   const { user } = useAuth();
+  const { permissions, isOwner } = useOrganization();
+  const navAccess = React.useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner,
+        globalRole: user?.global_role,
+      }),
+    [permissions, isOwner, user?.global_role],
+  );
   const visibleQuickLinks = React.useMemo(
-    () => filterStaffOnlyQuickLinks(quickLinks, user?.role),
-    [quickLinks, user?.role],
+    () => filterStaffOnlyQuickLinks(quickLinks, navAccess),
+    [quickLinks, navAccess],
   );
   const visibleModules = React.useMemo(
-    () => filterStaffOnlyModules(modules, user?.role),
-    [modules, user?.role],
+    () => filterStaffOnlyModules(modules, navAccess),
+    [modules, navAccess],
   );
 
   return (

@@ -8,7 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { authApi, setAuthToken, type User } from "@/lib/api";
-import { defaultPostLoginPath } from "@/lib/nav-access";
+import { buildNavAccess, defaultPostLoginPath } from "@/lib/nav-access";
 import {
   effectiveRole,
   OrganizationProvider,
@@ -87,7 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login({ email, password });
       setAuthToken(response.token);
       setUser(response.user);
-      router.push(defaultPostLoginPath(response.user.role));
+      router.push(
+        defaultPostLoginPath(
+          buildNavAccess({ globalRole: response.user.role }),
+        ),
+      );
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -113,7 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setAuthToken(response.token);
       setUser(response.user);
-      router.push(defaultPostLoginPath(response.user.role));
+      router.push(
+        defaultPostLoginPath(
+          buildNavAccess({ globalRole: response.user.role }),
+        ),
+      );
     } catch (error) {
       console.error("Signup failed:", error);
       throw error;
@@ -172,14 +180,27 @@ function EffectiveAuthProvider({
   refreshUser: AuthContextType["refreshUser"];
   children: ReactNode;
 }) {
-  const { isSuperAdmin, orgRole, loaded } = useOrganization();
+  const {
+    isSuperAdmin,
+    roleType,
+    permissions,
+    isOwner,
+    loaded,
+  } = useOrganization();
 
   const user: EffectiveUser | null = rawUser
     ? {
-      ...rawUser,
-      role: loaded ? effectiveRole(isSuperAdmin, orgRole) : rawUser.role,
-      global_role: rawUser.role,
-    }
+        ...rawUser,
+        role: loaded
+          ? effectiveRole(
+              isSuperAdmin,
+              roleType,
+              permissions,
+              rawUser.role,
+            )
+          : rawUser.role,
+        global_role: rawUser.role,
+      }
     : null;
 
   return (
