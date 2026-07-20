@@ -1,82 +1,48 @@
 /**
- * Navigation and route access for role `user` vs `staff` / `admin`.
- * Regular users see the client portal sidebar; settings is in the top nav.
+ * Navigation and route access driven by org-scoped permissions.
+ * Owner (and super admin acting as owner) bypasses all module checks.
  */
 
-export const STAFF_ONLY_MENU_IDS = new Set([
-  "customers",
-  "projects",
-  "tasks",
-  "products",
-  "hiring",
-  "accounts",
-  "invoices",
-  "workspace",
-  "human-resource",
-  "settings",
-  "crm",
-  "human-resources",
-]);
+export interface NavAccess {
+  permissions: string[];
+  isOwner: boolean;
+  /** Global account role (`user`, `super_admin`, etc.). */
+  globalRole?: string | null;
+}
 
-const STAFF_ONLY_PATH_PREFIXES = [
-  "/sales",
-  "/customer-onboarding",
-  "/projects",
-  "/tasks",
-  "/products",
-  "/product",
-  "/accounts",
-  "/workspace",
-  "/hr",
-  "/hiring",
-  "/invoices",
-] as const;
+/** Sidebar / launcher menu id → required permission (usually resource.read). */
+export const MENU_PERMISSION: Record<string, string | null> = {
+  dashboard: null,
+  customers: "sales.read",
+  projects: "projects.read",
+  tasks: "tasks.read",
+  products: "products.read",
+  hiring: "hr.read",
+  accounts: "accounts.read",
+  invoices: "invoices.read",
+  workspace: "hr.read",
+  "human-resource": "hr.read",
+  "human-resources": "hr.read",
+  settings: "settings.read",
+  crm: "customers.read",
+};
 
-/** Paths reserved for the client portal — allowed for role `user`. */
+const PATH_PERMISSION_RULES: ReadonlyArray<readonly [string, string]> = [
+  ["/sales", "sales.read"],
+  ["/customer-onboarding", "sales.read"],
+  ["/projects", "projects.read"],
+  ["/tasks", "tasks.read"],
+  ["/products", "products.read"],
+  ["/product", "products.read"],
+  ["/accounts", "accounts.read"],
+  ["/workspace", "hr.read"],
+  ["/hr", "hr.read"],
+  ["/hiring", "hr.read"],
+  ["/invoices", "invoices.read"],
+  ["/settings", "settings.read"],
+];
+
 const CLIENT_PORTAL_PATH_PREFIXES = ["/portal"] as const;
-
-export function isClientPortalPath(pathname: string): boolean {
-  return (
-    pathname === "/dashboard" ||
-    CLIENT_PORTAL_PATH_PREFIXES.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    )
-  );
-}
-
-export function normalizeRole(role?: string | null): string {
-  return (role ?? "user").toLowerCase();
-}
-
-export function canAccessStaffRoutes(role?: string | null): boolean {
-  const normalized = normalizeRole(role);
-  return normalized === "admin" || normalized === "staff";
-}
-
-/** Home page is the applications launcher — staff/admin only. */
-export function isApplicationsHomePath(pathname: string): boolean {
-  return pathname === "/";
-}
-
-export function isStaffOnlyPath(pathname: string): boolean {
-  if (isApplicationsHomePath(pathname)) return true;
-  if (isClientPortalPath(pathname)) return false;
-  return STAFF_ONLY_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
-export function filterByStaffAccess<T extends { id: string }>(
-  items: T[],
-  role?: string | null,
-): T[] {
-  if (canAccessStaffRoutes(role)) return items;
-  return items.filter((item) => !STAFF_ONLY_MENU_IDS.has(item.id));
-}
-
-export function defaultPostLoginPath(role?: string | null): string {
-  return canAccessStaffRoutes(role) ? "/" : "/dashboard";
-}
 
 const STAFF_ONLY_QUICK_LINK_HREFS = new Set([
   "/sales/deals",
@@ -90,6 +56,135 @@ const STAFF_ONLY_QUICK_LINK_HREFS = new Set([
 
 const STAFF_ONLY_QUICK_LINK_PREFIXES = ["/hr"] as const;
 
+export function hasPermission(
+  permissions: string[] | undefined,
+  name: string,
+): boolean {
+  return (permissions ?? []).includes(name);
+}
+
+export function normalizeRole(role?: string | null): string {
+  return (role ?? "user").toLowerCase();
+}
+
+export function buildNavAccess(input: {
+  permissions?: string[];
+  isOwner?: boolean;
+  globalRole?: string | null;
+}): NavAccess {
+  return {
+    permissions: input.permissions ?? [],
+    isOwner: input.isOwner ?? false,
+    globalRole: input.globalRole ?? null,
+  };
+}
+
+/** True when the user can see internal (non-portal) navigation at all. */
+export function canAccessInternalNav(access: NavAccess): boolean {
+  if (access.isOwner) return true;
+  if (normalizeRole(access.globalRole) === "super_admin") return true;
+  return access.permissions.some((p) => p.endsWith(".read"));
+}
+
+export function canAccessMenuItem(menuId: string, access: NavAccess): boolean {
+  if (access.isOwner) return true;
+  const required = MENU_PERMISSION[menuId];
+  if (required === null || required === undefined) {
+    return canAccessInternalNav(access);
+  }
+  return hasPermission(access.permissions, required);
+}
+
+export function isClientPortalPath(pathname: string): boolean {
+  return (
+    pathname === "/dashboard" ||
+    CLIENT_PORTAL_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  );
+}
+
+export function isApplicationsHomePath(pathname: string): boolean {
+  return pathname === "/";
+}
+
+function pathRequiredPermission(pathname: string): string | null {
+  for (const [prefix, permission] of PATH_PERMISSION_RULES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return permission;
+    }
+  }
+  return null;
+}
+
+export function canAccessPath(pathname: string, access: NavAccess): boolean {
+  if (access.isOwner || normalizeRole(access.globalRole) === "super_admin") {
+    return true;
+  }
+
+  if (isClientPortalPath(pathname)) {
+    return (
+      normalizeRole(access.globalRole) === "user" ||
+      hasPermission(access.permissions, "projects.read")
+    );
+  }
+
+  if (isApplicationsHomePath(pathname)) {
+    return canAccessInternalNav(access);
+  }
+
+  const required = pathRequiredPermission(pathname);
+  if (required === null) {
+    return canAccessInternalNav(access);
+  }
+  return hasPermission(access.permissions, required);
+}
+
+export function isStaffOnlyPath(pathname: string, access?: NavAccess): boolean {
+  if (isApplicationsHomePath(pathname)) return true;
+  if (isClientPortalPath(pathname)) return false;
+  if (access) {
+    return !canAccessPath(pathname, access);
+  }
+  return PATH_PERMISSION_RULES.some(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+/** @deprecated Prefer `canAccessInternalNav(buildNavAccess(...))`. */
+export function canAccessStaffRoutes(role?: string | null): boolean {
+  const normalized = normalizeRole(role);
+  return normalized === "admin" || normalized === "staff";
+}
+
+export function filterByNavAccess<T extends { id: string }>(
+  items: T[],
+  access: NavAccess,
+): T[] {
+  if (access.isOwner || normalizeRole(access.globalRole) === "super_admin") {
+    return items;
+  }
+  return items.filter((item) => canAccessMenuItem(item.id, access));
+}
+
+/** @deprecated Prefer `filterByNavAccess` with org permissions. */
+export function filterByStaffAccess<T extends { id: string }>(
+  items: T[],
+  role?: string | null,
+): T[] {
+  if (canAccessStaffRoutes(role)) return items;
+  const staffOnlyIds = new Set(
+    Object.entries(MENU_PERMISSION)
+      .filter(([, perm]) => perm !== null)
+      .map(([id]) => id),
+  );
+  return items.filter((item) => !staffOnlyIds.has(item.id));
+}
+
+export function defaultPostLoginPath(access: NavAccess): string {
+  return canAccessInternalNav(access) ? "/" : "/dashboard";
+}
+
 export function isStaffOnlyQuickLinkHref(href: string): boolean {
   if (STAFF_ONLY_QUICK_LINK_HREFS.has(href)) return true;
   return STAFF_ONLY_QUICK_LINK_PREFIXES.some(
@@ -99,17 +194,22 @@ export function isStaffOnlyQuickLinkHref(href: string): boolean {
 
 export function filterStaffOnlyQuickLinks<T extends { href: string }>(
   items: T[],
-  role?: string | null,
+  access: NavAccess,
 ): T[] {
-  if (canAccessStaffRoutes(role)) return items;
+  if (access.isOwner || canAccessInternalNav(access)) {
+    if (access.isOwner) return items;
+    return items.filter((item) => {
+      const required = pathRequiredPermission(item.href.split("?")[0] ?? "");
+      if (!required) return true;
+      return hasPermission(access.permissions, required);
+    });
+  }
   return items.filter((item) => !isStaffOnlyQuickLinkHref(item.href));
 }
 
 export function filterStaffOnlyModules<T extends { id: string }>(
   items: T[],
-  role?: string | null,
+  access: NavAccess,
 ): T[] {
-  if (canAccessStaffRoutes(role)) return items;
-  const staffOnlyModuleIds = new Set(["sales", "projects", "accounts"]);
-  return items.filter((item) => !staffOnlyModuleIds.has(item.id));
+  return filterByNavAccess(items, access);
 }

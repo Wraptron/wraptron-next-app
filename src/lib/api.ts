@@ -144,7 +144,8 @@ async function fetchApi<T>(
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login") &&
-        !window.location.pathname.startsWith("/signup")
+        !window.location.pathname.startsWith("/signup") &&
+        !window.location.pathname.startsWith("/invite")
       ) {
         window.location.href = "/login";
       }
@@ -216,19 +217,26 @@ export interface AuthResponse {
   token: string;
 }
 
+export type OrgRoleType = "owner" | "custom";
+
 export interface OrganizationSummary {
   id: number;
   name: string;
   slug: string;
   is_active: boolean;
-  role: "admin" | "staff" | "customer";
+  role_id: number | null;
+  role_type: OrgRoleType;
+  role_name: string;
+  permissions: string[];
   member_count?: number;
 }
 
 export interface OrganizationMember {
   id: number;
   user_id: number;
-  role: "admin" | "staff" | "customer";
+  role_id: number;
+  role_type: OrgRoleType;
+  role_name: string;
   is_active: boolean;
   email: string;
   first_name?: string | null;
@@ -236,15 +244,52 @@ export interface OrganizationMember {
   created_at?: string;
 }
 
-export interface OrgRolePermissionEntry {
+export interface OrganizationRole {
+  id: number;
+  organization_id: number;
+  name: string;
+  description?: string | null;
+  role_type: OrgRoleType;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgRolePermission {
   id: number;
   name: string;
   description?: string | null;
   resource: string;
   action: string;
-  default_granted: boolean;
-  override: boolean | null;
-  effective: boolean;
+}
+
+export type OrganizationInviteStatus =
+  | "pending"
+  | "accepted"
+  | "revoked"
+  | "expired";
+
+export interface OrganizationInvite {
+  id: number;
+  organization_id: number;
+  email: string;
+  role_id: number;
+  role_name?: string;
+  token: string;
+  invited_by: number;
+  status: OrganizationInviteStatus;
+  expires_at: string;
+  accepted_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvitePreview {
+  org_name: string;
+  role_name: string;
+  email: string;
+  flow_type: "signup" | "accept";
+  expires_at: string;
+  status: OrganizationInviteStatus;
 }
 
 export const organizationsApi = {
@@ -290,22 +335,12 @@ export const organizationsApi = {
     return fetchApi(`/api/organizations/${orgId}/members`);
   },
 
-  addMember: async (
-    orgId: number,
-    input: { email: string; role: string },
-  ): Promise<{ member: OrganizationMember }> => {
-    return fetchApi(`/api/organizations/${orgId}/members`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-
   updateMember: async (
     orgId: number,
-    memberId: number,
-    input: { role?: string; is_active?: boolean },
+    userId: number,
+    input: { role_id?: number; is_active?: boolean },
   ): Promise<{ member: OrganizationMember }> => {
-    return fetchApi(`/api/organizations/${orgId}/members/${memberId}`, {
+    return fetchApi(`/api/organizations/${orgId}/members/${userId}`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
@@ -313,30 +348,141 @@ export const organizationsApi = {
 
   removeMember: async (
     orgId: number,
-    memberId: number,
+    userId: number,
   ): Promise<{ success: boolean }> => {
-    return fetchApi(`/api/organizations/${orgId}/members/${memberId}`, {
+    return fetchApi(`/api/organizations/${orgId}/members/${userId}`, {
       method: "DELETE",
     });
   },
 
-  getPermissions: async (orgId: number): Promise<{
-    organization_id: number;
-    roles: { staff: OrgRolePermissionEntry[]; customer: OrgRolePermissionEntry[] };
-  }> => {
-    return fetchApi(`/api/organizations/${orgId}/permissions`);
+  listRoles: async (
+    orgId: number,
+  ): Promise<{ roles: OrganizationRole[] }> => {
+    return fetchApi(`/api/organizations/${orgId}/roles`);
   },
 
-  setPermissions: async (
+  createRole: async (
     orgId: number,
     input: {
-      role: "staff" | "customer";
-      overrides: Array<{ permission_id: number; granted: boolean | null }>;
+      name: string;
+      description?: string;
+      permission_names?: string[];
     },
-  ): Promise<{ success: boolean }> => {
-    return fetchApi(`/api/organizations/${orgId}/permissions`, {
+  ): Promise<{ role: OrganizationRole }> => {
+    return fetchApi(`/api/organizations/${orgId}/roles`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateRole: async (
+    orgId: number,
+    roleId: number,
+    input: {
+      name?: string;
+      description?: string;
+      permission_names?: string[];
+    },
+  ): Promise<{ role: OrganizationRole }> => {
+    return fetchApi(`/api/organizations/${orgId}/roles/${roleId}`, {
       method: "PUT",
       body: JSON.stringify(input),
+    });
+  },
+
+  deleteRole: async (
+    orgId: number,
+    roleId: number,
+  ): Promise<{ success: boolean }> => {
+    return fetchApi(`/api/organizations/${orgId}/roles/${roleId}`, {
+      method: "DELETE",
+    });
+  },
+
+  getRolePermissions: async (
+    orgId: number,
+    roleId: number,
+  ): Promise<{ role_id: number; permissions: OrgRolePermission[] }> => {
+    return fetchApi(
+      `/api/organizations/${orgId}/roles/${roleId}/permissions`,
+    );
+  },
+
+  setRolePermissions: async (
+    orgId: number,
+    roleId: number,
+    permissionNames: string[],
+  ): Promise<{ role_id: number; permissions: OrgRolePermission[] }> => {
+    return fetchApi(
+      `/api/organizations/${orgId}/roles/${roleId}/permissions`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ permission_names: permissionNames }),
+      },
+    );
+  },
+
+  listInvites: async (
+    orgId: number,
+  ): Promise<{ invites: OrganizationInvite[] }> => {
+    return fetchApi(`/api/organizations/${orgId}/invites`);
+  },
+
+  createInvite: async (
+    orgId: number,
+    input: { email: string; role_id: number },
+  ): Promise<{ invite: OrganizationInvite }> => {
+    return fetchApi(`/api/organizations/${orgId}/invites`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  resendInvite: async (
+    orgId: number,
+    inviteId: number,
+  ): Promise<{ invite: OrganizationInvite }> => {
+    return fetchApi(
+      `/api/organizations/${orgId}/invites/${inviteId}/resend`,
+      { method: "POST" },
+    );
+  },
+
+  revokeInvite: async (
+    orgId: number,
+    inviteId: number,
+  ): Promise<{ invite: OrganizationInvite }> => {
+    return fetchApi(
+      `/api/organizations/${orgId}/invites/${inviteId}/revoke`,
+      { method: "POST" },
+    );
+  },
+};
+
+export const invitesApi = {
+  preview: async (token: string): Promise<InvitePreview> => {
+    return fetchApi(`/api/invites/${encodeURIComponent(token)}`);
+  },
+
+  signup: async (
+    token: string,
+    body: { name?: string; password: string },
+  ): Promise<{
+    user: { id: number; email: string; first_name?: string | null };
+    token: string;
+    organization_id: number;
+  }> => {
+    return fetchApi(`/api/invites/${encodeURIComponent(token)}/signup`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  accept: async (
+    token: string,
+  ): Promise<{ success: boolean; organization_id: number; role_id: number }> => {
+    return fetchApi(`/api/invites/${encodeURIComponent(token)}/accept`, {
+      method: "POST",
     });
   },
 };

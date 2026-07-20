@@ -52,7 +52,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { useAuth } from "@/contexts/auth-context";
-import { canAccessStaffRoutes, filterByStaffAccess } from "@/lib/nav-access";
+import { useOrganization } from "@/contexts/organization-context";
+import {
+  buildNavAccess,
+  canAccessInternalNav,
+  filterByNavAccess,
+} from "@/lib/nav-access";
 import {
   CLIENT_PORTAL_MENU_ITEMS,
   PORTAL_RESOURCES_HREF,
@@ -350,10 +355,21 @@ const CLIENT_SETTINGS_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-function getSettingsMenuItems(role?: string | null): MenuItem[] {
-  return canAccessStaffRoutes(role)
+const ORG_TEAM_SETTINGS_ITEM: MenuItem = {
+  id: "settings-organization-team",
+  label: "Organization",
+  icon: Users,
+  href: "/settings/organization",
+};
+
+function getSettingsMenuItems(access: ReturnType<typeof buildNavAccess>) {
+  const base = canAccessInternalNav(access)
     ? SETTINGS_MENU_ITEMS
     : CLIENT_SETTINGS_MENU_ITEMS;
+  if (access.isOwner) {
+    return [ORG_TEAM_SETTINGS_ITEM, ...base];
+  }
+  return base;
 }
 
 const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
@@ -396,6 +412,16 @@ export default function SideNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { permissions, isOwner } = useOrganization();
+  const navAccess = useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner,
+        globalRole: user?.global_role,
+      }),
+    [permissions, isOwner, user?.global_role],
+  );
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [activeItem, setActiveItem] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -405,7 +431,7 @@ export default function SideNav() {
     { heading: string; items: string[] }[]
   >([]);
   const [aboutNotesLoading, setAboutNotesLoading] = useState(false);
-  const isClientPortalUser = !canAccessStaffRoutes(user?.role);
+  const isClientPortalUser = !canAccessInternalNav(navAccess);
 
   useEffect(() => {
     if (!aboutOpen) return;
@@ -437,11 +463,11 @@ export default function SideNav() {
   }, [aboutOpen]);
 
   const allMenuItems = useMemo(() => {
-    if (!canAccessStaffRoutes(user?.role)) {
+    if (!canAccessInternalNav(navAccess)) {
       return CLIENT_PORTAL_MENU_ITEMS;
     }
-    return filterByStaffAccess(MAIN_MENU_ITEMS, user?.role);
-  }, [user?.role]);
+    return filterByNavAccess(MAIN_MENU_ITEMS, navAccess);
+  }, [navAccess]);
 
   // When on /projects or /tasks, show Projects and Tasks in sidebar
   const isProjectsPage =
@@ -491,7 +517,7 @@ export default function SideNav() {
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
   } else if (isSettingsPage) {
-    menuItems = getSettingsMenuItems(user?.role);
+    menuItems = getSettingsMenuItems(navAccess);
   } else {
     menuItems = allMenuItems;
   }
@@ -617,7 +643,14 @@ export default function SideNav() {
     }
 
     if (isSettingsPage) {
-      const currentSettingsItems = getSettingsMenuItems(user?.role);
+      const currentSettingsItems = getSettingsMenuItems(navAccess);
+      if (pathname?.startsWith("/settings/organization")) {
+        const orgItem = currentSettingsItems.find(
+          (item) => item.href === "/settings/organization",
+        );
+        setActiveItem(orgItem?.id || currentSettingsItems[0]?.id || "");
+        return;
+      }
       const section = searchParams.get("section") || "general";
       const settingsItem = currentSettingsItems.find((item) =>
         item.href.includes(`section=${section}`),
@@ -639,7 +672,7 @@ export default function SideNav() {
     isEmployeeManagementSection,
     isWorkspacePage,
     isSettingsPage,
-    user?.role,
+    navAccess,
     searchParams,
   ]);
 

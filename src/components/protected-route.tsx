@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/auth-context";
 import { useOrganization } from "@/contexts/organization-context";
 import { NoOrganizationScreen } from "@/components/org-switcher";
 import {
-  canAccessStaffRoutes,
-  isStaffOnlyPath,
+  buildNavAccess,
+  canAccessPath,
+  isClientPortalPath,
 } from "@/lib/nav-access";
 import { Loader2 } from "lucide-react";
 
@@ -15,18 +16,35 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/customer-onboarding"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/customer-onboarding", "/invite"];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isAuthenticated, loading } = useAuth();
-  const { activeOrg, isSuperAdmin, loaded: orgsLoaded } = useOrganization();
+  const {
+    activeOrg,
+    isSuperAdmin,
+    loaded: orgsLoaded,
+    permissions,
+    isOwner,
+  } = useOrganization();
   const router = useRouter();
   const pathname = usePathname();
+
+  const navAccess = buildNavAccess({
+    permissions,
+    isOwner,
+    globalRole: user?.global_role,
+  });
+
+  const pathAllowed =
+    !pathname ||
+    isClientPortalPath(pathname) ||
+    canAccessPath(pathname, navAccess);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-        pathname?.startsWith(route)
+        pathname?.startsWith(route),
       );
 
       if (!isPublicRoute) {
@@ -35,18 +53,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       return;
     }
 
-    if (
-      !loading &&
-      isAuthenticated &&
-      pathname &&
-      !canAccessStaffRoutes(user?.role) &&
-      isStaffOnlyPath(pathname)
-    ) {
+    if (!loading && isAuthenticated && pathname && !pathAllowed) {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, loading, pathname, router, user?.role]);
+  }, [isAuthenticated, loading, pathname, pathAllowed, router]);
 
-  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
@@ -55,10 +66,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If not authenticated and trying to access protected route, don't render children
-  // (redirect will happen in useEffect)
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-    pathname?.startsWith(route)
+    pathname?.startsWith(route),
   );
 
   if (!isAuthenticated && !isPublicRoute) {
@@ -69,12 +78,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (
-    isAuthenticated &&
-    pathname &&
-    !canAccessStaffRoutes(user?.role) &&
-    isStaffOnlyPath(pathname)
-  ) {
+  if (isAuthenticated && pathname && !pathAllowed) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -82,8 +86,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Authenticated users without any org membership can't load org-scoped
-  // data — show a clear notice instead of a wall of failed requests.
   const isPublic = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
   if (
     isAuthenticated &&
@@ -97,4 +99,3 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
-
