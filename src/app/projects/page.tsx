@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   projectsApi,
   projectStatusesApi,
@@ -37,14 +37,18 @@ import {
   DragOverlay,
   useSensor,
   useSensors,
+  useDroppable,
   PointerSensor,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   TouchSensor,
   closestCorners,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -243,16 +247,64 @@ const SortableProjectCard = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="touch-none"
+      {...attributes}
+      {...listeners}
+    >
       <ProjectKanbanCard
         project={project}
         onEdit={onEdit}
         onDelete={() => onDelete(project)}
-        onCardClick={() => onCardClick(project)}
+        onCardClick={() => {
+          if (!isDragging) onCardClick(project);
+        }}
       />
     </div>
   );
 };
+
+type ProjectBoardState = Record<string, Project[]>;
+
+function buildProjectBoard(
+  projects: Project[],
+  columnKeys: string[],
+): ProjectBoardState {
+  const grouped: ProjectBoardState = { other: [] };
+  for (const key of columnKeys) grouped[key] = [];
+
+  for (const project of projects) {
+    const status = project.status?.toLowerCase() || "other";
+    if (grouped[status] !== undefined) {
+      grouped[status].push(project);
+    } else {
+      grouped.other.push(project);
+    }
+  }
+
+  const dealTime = (p: Project) =>
+    new Date(p.updated_at ?? p.created_at).getTime();
+  for (const key of Object.keys(grouped)) {
+    grouped[key].sort((a, b) => dealTime(b) - dealTime(a));
+  }
+
+  return grouped;
+}
+
+function findProjectColumn(
+  id: UniqueIdentifier,
+  board: ProjectBoardState,
+  columnIds: string[],
+): string | undefined {
+  const sid = String(id);
+  if (columnIds.includes(sid)) return sid;
+  for (const [columnId, columnProjects] of Object.entries(board)) {
+    if (columnProjects.some((p) => String(p.id) === sid)) return columnId;
+  }
+  return undefined;
+}
 
 const KanbanColumn = ({
   id,
@@ -271,12 +323,15 @@ const KanbanColumn = ({
   onDelete: (project: Project) => void;
   onCardClick: (project: Project) => void;
 }) => {
-  const { setNodeRef } = useSortable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div
       ref={setNodeRef}
-      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm"
+      className={cn(
+        "flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm",
+        isOver && "border-primary/50 bg-primary/5",
+      )}
     >
       <div className="shrink-0 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -421,29 +476,41 @@ const Projects = () => {
     return FALLBACK_PROJECT_STATUS_COLUMNS.map((c) => c.key);
   }, [statusesSorted]);
 
-  const getProjectsByStatus = () => {
-    const grouped: Record<string, Project[]> = { other: [] };
-    statusColumnKeys.forEach((k) => {
-      grouped[k] = [];
-    });
+  const kanbanColumns = useMemo(() => {
+    const columns =
+      statusesSorted.length > 0
+        ? statusesSorted.map((s) => ({
+            key: s.name.toLowerCase(),
+            label: s.name,
+          }))
+        : [...FALLBACK_PROJECT_STATUS_COLUMNS];
 
-    projects.forEach((project) => {
+    const hasOther = projects.some((project) => {
       const status = project.status?.toLowerCase() || "other";
-      if (grouped[status] !== undefined) {
-        grouped[status].push(project);
-      } else {
-        grouped.other.push(project);
-      }
+      return !statusColumnKeys.includes(status);
     });
-
-    const dealTime = (p: Project) =>
-      new Date(p.updated_at ?? p.created_at).getTime();
-    for (const key of Object.keys(grouped)) {
-      grouped[key].sort((a, b) => dealTime(b) - dealTime(a));
+    if (hasOther) {
+      columns.push({ key: "other", label: "Other" });
     }
+    return columns;
+  }, [statusesSorted, projects, statusColumnKeys]);
 
-    return grouped;
-  };
+  const columnIds = useMemo(
+    () => kanbanColumns.map((c) => c.key),
+    [kanbanColumns],
+  );
+
+  const [board, setBoard] = useState<ProjectBoardState>(() =>
+    buildProjectBoard(projects, statusColumnKeys),
+  );
+  const boardRef = useRef(board);
+  boardRef.current = board;
+  const originColumnRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeDragProject != null) return;
+    setBoard(buildProjectBoard(projects, statusColumnKeys));
+  }, [projects, statusColumnKeys, activeDragProject]);
 
   const getStatusSubtext = (statusProjects: Project[]) => {
     const count = statusProjects.length;
@@ -454,42 +521,111 @@ const Projects = () => {
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
     }),
-    useSensor(TouchSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+  );
+
+  const resolveCanonicalStatus = useCallback(
+    (columnKey: string) => {
+      const col = statusesSorted.find(
+        (s) => s.name.toLowerCase() === columnKey.toLowerCase(),
+      );
+      return col?.name ?? columnKey;
+    },
+    [statusesSorted],
   );
 
   const handleKanbanDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const project = projects.find((p) => p.id === active.id);
-    if (project) setActiveDragProject(project);
+    if (!project) return;
+    setActiveDragProject(project);
+    originColumnRef.current =
+      findProjectColumn(active.id, boardRef.current, columnIds) ??
+      (project.status?.toLowerCase() || "other");
   };
 
-  const handleKanbanDragEnd = async (event: DragEndEvent) => {
+  const handleKanbanDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    setActiveDragProject(null);
     if (!over) return;
 
-    const activeId = active.id;
-    const overId = over.id;
-    const project = projects.find((p) => p.id === activeId);
-    if (!project) return;
+    setBoard((prev) => {
+      const activeCol = findProjectColumn(active.id, prev, columnIds);
+      const overCol = findProjectColumn(over.id, prev, columnIds);
+      if (!activeCol || !overCol || activeCol === overCol) return prev;
+      if (overCol === "other") return prev;
 
-    const overStr = String(overId);
-    if (overStr === "other") return;
+      const activeItems = [...(prev[activeCol] ?? [])];
+      const overItems = [...(prev[overCol] ?? [])];
+      const activeIndex = activeItems.findIndex(
+        (p) => String(p.id) === String(active.id),
+      );
+      if (activeIndex < 0) return prev;
 
-    let newStatusCanonical: string | undefined;
-    const col = statusesSorted.find((s) => s.name.toLowerCase() === overStr);
-    if (col) {
-      newStatusCanonical = col.name;
-    } else {
-      const overProject = projects.find((p) => p.id === overId);
-      if (overProject) {
-        newStatusCanonical = overProject.status;
-      } else {
-        return;
-      }
+      const [moved] = activeItems.splice(activeIndex, 1);
+      const overIsColumn = columnIds.includes(String(over.id));
+      let newIndex = overIsColumn
+        ? overItems.length
+        : overItems.findIndex((p) => String(p.id) === String(over.id));
+      if (newIndex < 0) newIndex = overItems.length;
+      overItems.splice(newIndex, 0, moved);
+
+      return { ...prev, [activeCol]: activeItems, [overCol]: overItems };
+    });
+  };
+
+  const handleKanbanDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    const fromColumn = originColumnRef.current;
+    originColumnRef.current = null;
+
+    if (!over || !fromColumn) {
+      setActiveDragProject(null);
+      return;
     }
 
-    if (!newStatusCanonical) return;
+    const currentBoard = boardRef.current;
+    let toColumn = findProjectColumn(active.id, currentBoard, columnIds);
+
+    if (toColumn === fromColumn && !columnIds.includes(String(over.id))) {
+      const list = currentBoard[fromColumn] ?? [];
+      const activeIndex = list.findIndex(
+        (p) => String(p.id) === String(active.id),
+      );
+      const overIndex = list.findIndex((p) => String(p.id) === String(over.id));
+      if (activeIndex >= 0 && overIndex >= 0 && activeIndex !== overIndex) {
+        setBoard((prev) => ({
+          ...prev,
+          [fromColumn]: arrayMove(
+            prev[fromColumn] ?? [],
+            activeIndex,
+            overIndex,
+          ),
+        }));
+      }
+      setActiveDragProject(null);
+      return;
+    }
+
+    if (!toColumn) {
+      toColumn = findProjectColumn(over.id, currentBoard, columnIds);
+    }
+
+    setActiveDragProject(null);
+    if (!toColumn || toColumn === fromColumn || toColumn === "other") {
+      if (toColumn === "other") {
+        setBoard(buildProjectBoard(projects, statusColumnKeys));
+      }
+      return;
+    }
+
+    const project =
+      projects.find((p) => String(p.id) === String(active.id)) ??
+      currentBoard[toColumn]?.find((p) => String(p.id) === String(active.id));
+    if (!project) return;
+
+    const newStatusCanonical = resolveCanonicalStatus(toColumn);
     if (
       newStatusCanonical.toLowerCase() ===
       (project.status?.toLowerCase() ?? "")
@@ -498,23 +634,32 @@ const Projects = () => {
     }
 
     const oldStatus = project.status;
-    const updated = projects.map((p) =>
-      p.id === project.id ? { ...p, status: newStatusCanonical } : p,
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === project.id ? { ...p, status: newStatusCanonical } : p,
+      ),
     );
-    setProjects(updated);
 
-    try {
-      await projectsApi.update(Number(project.id), {
-        status: newStatusCanonical,
-      });
-    } catch (err) {
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === project.id ? { ...p, status: oldStatus } : p,
-        ),
-      );
-      console.error("Failed to update project status", err);
-    }
+    void (async () => {
+      try {
+        await projectsApi.update(Number(project.id), {
+          status: newStatusCanonical,
+        });
+      } catch (err) {
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === project.id ? { ...p, status: oldStatus } : p,
+          ),
+        );
+        console.error("Failed to update project status", err);
+      }
+    })();
+  };
+
+  const handleKanbanDragCancel = () => {
+    originColumnRef.current = null;
+    setActiveDragProject(null);
+    setBoard(buildProjectBoard(projects, statusColumnKeys));
   };
 
   const renderProjects = () => {
@@ -608,18 +753,6 @@ const Projects = () => {
     }
 
     if (viewMode === "kanban") {
-      const grouped = getProjectsByStatus();
-      const columns =
-        statusesSorted.length > 0
-          ? statusesSorted.map((s) => ({
-              key: s.name.toLowerCase(),
-              label: s.name,
-            }))
-          : FALLBACK_PROJECT_STATUS_COLUMNS;
-      if ((grouped.other?.length ?? 0) > 0) {
-        columns.push({ key: "other", label: "Other" });
-      }
-
       return (
         <div className="flex h-full min-h-[320px] flex-col overflow-hidden rounded-md border border-border bg-card">
           <div className="flex flex-1 min-h-0 overflow-x-auto border-t">
@@ -627,11 +760,13 @@ const Projects = () => {
               sensors={sensors}
               collisionDetection={closestCorners}
               onDragStart={handleKanbanDragStart}
+              onDragOver={handleKanbanDragOver}
               onDragEnd={handleKanbanDragEnd}
+              onDragCancel={handleKanbanDragCancel}
             >
               <div className="flex h-full py-0">
-                {columns.map((column) => {
-                  const statusProjects = grouped[column.key] || [];
+                {kanbanColumns.map((column) => {
+                  const statusProjects = board[column.key] || [];
                   return (
                     <KanbanColumn
                       key={column.key}

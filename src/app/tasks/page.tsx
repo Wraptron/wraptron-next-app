@@ -533,6 +533,7 @@ export default function TasksBoardPage() {
         setNotice(check.reason ?? "Move not allowed");
         return;
       }
+      const previous = task;
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id
@@ -543,12 +544,13 @@ export default function TasksBoardPage() {
       try {
         await tasksApi.update(task.id, { status: toStatus.name });
       } catch (err) {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === previous.id ? previous : t)),
+        );
         setNotice(err instanceof Error ? err.message : "Move failed");
-      } finally {
-        void loadTasks();
       }
     },
-    [tasksById, statusByName, user?.role, loadTasks],
+    [tasksById, statusByName, user?.role],
   );
 
   const handleCreate = async () => {

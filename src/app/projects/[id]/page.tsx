@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,8 +43,12 @@ import {
 import {
   projectsApi,
   integrationsApi,
+  taskStatusesApi,
+  WORKFLOW_CATEGORY_LABELS,
+  WORKFLOW_CATEGORY_ORDER,
   type Project,
   type Task,
+  type TaskStatus,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -45,14 +57,18 @@ import {
   DragOverlay,
   useSensor,
   useSensors,
+  useDroppable,
   PointerSensor,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   TouchSensor,
   closestCorners,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -103,7 +119,6 @@ const SERVICE_OPTIONS = [
   "Support and Maintenance",
   "Other",
 ] as const;
-import Link from "next/link";
 
 interface ProjectCharterDialogProps {
   open: boolean;
@@ -983,22 +998,68 @@ function TaskViewSwitcher({
 }
 
 // Task Board Component
-const TASK_COLUMN_KEYS = ["backlog", "todo", "in_progress", "review", "done"];
-const COLUMN_TO_STATUS: Record<string, string> = {
-  backlog: "pending",
-  todo: "todo",
-  in_progress: "in_progress",
-  review: "review",
-  done: "completed",
+type TaskBoardState = Record<string, Task[]>;
+
+const FALLBACK_TASK_COLUMNS = [
+  { id: "backlog", label: "Backlog" },
+  { id: "todo", label: "To Do" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "review", label: "Review" },
+  { id: "done", label: "Done" },
+];
+
+/** Legacy status names → current org status names (when statuses are loaded). */
+const LEGACY_STATUS_ALIASES: Record<string, string[]> = {
+  pending: ["backlog", "todo"],
+  completed: ["done"],
 };
-const STATUS_TO_COLUMN: Record<string, string> = {
-  pending: "backlog",
-  todo: "todo",
-  in_progress: "in_progress",
-  review: "review",
-  completed: "done",
-  done: "done",
-};
+
+function resolveTaskColumnId(
+  status: string,
+  columnIds: string[],
+): string {
+  const lower = status.toLowerCase();
+  const exact = columnIds.find((id) => id.toLowerCase() === lower);
+  if (exact) return exact;
+
+  const aliases = LEGACY_STATUS_ALIASES[lower];
+  if (aliases) {
+    for (const alias of aliases) {
+      const match = columnIds.find((id) => id.toLowerCase() === alias);
+      if (match) return match;
+    }
+  }
+
+  const other = columnIds.find((id) => id.toLowerCase() === "other");
+  return other ?? columnIds[0] ?? status;
+}
+
+function buildTaskBoard(
+  tasks: Task[],
+  columnIds: string[],
+): TaskBoardState {
+  const board: TaskBoardState = {};
+  for (const id of columnIds) board[id] = [];
+  for (const task of tasks) {
+    const col = resolveTaskColumnId(task.status, columnIds);
+    if (board[col]) board[col].push(task);
+    else if (board[columnIds[0]]) board[columnIds[0]].push(task);
+  }
+  return board;
+}
+
+function findTaskColumn(
+  id: UniqueIdentifier,
+  board: TaskBoardState,
+  columnIds: string[],
+): string | undefined {
+  const sid = String(id);
+  if (columnIds.includes(sid)) return sid;
+  for (const [columnId, columnTasks] of Object.entries(board)) {
+    if (columnTasks.some((t) => String(t.id) === sid)) return columnId;
+  }
+  return undefined;
+}
 
 function TaskKanbanCard({ task }: { task: Task }) {
   return (
@@ -1059,10 +1120,20 @@ function SortableTaskCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="touch-none"
+      {...attributes}
+      {...listeners}
+    >
       <Link
         href={`/projects/${projectId}/tasks/${task.id}`}
         className="block no-underline text-inherit"
+        draggable={false}
+        onClick={(e) => {
+          if (isDragging) e.preventDefault();
+        }}
       >
         <TaskKanbanCard task={task} />
       </Link>
@@ -1078,17 +1149,19 @@ function TaskKanbanColumn({
   statusSubtext,
 }: {
   id: string;
-  label: string;
+  label: ReactNode;
   tasks: Task[];
   projectId: number;
   statusSubtext: string;
 }) {
-  const { setNodeRef } = useSortable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div
       ref={setNodeRef}
-      className="flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm"
+      className={`flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm ${
+        isOver ? "border-primary/50 bg-primary/5" : ""
+      }`}
     >
       <div className="shrink-0 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -1129,67 +1202,193 @@ function TaskBoard({
   projectId: number;
   onTaskUpdate: () => void;
 }) {
+  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
+  const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+  const originColumnRef = useRef<string | null>(null);
 
-  const columns = [
-    { key: "backlog", label: "Backlog" },
-    { key: "todo", label: "To Do" },
-    { key: "in_progress", label: "In Progress" },
-    { key: "review", label: "Review" },
-    { key: "done", label: "Done" },
-  ];
+  useEffect(() => {
+    setLocalTasks(tasks);
+  }, [tasks]);
 
-  const getTasksByStatus = (status: string) => {
-    return tasks.filter(
-      (task) =>
-        STATUS_TO_COLUMN[task.status] === status || task.status === status,
-    );
-  };
+  useEffect(() => {
+    let cancelled = false;
+    taskStatusesApi
+      .getAll()
+      .then((res) => {
+        if (!cancelled) setStatuses(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setStatuses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const getStatusSubtext = (columnTasks: Task[]) =>
-    `${columnTasks.length} task${columnTasks.length !== 1 ? "s" : ""}`;
+  const columns = useMemo(() => {
+    if (statuses.length > 0) {
+      return [...statuses]
+        .sort(
+          (a, b) =>
+            WORKFLOW_CATEGORY_ORDER[a.category] -
+              WORKFLOW_CATEGORY_ORDER[b.category] ||
+            a.sort_order - b.sort_order ||
+            a.id - b.id,
+        )
+        .map((s) => ({
+          id: s.name,
+          label: (
+            <span className="flex items-center gap-2 capitalize">
+              {s.name.replace(/_/g, " ")}
+              <span className="text-xs font-normal text-muted-foreground">
+                {WORKFLOW_CATEGORY_LABELS[s.category]}
+              </span>
+            </span>
+          ),
+        }));
+    }
+    return FALLBACK_TASK_COLUMNS;
+  }, [statuses]);
+
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+  const statusByName = useMemo(() => {
+    const map = new Map<string, TaskStatus>();
+    for (const s of statuses) map.set(s.name.toLowerCase(), s);
+    return map;
+  }, [statuses]);
+
+  const [board, setBoard] = useState<TaskBoardState>(() =>
+    buildTaskBoard(tasks, columnIds),
+  );
+  const boardRef = useRef(board);
+  boardRef.current = board;
+
+  useEffect(() => {
+    if (activeDragTask != null) return;
+    setBoard(buildTaskBoard(localTasks, columnIds));
+  }, [localTasks, columnIds, activeDragTask]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+  );
+
+  const canonicalStatusName = useCallback(
+    (columnId: string) => {
+      const match = statusByName.get(columnId.toLowerCase());
+      return match?.name ?? columnId;
+    },
+    [statusByName],
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks.find((t) => t.id === event.active.id);
-    if (task) setActiveDragTask(task);
+    const task = localTasks.find((t) => t.id === event.active.id);
+    if (!task) return;
+    setActiveDragTask(task);
+    originColumnRef.current =
+      findTaskColumn(event.active.id, boardRef.current, columnIds) ??
+      resolveTaskColumnId(task.status, columnIds);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    setActiveDragTask(null);
     if (!over) return;
 
-    const task = tasks.find((t) => t.id === active.id);
+    setBoard((prev) => {
+      const activeCol = findTaskColumn(active.id, prev, columnIds);
+      const overCol = findTaskColumn(over.id, prev, columnIds);
+      if (!activeCol || !overCol || activeCol === overCol) return prev;
+
+      const activeItems = [...(prev[activeCol] ?? [])];
+      const overItems = [...(prev[overCol] ?? [])];
+      const activeIndex = activeItems.findIndex(
+        (t) => String(t.id) === String(active.id),
+      );
+      if (activeIndex < 0) return prev;
+
+      const [moved] = activeItems.splice(activeIndex, 1);
+      const overIsColumn = columnIds.includes(String(over.id));
+      let newIndex = overIsColumn
+        ? overItems.length
+        : overItems.findIndex((t) => String(t.id) === String(over.id));
+      if (newIndex < 0) newIndex = overItems.length;
+      overItems.splice(newIndex, 0, moved);
+
+      return { ...prev, [activeCol]: activeItems, [overCol]: overItems };
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    const fromColumn = originColumnRef.current;
+    originColumnRef.current = null;
+
+    if (!over || !fromColumn) {
+      setActiveDragTask(null);
+      return;
+    }
+
+    const currentBoard = boardRef.current;
+    let toColumn = findTaskColumn(active.id, currentBoard, columnIds);
+
+    if (toColumn === fromColumn && !columnIds.includes(String(over.id))) {
+      const list = currentBoard[fromColumn] ?? [];
+      const activeIndex = list.findIndex(
+        (t) => String(t.id) === String(active.id),
+      );
+      const overIndex = list.findIndex((t) => String(t.id) === String(over.id));
+      if (activeIndex >= 0 && overIndex >= 0 && activeIndex !== overIndex) {
+        setBoard((prev) => ({
+          ...prev,
+          [fromColumn]: arrayMove(prev[fromColumn] ?? [], activeIndex, overIndex),
+        }));
+      }
+      setActiveDragTask(null);
+      return;
+    }
+
+    if (!toColumn) {
+      toColumn = findTaskColumn(over.id, currentBoard, columnIds);
+    }
+
+    setActiveDragTask(null);
+    if (!toColumn || toColumn === fromColumn) return;
+
+    const task =
+      localTasks.find((t) => String(t.id) === String(active.id)) ??
+      currentBoard[toColumn]?.find((t) => String(t.id) === String(active.id));
     if (!task) return;
 
-    let newColumn = "";
-    if (TASK_COLUMN_KEYS.includes(String(over.id))) {
-      newColumn = String(over.id);
-    } else {
-      const overTask = tasks.find((t) => t.id === over.id);
-      if (overTask) {
-        newColumn = STATUS_TO_COLUMN[overTask.status] || overTask.status;
-      } else {
-        return;
+    const newStatus = canonicalStatusName(toColumn);
+    if (task.status.toLowerCase() === newStatus.toLowerCase()) return;
+
+    const oldStatus = task.status;
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)),
+    );
+
+    void (async () => {
+      try {
+        await projectsApi.updateTask(projectId, task.id, { status: newStatus });
+        onTaskUpdate();
+      } catch (err) {
+        console.error("Error updating task status", err);
+        setLocalTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id ? { ...t, status: oldStatus } : t,
+          ),
+        );
       }
-    }
+    })();
+  };
 
-    const newStatus = COLUMN_TO_STATUS[newColumn] || newColumn;
-    const currentColumn =
-      STATUS_TO_COLUMN[task.status] || task.status || "backlog";
-    if (newColumn === currentColumn) return;
-
-    try {
-      await projectsApi.updateTask(projectId, task.id, { status: newStatus });
-      onTaskUpdate();
-    } catch (err) {
-      console.error("Error updating task status", err);
-    }
+  const handleDragCancel = () => {
+    originColumnRef.current = null;
+    setActiveDragTask(null);
+    setBoard(buildTaskBoard(localTasks, columnIds));
   };
 
   return (
@@ -1199,19 +1398,23 @@ function TaskBoard({
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="flex h-full py-0">
             {columns.map((col) => {
-              const columnTasks = getTasksByStatus(col.key);
+              const columnTasks = board[col.id] ?? [];
               return (
                 <TaskKanbanColumn
-                  key={col.key}
-                  id={col.key}
+                  key={col.id}
+                  id={col.id}
                   label={col.label}
                   tasks={columnTasks}
                   projectId={projectId}
-                  statusSubtext={getStatusSubtext(columnTasks)}
+                  statusSubtext={`${columnTasks.length} task${
+                    columnTasks.length !== 1 ? "s" : ""
+                  }`}
                 />
               );
             })}

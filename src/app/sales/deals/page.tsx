@@ -572,9 +572,13 @@ export default function DealsPage() {
   ) => {
     const deal = dealById.get(Number(item.id));
     if (!deal) return;
+    if (toColumnId === "other") return;
 
-    const newStage = toColumnId;
-    if (newStage === deal.stage?.toLowerCase()) return;
+    const stageMatch = stagesSorted.find(
+      (s) => s.name.toLowerCase() === toColumnId.toLowerCase(),
+    );
+    const newStage = stageMatch?.name ?? toColumnId;
+    if (newStage.toLowerCase() === deal.stage?.toLowerCase()) return;
 
     const oldStage = deal.stage;
     setDeals((prev) =>

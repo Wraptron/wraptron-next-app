@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -8,13 +8,17 @@ import {
   PointerSensor,
   TouchSensor,
   closestCorners,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -49,6 +53,47 @@ export type CollectionKanbanViewProps = {
   className?: string;
 };
 
+type BoardState = Record<string, CollectionItem[]>;
+
+function buildBoard(
+  items: CollectionItem[],
+  columns: CollectionKanbanColumn[],
+  groupBy: (item: CollectionItem) => string,
+): BoardState {
+  const map: BoardState = {};
+  for (const column of columns) {
+    map[column.id] = [];
+  }
+  const otherKey = columns.some((c) => c.id === "other")
+    ? "other"
+    : columns[columns.length - 1]?.id;
+
+  for (const item of items) {
+    const key = groupBy(item);
+    if (map[key]) {
+      map[key].push(item);
+    } else if (otherKey && map[otherKey]) {
+      map[otherKey].push(item);
+    }
+  }
+  return map;
+}
+
+function findColumn(
+  id: UniqueIdentifier,
+  board: BoardState,
+  columnIds: string[],
+): string | undefined {
+  const sid = String(id);
+  if (columnIds.includes(sid)) return sid;
+  for (const [columnId, columnItems] of Object.entries(board)) {
+    if (columnItems.some((item) => String(item.id) === sid)) {
+      return columnId;
+    }
+  }
+  return undefined;
+}
+
 function DefaultKanbanCard({ item }: { item: CollectionItem }) {
   return (
     <Card className="cursor-grab gap-0 rounded-lg border border-border bg-card py-0 text-card-foreground shadow-none active:cursor-grabbing">
@@ -76,10 +121,12 @@ function SortableKanbanCard({
   item,
   href,
   renderCard,
+  disabled,
 }: {
   item: CollectionItem;
   href?: string;
   renderCard?: (item: CollectionItem) => React.ReactNode;
+  disabled?: boolean;
 }) {
   const {
     attributes,
@@ -88,7 +135,7 @@ function SortableKanbanCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -99,9 +146,22 @@ function SortableKanbanCard({
   const card = renderCard ? renderCard(item) : <DefaultKanbanCard item={item} />;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={disabled ? undefined : "touch-none"}
+      {...attributes}
+      {...(disabled ? {} : listeners)}
+    >
       {href ? (
-        <Link href={href} className="block text-inherit no-underline">
+        <Link
+          href={href}
+          className="block text-inherit no-underline"
+          draggable={false}
+          onClick={(e) => {
+            if (isDragging) e.preventDefault();
+          }}
+        >
           {card}
         </Link>
       ) : (
@@ -132,13 +192,14 @@ function KanbanColumn({
   headerClassName?: string;
   className?: string;
 }) {
-  const { setNodeRef } = useSortable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
         "flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm",
+        isOver && draggable && "border-primary/50 bg-primary/5",
         className,
       )}
     >
@@ -166,6 +227,7 @@ function KanbanColumn({
                 item={item}
                 href={getRowHref?.(item)}
                 renderCard={renderCard}
+                disabled={!draggable}
               />
             ))}
             {items.length === 0 && (
@@ -176,6 +238,56 @@ function KanbanColumn({
           </div>
         </SortableContext>
       </div>
+    </div>
+  );
+}
+
+function KanbanBoardBody({
+  board,
+  columns,
+  getColumnSubtext,
+  getRowHref,
+  renderCard,
+  draggable,
+}: {
+  board: BoardState;
+  columns: CollectionKanbanColumn[];
+  getColumnSubtext?: (
+    columnId: string,
+    columnItems: CollectionItem[],
+  ) => React.ReactNode;
+  getRowHref?: (item: CollectionItem) => string | undefined;
+  renderCard?: (item: CollectionItem) => React.ReactNode;
+  draggable: boolean;
+}) {
+  const defaultSubtext = (_columnId: string, columnItems: CollectionItem[]) => {
+    const count = columnItems.length;
+    return `${count} item${count !== 1 ? "s" : ""}`;
+  };
+
+  return (
+    <div className="flex h-full py-0">
+      {columns.map((column) => {
+        const columnItems = board[column.id] ?? [];
+        const subtext = getColumnSubtext
+          ? getColumnSubtext(column.id, columnItems)
+          : defaultSubtext(column.id, columnItems);
+
+        return (
+          <KanbanColumn
+            key={column.id}
+            id={column.id}
+            label={column.label}
+            subtext={subtext}
+            items={columnItems}
+            getRowHref={getRowHref}
+            renderCard={renderCard}
+            draggable={draggable}
+            headerClassName={column.headerClassName}
+            className={column.className}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -193,71 +305,131 @@ export function CollectionKanbanView({
   emptyMessage = "No items found.",
   className,
 }: CollectionKanbanViewProps) {
+  const draggable = Boolean(onItemMove);
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+  const [board, setBoard] = useState<BoardState>(() =>
+    buildBoard(items, columns, groupBy),
+  );
   const [activeDragItem, setActiveDragItem] = useState<CollectionItem | null>(
     null,
   );
+  const originColumnRef = useRef<string | null>(null);
+  const boardRef = useRef(board);
+  boardRef.current = board;
 
-  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
-
-  const grouped = useMemo(() => {
-    const map: Record<string, CollectionItem[]> = {};
-    for (const column of columns) {
-      map[column.id] = [];
-    }
-    const otherKey = columns.some((c) => c.id === "other")
-      ? "other"
-      : columns[columns.length - 1]?.id;
-
-    for (const item of items) {
-      const key = groupBy(item);
-      if (map[key]) {
-        map[key].push(item);
-      } else if (otherKey && map[otherKey]) {
-        map[otherKey].push(item);
-      }
-    }
-    return map;
-  }, [items, columns, groupBy]);
+  useEffect(() => {
+    if (activeDragItem != null) return;
+    setBoard(buildBoard(items, columns, groupBy));
+  }, [items, columns, groupBy, activeDragItem]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    const active = items.find((item) => item.id === event.active.id);
-    if (active) setActiveDragItem(active);
+    const active = items.find(
+      (item) => String(item.id) === String(event.active.id),
+    );
+    if (!active) return;
+    setActiveDragItem(active);
+    originColumnRef.current =
+      findColumn(event.active.id, boardRef.current, columnIds) ??
+      groupBy(active);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveDragItem(null);
-    if (!onItemMove) return;
-
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    if (!over || !draggable) return;
 
-    const item = items.find((i) => i.id === active.id);
-    if (!item) return;
+    setBoard((prev) => {
+      const activeCol = findColumn(active.id, prev, columnIds);
+      const overCol = findColumn(over.id, prev, columnIds);
+      if (!activeCol || !overCol || activeCol === overCol) return prev;
 
-    let toColumnId = String(over.id);
-    if (!columnIds.includes(toColumnId)) {
-      const overItem = items.find((i) => i.id === over.id);
-      if (overItem) {
-        toColumnId = groupBy(overItem);
-      } else {
-        return;
+      const activeItems = [...(prev[activeCol] ?? [])];
+      const overItems = [...(prev[overCol] ?? [])];
+      const activeIndex = activeItems.findIndex(
+        (item) => String(item.id) === String(active.id),
+      );
+      if (activeIndex < 0) return prev;
+
+      const [moved] = activeItems.splice(activeIndex, 1);
+      const overIsColumn = columnIds.includes(String(over.id));
+      let newIndex = overIsColumn
+        ? overItems.length
+        : overItems.findIndex((item) => String(item.id) === String(over.id));
+      if (newIndex < 0) newIndex = overItems.length;
+      overItems.splice(newIndex, 0, moved);
+
+      return {
+        ...prev,
+        [activeCol]: activeItems,
+        [overCol]: overItems,
+      };
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    const fromColumn = originColumnRef.current;
+    originColumnRef.current = null;
+
+    if (!draggable || !onItemMove || !over || !fromColumn) {
+      setActiveDragItem(null);
+      return;
+    }
+
+    const currentBoard = boardRef.current;
+    let toColumn = findColumn(active.id, currentBoard, columnIds);
+
+    if (toColumn === fromColumn && !columnIds.includes(String(over.id))) {
+      const activeIndex = (currentBoard[fromColumn] ?? []).findIndex(
+        (item) => String(item.id) === String(active.id),
+      );
+      const overIndex = (currentBoard[fromColumn] ?? []).findIndex(
+        (item) => String(item.id) === String(over.id),
+      );
+      if (activeIndex >= 0 && overIndex >= 0 && activeIndex !== overIndex) {
+        setBoard((prev) => ({
+          ...prev,
+          [fromColumn]: arrayMove(
+            prev[fromColumn] ?? [],
+            activeIndex,
+            overIndex,
+          ),
+        }));
+      }
+      setActiveDragItem(null);
+      return;
+    }
+
+    if (!toColumn) {
+      toColumn = findColumn(over.id, currentBoard, columnIds);
+    }
+
+    if (toColumn && toColumn !== fromColumn) {
+      const item =
+        items.find((i) => String(i.id) === String(active.id)) ??
+        currentBoard[toColumn]?.find(
+          (i) => String(i.id) === String(active.id),
+        );
+      if (item) {
+        // Do not await — parent should update items optimistically so the
+        // board does not snap back while the API request is in flight.
+        void Promise.resolve(onItemMove(item, toColumn));
       }
     }
 
-    const fromColumnId = groupBy(item);
-    if (fromColumnId === toColumnId) return;
-
-    await onItemMove(item, toColumnId);
+    setActiveDragItem(null);
   };
 
-  const defaultSubtext = (_columnId: string, columnItems: CollectionItem[]) => {
-    const count = columnItems.length;
-    return `${count} item${count !== 1 ? "s" : ""}`;
+  const handleDragCancel = () => {
+    originColumnRef.current = null;
+    setActiveDragItem(null);
+    setBoard(buildBoard(items, columns, groupBy));
   };
 
   if (loading) {
@@ -286,8 +458,6 @@ export function CollectionKanbanView({
     );
   }
 
-  const draggable = Boolean(onItemMove);
-
   return (
     <div
       className={cn(
@@ -296,45 +466,43 @@ export function CollectionKanbanView({
       )}
     >
       <div className="flex min-h-0 flex-1 overflow-x-auto border-t border-border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex h-full py-0">
-            {columns.map((column) => {
-              const columnItems = grouped[column.id] ?? [];
-              const subtext = getColumnSubtext
-                ? getColumnSubtext(column.id, columnItems)
-                : defaultSubtext(column.id, columnItems);
-
-              return (
-                <KanbanColumn
-                  key={column.id}
-                  id={column.id}
-                  label={column.label}
-                  subtext={subtext}
-                  items={columnItems}
-                  getRowHref={getRowHref}
-                  renderCard={renderCard}
-                  draggable={draggable}
-                  headerClassName={column.headerClassName}
-                  className={column.className}
-                />
-              );
-            })}
-          </div>
-          <DragOverlay>
-            {activeDragItem ? (
-              renderCard ? (
-                renderCard(activeDragItem)
-              ) : (
-                <DefaultKanbanCard item={activeDragItem} />
-              )
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        {draggable ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <KanbanBoardBody
+              board={board}
+              columns={columns}
+              getColumnSubtext={getColumnSubtext}
+              getRowHref={getRowHref}
+              renderCard={renderCard}
+              draggable
+            />
+            <DragOverlay>
+              {activeDragItem ? (
+                renderCard ? (
+                  renderCard(activeDragItem)
+                ) : (
+                  <DefaultKanbanCard item={activeDragItem} />
+                )
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <KanbanBoardBody
+            board={board}
+            columns={columns}
+            getColumnSubtext={getColumnSubtext}
+            getRowHref={getRowHref}
+            renderCard={renderCard}
+            draggable={false}
+          />
+        )}
       </div>
     </div>
   );
