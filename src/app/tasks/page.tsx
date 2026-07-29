@@ -89,6 +89,11 @@ function canMove(
   return { allowed: true };
 }
 
+function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  return value.slice(0, 10);
+}
+
 const PR_STATE_META: Record<
   string,
   { icon: React.ReactNode; className: string }
@@ -261,6 +266,9 @@ export default function TasksBoardPage() {
   const [newDescription, setNewDescription] = useState("");
   const [newAssignee, setNewAssignee] = useState<string>("unassigned");
   const [newPriority, setNewPriority] = useState("medium");
+  const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     setTitle("Tasks");
@@ -382,6 +390,36 @@ export default function TasksBoardPage() {
     return map;
   }, [statuses]);
 
+  const assigneeOptionsByTaskId = useMemo(() => {
+    const employeeLabelById = new Map<number, string>();
+    for (const employee of employees) {
+      employeeLabelById.set(
+        employee.id,
+        `${employee.first_name} ${employee.last_name}`.trim(),
+      );
+    }
+    const map = new Map<number, Array<{ id: number; label: string }>>();
+    for (const task of visibleTasks) {
+      const options = employees.map((employee) => ({
+        id: employee.id,
+        label: `${employee.first_name} ${employee.last_name}`.trim(),
+      }));
+      if (
+        task.assigned_employee_id != null &&
+        !employeeLabelById.has(task.assigned_employee_id)
+      ) {
+        options.unshift({
+          id: task.assigned_employee_id,
+          label:
+            task.assignee_name?.trim() ||
+            `Employee #${task.assigned_employee_id}`,
+        });
+      }
+      map.set(task.id, options);
+    }
+    return map;
+  }, [employees, visibleTasks]);
+
   const taskHref = useCallback(
     (item: CollectionItem) => {
       const task = tasksById.get(Number(item.id));
@@ -396,6 +434,98 @@ export default function TasksBoardPage() {
       void loadTasks();
     },
     [loadTasks],
+  );
+
+  const patchTask = useCallback(
+    async (
+      task: BoardTask,
+      changes: Partial<Pick<BoardTask, "status" | "category" | "assigned_employee_id" | "assignee_name" | "end_date">>,
+      payload: { status?: string; assigned_employee_id?: number | null; end_date?: string | null },
+      errorMessage: string,
+    ) => {
+      const previous = task;
+      setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+      setTasks((prev) =>
+        prev.map((current) =>
+          current.id === task.id ? { ...current, ...changes } : current,
+        ),
+      );
+      try {
+        const updated = await tasksApi.update(task.id, payload);
+        setTasks((prev) =>
+          prev.map((current) => (current.id === task.id ? updated : current)),
+        );
+      } catch (err) {
+        setTasks((prev) =>
+          prev.map((current) => (current.id === previous.id ? previous : current)),
+        );
+        setNotice(err instanceof Error ? err.message : errorMessage);
+      } finally {
+        setUpdatingTaskIds((prev) => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
+  const handleInlineStatusChange = useCallback(
+    async (task: BoardTask, statusName: string) => {
+      if (statusName === task.status) return;
+      const toStatus = statusByName.get(statusName.toLowerCase());
+      if (!toStatus) return;
+      const fromCategory = task.category ?? "backlog";
+      const check = canMove(user?.role, fromCategory, toStatus.category);
+      if (!check.allowed) {
+        setNotice(check.reason ?? "Status change not allowed");
+        return;
+      }
+      await patchTask(
+        task,
+        { status: toStatus.name, category: toStatus.category },
+        { status: toStatus.name },
+        "Status change failed",
+      );
+    },
+    [patchTask, setNotice, statusByName, user?.role],
+  );
+
+  const handleInlineAssigneeChange = useCallback(
+    async (task: BoardTask, value: string) => {
+      const assignedEmployeeId = value === "unassigned" ? null : parseInt(value, 10);
+      if (value !== "unassigned" && Number.isNaN(assignedEmployeeId)) return;
+      if (assignedEmployeeId === task.assigned_employee_id) return;
+      const nextAssigneeName =
+        assignedEmployeeId == null
+          ? null
+          : assigneeOptionsByTaskId
+              .get(task.id)
+              ?.find((option) => option.id === assignedEmployeeId)?.label ?? null;
+      await patchTask(
+        task,
+        { assigned_employee_id: assignedEmployeeId, assignee_name: nextAssigneeName },
+        { assigned_employee_id: assignedEmployeeId },
+        "Failed to update assignee",
+      );
+    },
+    [assigneeOptionsByTaskId, patchTask],
+  );
+
+  const handleInlineDeadlineChange = useCallback(
+    async (task: BoardTask, value: string) => {
+      const nextDeadline = value || null;
+      const currentValue = toDateInputValue(task.end_date);
+      if (nextDeadline === currentValue) return;
+      await patchTask(
+        task,
+        { end_date: nextDeadline },
+        { end_date: nextDeadline },
+        "Failed to update deadline",
+      );
+    },
+    [patchTask],
   );
 
   const groupBy = useCallback(
@@ -449,15 +579,35 @@ export default function TasksBoardPage() {
       {
         id: "status",
         header: "Status",
-        className: "w-[140px]",
+        className: "w-[220px]",
         sortValue: (item) => tasksById.get(Number(item.id))?.status ?? "",
         cell: (item) => {
           const task = tasksById.get(Number(item.id));
           if (!task) return "—";
+          const isUpdating = !!updatingTaskIds[task.id];
           return (
-            <span className="capitalize text-sm">
-              {task.status.replace(/_/g, " ")}
-            </span>
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select
+                value={task.status}
+                onValueChange={(value) => void handleInlineStatusChange(task, value)}
+                disabled={isUpdating}
+              >
+                <SelectTrigger className="h-8 w-[200px] capitalize text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {orderedStatuses.map((status) => (
+                    <SelectItem
+                      key={status.id}
+                      value={status.name}
+                      className="capitalize"
+                    >
+                      {status.name.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           );
         },
       },
@@ -473,10 +623,69 @@ export default function TasksBoardPage() {
         header: "Assignee",
         sortValue: (item) =>
           tasksById.get(Number(item.id))?.assignee_name ?? "",
-        cell: (item) =>
-          tasksById.get(Number(item.id))?.assignee_name ?? (
-            <span className="text-muted-foreground">Unassigned</span>
-          ),
+        className: "w-[230px]",
+        cell: (item) => {
+          const task = tasksById.get(Number(item.id));
+          if (!task) return "—";
+          const isUpdating = !!updatingTaskIds[task.id];
+          const options = assigneeOptionsByTaskId.get(task.id) ?? [];
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select
+                value={
+                  task.assigned_employee_id != null
+                    ? String(task.assigned_employee_id)
+                    : "unassigned"
+                }
+                onValueChange={(value) => void handleInlineAssigneeChange(task, value)}
+                disabled={isUpdating}
+              >
+                <SelectTrigger className="h-8 w-[210px] text-xs">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {options.map((option) => (
+                    <SelectItem key={option.id} value={String(option.id)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        },
+      },
+      {
+        id: "deadline",
+        header: "Deadline",
+        className: "w-[190px]",
+        sortValue: (item) => tasksById.get(Number(item.id))?.end_date ?? "",
+        cell: (item) => {
+          const task = tasksById.get(Number(item.id));
+          if (!task) return "—";
+          const isUpdating = !!updatingTaskIds[task.id];
+          return (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2"
+            >
+              <Input
+                type="date"
+                value={toDateInputValue(task.end_date)}
+                onChange={(e) =>
+                  void handleInlineDeadlineChange(task, e.target.value)
+                }
+                disabled={isUpdating}
+                className="h-8 w-[150px] text-xs"
+                aria-label={`Deadline for ${task.display_key}`}
+              />
+              {!task.end_date && (
+                <span className="text-xs text-muted-foreground">None</span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "priority",
@@ -519,7 +728,15 @@ export default function TasksBoardPage() {
         },
       },
     ],
-    [tasksById],
+    [
+      assigneeOptionsByTaskId,
+      handleInlineAssigneeChange,
+      handleInlineDeadlineChange,
+      handleInlineStatusChange,
+      orderedStatuses,
+      tasksById,
+      updatingTaskIds,
+    ],
   );
 
   const handleItemMove = useCallback(
