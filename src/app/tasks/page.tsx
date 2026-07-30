@@ -592,7 +592,7 @@ export default function TasksBoardPage() {
                 onValueChange={(value) => void handleInlineStatusChange(task, value)}
                 disabled={isUpdating}
               >
-                <SelectTrigger className="h-8 w-[200px] capitalize text-xs">
+                <SelectTrigger className="h-6.5 w-[160px] px-2 py-0.5 capitalize text-xs border-border/40 bg-transparent shadow-none hover:bg-muted/40 hover:border-border/70">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -640,7 +640,7 @@ export default function TasksBoardPage() {
                 onValueChange={(value) => void handleInlineAssigneeChange(task, value)}
                 disabled={isUpdating}
               >
-                <SelectTrigger className="h-8 w-[210px] text-xs">
+                <SelectTrigger className="h-6.5 w-[170px] px-2 py-0.5 text-xs border-border/40 bg-transparent shadow-none hover:bg-muted/40 hover:border-border/70">
                   <SelectValue placeholder="Unassigned" />
                 </SelectTrigger>
                 <SelectContent>
@@ -677,12 +677,9 @@ export default function TasksBoardPage() {
                   void handleInlineDeadlineChange(task, e.target.value)
                 }
                 disabled={isUpdating}
-                className="h-8 w-[150px] text-xs"
+                className="h-6.5 w-[130px] px-2 py-0.5 text-xs border-border/40 bg-transparent shadow-none hover:bg-muted/40 hover:border-border/70"
                 aria-label={`Deadline for ${task.display_key}`}
               />
-              {!task.end_date && (
-                <span className="text-xs text-muted-foreground">None</span>
-              )}
             </div>
           );
         },
