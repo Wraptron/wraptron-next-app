@@ -2477,6 +2477,7 @@ export interface BoardTask {
   project_id: number;
   title: string;
   status: string;
+  end_date?: string | null;
   category: WorkflowCategory | null;
   priority: string | null;
   number: number;
@@ -2586,6 +2587,7 @@ export const tasksApi = {
       description?: string | null;
       status?: string;
       assigned_employee_id?: number | null;
+      end_date?: string | null;
       priority?: string;
     },
   ): Promise<BoardTask> => {
