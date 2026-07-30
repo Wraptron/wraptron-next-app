@@ -266,6 +266,7 @@ export default function TasksBoardPage() {
   const [newDescription, setNewDescription] = useState("");
   const [newAssignee, setNewAssignee] = useState<string>("unassigned");
   const [newPriority, setNewPriority] = useState("medium");
+  const [newDeadline, setNewDeadline] = useState("");
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
     {},
   );
@@ -778,12 +779,14 @@ export default function TasksBoardPage() {
         assigned_employee_id:
           newAssignee !== "unassigned" ? parseInt(newAssignee) : null,
         priority: newPriority,
+        end_date: newDeadline || null,
       });
       setCreateOpen(false);
       setNewTitle("");
       setNewDescription("");
       setNewAssignee("unassigned");
       setNewPriority("medium");
+      setNewDeadline("");
       void loadTasks();
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Failed to create task");
@@ -969,7 +972,7 @@ export default function TasksBoardPage() {
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="grid gap-1.5">
                 <Label>Assignee</Label>
                 <Select value={newAssignee} onValueChange={setNewAssignee}>
@@ -985,6 +988,15 @@ export default function TasksBoardPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="new-task-deadline">Deadline</Label>
+                <Input
+                  id="new-task-deadline"
+                  type="date"
+                  value={newDeadline}
+                  onChange={(e) => setNewDeadline(e.target.value)}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label>Priority</Label>

@@ -2573,6 +2573,7 @@ export const tasksApi = {
     description?: string;
     assigned_employee_id?: number | null;
     priority?: string;
+    end_date?: string | null;
   }): Promise<BoardTask> => {
     return fetchApi<BoardTask>("/api/tasks", {
       method: "POST",

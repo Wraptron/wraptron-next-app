@@ -12,7 +12,9 @@ import {
   type Employee,
   type TaskDetail,
   type TaskStatus,
+  type WorkflowCategory,
 } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
+  Calendar,
   Check,
   Copy,
   GitBranch,
@@ -62,6 +65,37 @@ function formatDate(value: string | null): string {
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
 }
 
+function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  return value.slice(0, 10);
+}
+
+function canMove(
+  role: string | undefined,
+  from: WorkflowCategory,
+  to: WorkflowCategory,
+): { allowed: boolean; reason?: string } {
+  if (from === to) return { allowed: true };
+  const r = (role ?? "").toLowerCase();
+  if (r === "admin") return { allowed: true };
+  if (r !== "staff") return { allowed: false, reason: "Staff access required" };
+  if (from === "done" || to === "done") {
+    return {
+      allowed: false,
+      reason: "Only admins can move tasks into or out of Done",
+    };
+  }
+  if (
+    Math.abs(WORKFLOW_CATEGORY_ORDER[to] - WORKFLOW_CATEGORY_ORDER[from]) !== 1
+  ) {
+    return {
+      allowed: false,
+      reason: "Staff can only move tasks one step at a time",
+    };
+  }
+  return { allowed: true };
+}
+
 const PR_STATE_ICON: Record<string, React.ReactNode> = {
   open: <GitPullRequest className="h-4 w-4 text-emerald-600" />,
   merged: <GitMerge className="h-4 w-4 text-purple-600" />,
@@ -84,6 +118,14 @@ function describeActivity(entry: TaskDetail["activity"][number]): string {
       return `${who} assigned the task to ${
         entry.new_assignee_name?.trim() || `employee #${entry.new_value}`
       }`;
+    case "end_date":
+      return entry.old_value
+        ? `${who} changed deadline from ${entry.old_value.slice(0, 10)} to ${
+            entry.new_value ? entry.new_value.slice(0, 10) : "none"
+          }`
+        : `${who} set deadline to ${
+            entry.new_value ? entry.new_value.slice(0, 10) : "none"
+          }`;
     case "branch_name":
       return `${who} generated branch ${entry.new_value ?? ""}`;
     case "pull_request":
@@ -96,6 +138,7 @@ function describeActivity(entry: TaskDetail["activity"][number]): string {
 export default function TaskDetailPage() {
   const params = useParams<{ key: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const { setTitle } = usePageTitle();
 
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -197,11 +240,51 @@ export default function TaskDetailPage() {
 
   const handleStatusChange = async (statusName: string) => {
     if (!task) return;
+    const toStatus = statuses.find((s) => s.name === statusName);
+    if (!toStatus) return;
+    const fromCategory = task.category ?? "backlog";
+    const check = canMove(user?.role, fromCategory, toStatus.category);
+    if (!check.allowed) {
+      setNotice(check.reason ?? "Status change not allowed");
+      return;
+    }
+    const previous = task;
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: toStatus.name,
+            category: toStatus.category,
+          }
+        : prev,
+    );
     try {
       await tasksApi.update(task.id, { status: statusName });
       void load();
     } catch (err) {
+      setTask(previous);
       setNotice(err instanceof Error ? err.message : "Status change failed");
+    }
+  };
+
+  const handleDeadlineChange = async (value: string) => {
+    if (!task) return;
+    const nextDeadline = value || null;
+    const currentInputValue = toDateInputValue(task.end_date);
+    if (nextDeadline === currentInputValue) return;
+
+    const previousDeadline = task.end_date;
+    setTask((prev) => (prev ? { ...prev, end_date: nextDeadline } : prev));
+    try {
+      await tasksApi.update(task.id, { end_date: nextDeadline });
+      void load();
+    } catch (err) {
+      setTask((prev) =>
+        prev ? { ...prev, end_date: previousDeadline } : prev,
+      );
+      setNotice(
+        err instanceof Error ? err.message : "Failed to update deadline",
+      );
     }
   };
 
@@ -466,6 +549,16 @@ export default function TaskDetailPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Deadline:</span>
+          <Input
+            type="date"
+            className="h-8 w-36 text-xs"
+            value={toDateInputValue(task.end_date)}
+            onChange={(e) => void handleDeadlineChange(e.target.value)}
+            aria-label="Task deadline"
+          />
         </div>
         <div className="flex items-center gap-2">
           <span>Priority:</span>

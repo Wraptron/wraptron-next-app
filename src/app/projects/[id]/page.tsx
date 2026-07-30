@@ -44,11 +44,13 @@ import {
   projectsApi,
   integrationsApi,
   taskStatusesApi,
+  employeesApi,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_ORDER,
   type Project,
   type Task,
   type TaskStatus,
+  type Employee,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -2238,7 +2240,33 @@ function AddTaskDialog({
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState("backlog");
+  const [assigneeId, setAssigneeId] = useState<string>("unassigned");
+  const [deadline, setDeadline] = useState("");
+  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    Promise.all([
+      taskStatusesApi.getAll(),
+      employeesApi.getAll({ employment_status: "active", limit: 500 }),
+    ])
+      .then(([statusesRes, employeesRes]) => {
+        setStatuses(statusesRes.data);
+        setEmployees(employeesRes.data);
+        if (statusesRes.data.length > 0) {
+          setStatus((prev) =>
+            prev === "pending" || prev === "backlog"
+              ? statusesRes.data[0].name
+              : prev,
+          );
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load task metadata options:", err);
+      });
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2247,16 +2275,21 @@ function AddTaskDialog({
     setLoading(true);
     try {
       await projectsApi.createTask(projectId, {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim() || undefined,
         status,
+        assigned_employee_id:
+          assigneeId !== "unassigned" ? parseInt(assigneeId, 10) : undefined,
+        end_date: deadline || undefined,
       });
 
       onSuccess();
       onOpenChange(false);
       setTitle("");
       setDescription("");
-      setStatus("pending");
+      setStatus(statuses[0]?.name ?? "backlog");
+      setAssigneeId("unassigned");
+      setDeadline("");
     } catch (error) {
       console.error("Failed to create task:", error);
     } finally {
@@ -2264,9 +2297,26 @@ function AddTaskDialog({
     }
   };
 
+  const statusOptions = useMemo(() => {
+    if (statuses.length > 0) {
+      return statuses.map((s) => ({
+        value: s.name,
+        label: s.name.replace(/_/g, " "),
+        category: WORKFLOW_CATEGORY_LABELS[s.category],
+      }));
+    }
+    return [
+      { value: "backlog", label: "Backlog", category: "Backlog" },
+      { value: "todo", label: "To Do", category: "Backlog" },
+      { value: "in_progress", label: "In Progress", category: "In Progress" },
+      { value: "review", label: "Review", category: "Review" },
+      { value: "done", label: "Done", category: "Done" },
+    ];
+  }, [statuses]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Add New Task</DialogTitle>
         </DialogHeader>
@@ -2288,21 +2338,59 @@ function AddTaskDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Task description"
+              rows={3}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-status">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="task-status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger id="task-status" className="capitalize">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="capitalize"
+                    >
+                      {opt.label}
+                      {opt.category && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {opt.category}
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-assignee">Assignee</Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger id="task-assignee">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {e.first_name} {e.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-deadline">Deadline</Label>
+              <Input
+                id="task-deadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -2312,7 +2400,7 @@ function AddTaskDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !title.trim()}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
