@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { contactsApi, type Contact } from "@/lib/api";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContactActivities } from "@/components/contact-activities";
+import { ContactFormSheet } from "@/components/contact-form-sheet";
 import { ArrowLeft, Edit, Loader2, Mail, Phone } from "lucide-react";
 
 const getStatusColor = (status?: string) => {
@@ -71,10 +72,11 @@ export default function ContactDetailPage() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const id = typeof params.id === "string" ? parseInt(params.id, 10) : NaN;
 
-  useEffect(() => {
+  const fetchContact = useCallback(() => {
     if (isNaN(id)) {
       setError("Invalid contact ID");
       setLoading(false);
@@ -86,6 +88,10 @@ export default function ContactDetailPage() {
       .catch(() => setError("Failed to load contact"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    fetchContact();
+  }, [fetchContact]);
 
   useEffect(() => {
     if (contact) {
@@ -152,11 +158,13 @@ export default function ContactDetailPage() {
                 </a>
               </Button>
             ) : null}
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/sales/contacts?edit=${contact.id}`}>
-                <Edit className="mr-1 h-4 w-4" />
-                Edit
-              </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditSheetOpen(true)}
+            >
+              <Edit className="mr-1 h-4 w-4" />
+              Edit
             </Button>
           </div>
         </div>
@@ -218,6 +226,16 @@ export default function ContactDetailPage() {
         </Card>
 
         <ContactActivities contact={contact} />
+
+        <ContactFormSheet
+          open={editSheetOpen}
+          onOpenChange={setEditSheetOpen}
+          onSuccess={() => {
+            setEditSheetOpen(false);
+            fetchContact();
+          }}
+          contact={contact}
+        />
       </div>
     </div>
   );

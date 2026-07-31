@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { companiesApi, contactsApi, type Company, type Contact } from "@/lib/api";
@@ -9,6 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CompanyForm } from "@/components/company-form";
 import { ArrowLeft, Edit, Loader2, Mail, Phone } from "lucide-react";
 import { statusBadgeClass } from "@/lib/status-colors";
 
@@ -64,11 +71,12 @@ export default function CompanyDetailPage() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const id =
     typeof params.id === "string" ? parseInt(params.id, 10) : NaN;
 
-  useEffect(() => {
+  const fetchCompany = useCallback(() => {
     if (isNaN(id)) {
       setError("Invalid company ID");
       setLoading(false);
@@ -80,6 +88,10 @@ export default function CompanyDetailPage() {
       .catch(() => setError("Failed to load company"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    fetchCompany();
+  }, [fetchCompany]);
 
   useEffect(() => {
     if (!company) return;
@@ -161,11 +173,13 @@ export default function CompanyDetailPage() {
                 </a>
               </Button>
             ) : null}
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/sales/companies?edit=${company.company_id}`}>
-                <Edit className="mr-1 h-4 w-4" />
-                Edit
-              </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditDialogOpen(true)}
+            >
+              <Edit className="mr-1 h-4 w-4" />
+              Edit
             </Button>
           </div>
         </div>
@@ -267,8 +281,23 @@ export default function CompanyDetailPage() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
         </Tabs>
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Company</DialogTitle>
+            </DialogHeader>
+            <CompanyForm
+              company={company}
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                fetchCompany();
+              }}
+              onCancel={() => setEditDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
