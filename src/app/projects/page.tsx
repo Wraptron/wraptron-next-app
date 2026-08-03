@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -404,12 +405,25 @@ const Projects = () => {
   };
 
   const toggleAll = () => {
-    if (selectedProjects.length === projects.length) {
+    if (
+      projects.length > 0 &&
+      selectedProjects.length === projects.length
+    ) {
       setSelectedProjects([]);
     } else {
       setSelectedProjects(projects.map((p) => p.id));
     }
   };
+
+  const allProjectsSelected =
+    projects.length > 0 && selectedProjects.length === projects.length;
+  const someProjectsSelected =
+    selectedProjects.length > 0 && selectedProjects.length < projects.length;
+  const headerChecked: boolean | "indeterminate" = allProjectsSelected
+    ? true
+    : someProjectsSelected
+      ? "indeterminate"
+      : false;
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
@@ -670,15 +684,12 @@ const Projects = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
-                    checked={
-                      projects.length > 0 &&
-                      selectedProjects.length === projects.length
-                    }
-                    onChange={toggleAll}
+                  <Checkbox
+                    checked={headerChecked}
+                    onCheckedChange={toggleAll}
                     onClick={(e) => e.stopPropagation()}
+                    disabled={projects.length === 0}
+                    aria-label="Select all projects"
                   />
                 </TableHead>
                 <TableHead className="w-[300px]">Project Name</TableHead>
@@ -701,23 +712,20 @@ const Projects = () => {
                 projects.map((project) => (
                   <TableRow
                     key={project.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      selectedProjects.includes(project.id) ? "bg-primary/10" : ""
-                    }`}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      selectedProjects.includes(project.id) && "bg-accent",
+                    )}
                     onClick={() => router.push(`/projects/${project.id}`)}
                   >
-                    <TableCell
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleProjectSelection(project.id);
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 cursor-pointer rounded border-input text-primary focus:ring-ring"
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
                         checked={selectedProjects.includes(project.id)}
-                        onChange={() => {}} // Handle change in parent click for better hit area
+                        onCheckedChange={() =>
+                          toggleProjectSelection(project.id)
+                        }
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={`Select ${project.project_name}`}
                       />
                     </TableCell>
                     <TableCell className="font-medium">
@@ -853,21 +861,36 @@ const Projects = () => {
           </div>
         </div>
 
-        {selectedProjects.length > 0 && (
-          <div className="mb-6 flex items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
-            <span className="text-sm font-medium">
-              {selectedProjects.length} item
-              {selectedProjects.length === 1 ? "" : "s"} selected
-            </span>
-            <div className="flex gap-2">
+        {viewMode === "list" && selectedProjects.length > 0 && (
+          <div className="mb-6 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
+                {selectedProjects.length}
+              </span>
+              <span className="text-sm font-medium text-foreground">
+                {selectedProjects.length}{" "}
+                {selectedProjects.length === 1 ? "project" : "projects"}{" "}
+                selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setSelectedProjects([])}
                 disabled={isDeleting}
-                className="border-destructive/30 bg-card text-destructive hover:border-destructive/50 hover:bg-destructive/10"
-                onClick={() => setDeleteDialogOpen(true)}
               >
-                Delete Selected
+                Deselect all
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={isDeleting}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Selected ({selectedProjects.length})</span>
               </Button>
             </div>
           </div>

@@ -14,11 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -78,6 +80,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
+import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   ArrowLeft,
@@ -102,6 +105,7 @@ import {
   ArrowUpDown,
   Filter,
   Calendar,
+  Trash2,
   ChevronLeft,
   FileText,
   Printer,
@@ -1455,6 +1459,32 @@ function TaskListView({
 
   // Selection State
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setSelectedTasks(new Set());
+  }, [tasks]);
+
+  const confirmBulkDelete = async () => {
+    if (selectedTasks.size === 0) return;
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        [...selectedTasks].map((taskId) =>
+          projectsApi.deleteTask(projectId, taskId),
+        ),
+      );
+      setSelectedTasks(new Set());
+      setBulkDeleteDialogOpen(false);
+      onUpdate();
+    } catch (err) {
+      console.error("Error deleting selected tasks:", err);
+      alert("Failed to delete selected tasks. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Drag and Drop State
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -1646,6 +1676,17 @@ function TaskListView({
     }
   };
 
+  const allTasksSelected =
+    processedTasks.length > 0 &&
+    selectedTasks.size === processedTasks.length;
+  const someTasksSelected =
+    selectedTasks.size > 0 && selectedTasks.size < processedTasks.length;
+  const headerChecked: boolean | "indeterminate" = allTasksSelected
+    ? true
+    : someTasksSelected
+      ? "indeterminate"
+      : false;
+
   if (tasks.length === 0) {
     return (
       <Card>
@@ -1657,7 +1698,42 @@ function TaskListView({
   }
 
   return (
-    <Card>
+    <>
+      {selectedTasks.size > 0 && (
+        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
+              {selectedTasks.size}
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {selectedTasks.size}{" "}
+              {selectedTasks.size === 1 ? "task" : "tasks"} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedTasks(new Set())}
+              disabled={isDeleting}
+            >
+              Deselect all
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              disabled={isDeleting}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Selected ({selectedTasks.size})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Card>
       <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
         <div className="text-sm font-medium text-muted-foreground">
           {processedTasks.length} task{processedTasks.length !== 1 && "s"}
@@ -1678,14 +1754,12 @@ function TaskListView({
             <TableRow>
               {/* Checkbox Column */}
               <TableHead className="w-[40px]">
-                <input
-                  type="checkbox"
-                  checked={
-                    processedTasks.length > 0 &&
-                    selectedTasks.size === processedTasks.length
-                  }
-                  onChange={toggleSelectAll}
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                <Checkbox
+                  checked={headerChecked}
+                  onCheckedChange={toggleSelectAll}
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={processedTasks.length === 0}
+                  aria-label="Select all tasks"
                 />
               </TableHead>
               {/* Dynamic Columns */}
@@ -1759,17 +1833,17 @@ function TaskListView({
               processedTasks.map((task) => (
                 <TableRow
                   key={task.id}
-                  className={`hover:bg-muted/50 ${
-                    selectedTasks.has(task.id) ? "bg-primary/10" : ""
-                  }`}
+                  className={cn(
+                    "hover:bg-muted/50",
+                    selectedTasks.has(task.id) && "bg-accent",
+                  )}
                 >
-                  {/* Checkbox Cell */}
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedTasks.has(task.id)}
-                      onChange={() => toggleSelect(task.id)}
-                      className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                      onCheckedChange={() => toggleSelect(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${task.title}`}
                     />
                   </TableCell>
                   {/* Dynamic Cells */}
@@ -1791,6 +1865,42 @@ function TaskListView({
         </Table>
       </CardContent>
     </Card>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Tasks</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <strong className="text-foreground">{selectedTasks.size}</strong>{" "}
+              selected task{selectedTasks.size === 1 ? "" : "s"}? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting
+                ? "Deleting…"
+                : `Delete ${selectedTasks.size} Task${selectedTasks.size === 1 ? "" : "s"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

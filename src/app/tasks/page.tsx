@@ -59,6 +59,7 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestClosed,
+  Trash2,
 } from "lucide-react";
 
 /** Client-side mirror of the server's category transition rules (UX only —
@@ -270,6 +271,13 @@ export default function TasksBoardPage() {
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
     {},
   );
+  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setSelectedTaskIds([]);
+  }, [projectFilter, assigneeFilter, search, myTasksOnly]);
 
   useEffect(() => {
     setTitle("Tasks");
@@ -795,6 +803,28 @@ export default function TasksBoardPage() {
     }
   };
 
+  const confirmBulkDelete = async () => {
+    if (selectedTaskIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      await Promise.all(selectedTaskIds.map((id) => tasksApi.delete(id)));
+      const deletedSet = new Set(selectedTaskIds);
+      setTasks((prev) => prev.filter((task) => !deletedSet.has(task.id)));
+      setSelectedTaskIds([]);
+      setBulkDeleteDialogOpen(false);
+      void loadTasks();
+    } catch (err) {
+      console.error("Error deleting selected tasks:", err);
+      setNotice(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete selected tasks. Please try again.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const emptyMessage = "No tasks found. Create one to get started.";
 
   const renderTasks = (mode: CollectionViewMode) => {
@@ -805,6 +835,11 @@ export default function TasksBoardPage() {
           items={items}
           columns={listColumns}
           primaryColumnId="title"
+          selectable
+          selectedIds={selectedTaskIds}
+          onSelectedIdsChange={(ids) =>
+            setSelectedTaskIds(ids.map((id) => Number(id)))
+          }
           getRowHref={taskHref}
           onRowClick={(item) => {
             const href = taskHref(item);
@@ -920,6 +955,38 @@ export default function TasksBoardPage() {
         </div>
       )}
 
+      {viewMode === "list" && selectedTaskIds.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
+              {selectedTaskIds.length}
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {selectedTaskIds.length}{" "}
+              {selectedTaskIds.length === 1 ? "task" : "tasks"} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedTaskIds([])}
+            >
+              Deselect all
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Selected ({selectedTaskIds.length})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div
         className={cn(
           "min-h-0 flex-1",
@@ -1023,6 +1090,43 @@ export default function TasksBoardPage() {
               disabled={creating || !newTitle.trim() || !newProject}
             >
               {creating ? "Creating…" : "Create task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Tasks</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <strong className="text-foreground">
+                {selectedTaskIds.length}
+              </strong>{" "}
+              selected task{selectedTaskIds.length === 1 ? "" : "s"}? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting
+                ? "Deleting…"
+                : `Delete ${selectedTaskIds.length} Task${selectedTaskIds.length === 1 ? "" : "s"}`}
             </Button>
           </DialogFooter>
         </DialogContent>

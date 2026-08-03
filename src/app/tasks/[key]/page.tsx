@@ -238,8 +238,22 @@ export default function TaskDetailPage() {
     }
   };
 
+  const refreshTaskHistory = useCallback(() => {
+    void tasksApi.getByKey(taskKey).then((detail) => {
+      setTask((prev) =>
+        prev && prev.id === detail.id
+          ? {
+              ...prev,
+              activity: detail.activity,
+              time_in_status: detail.time_in_status,
+            }
+          : prev,
+      );
+    });
+  }, [taskKey]);
+
   const handleStatusChange = async (statusName: string) => {
-    if (!task) return;
+    if (!task || statusName === task.status) return;
     const toStatus = statuses.find((s) => s.name === statusName);
     if (!toStatus) return;
     const fromCategory = task.category ?? "backlog";
@@ -259,8 +273,9 @@ export default function TaskDetailPage() {
         : prev,
     );
     try {
-      await tasksApi.update(task.id, { status: statusName });
-      void load();
+      const updated = await tasksApi.update(task.id, { status: statusName });
+      setTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      refreshTaskHistory();
     } catch (err) {
       setTask(previous);
       setNotice(err instanceof Error ? err.message : "Status change failed");
@@ -276,8 +291,9 @@ export default function TaskDetailPage() {
     const previousDeadline = task.end_date;
     setTask((prev) => (prev ? { ...prev, end_date: nextDeadline } : prev));
     try {
-      await tasksApi.update(task.id, { end_date: nextDeadline });
-      void load();
+      const updated = await tasksApi.update(task.id, { end_date: nextDeadline });
+      setTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      refreshTaskHistory();
     } catch (err) {
       setTask((prev) =>
         prev ? { ...prev, end_date: previousDeadline } : prev,
@@ -357,16 +373,52 @@ export default function TaskDetailPage() {
     }
   };
 
+  const assigneeOptions = useMemo(() => {
+    const options = employees.map((e) => ({
+      id: e.id,
+      label: `${e.first_name} ${e.last_name}`.trim(),
+    }));
+    if (
+      task?.assigned_employee_id != null &&
+      !employees.some((e) => e.id === task.assigned_employee_id)
+    ) {
+      options.unshift({
+        id: task.assigned_employee_id,
+        label: task.assignee_name?.trim() || `Employee #${task.assigned_employee_id}`,
+      });
+    }
+    return options;
+  }, [employees, task?.assigned_employee_id, task?.assignee_name]);
+
   const handleAssigneeChange = async (value: string) => {
     if (!task) return;
     const assigned_employee_id =
       value === "unassigned" ? null : parseInt(value, 10);
     if (value !== "unassigned" && Number.isNaN(assigned_employee_id)) return;
     if (assigned_employee_id === task.assigned_employee_id) return;
+
+    const nextAssigneeName =
+      assigned_employee_id == null
+        ? null
+        : assigneeOptions.find((option) => option.id === assigned_employee_id)
+            ?.label ?? null;
+
+    const previous = task;
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            assigned_employee_id,
+            assignee_name: nextAssigneeName,
+          }
+        : prev,
+    );
     try {
-      await tasksApi.update(task.id, { assigned_employee_id });
-      void load();
+      const updated = await tasksApi.update(task.id, { assigned_employee_id });
+      setTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      refreshTaskHistory();
     } catch (err) {
+      setTask(previous);
       setNotice(
         err instanceof Error ? err.message : "Failed to update assignee",
       );
@@ -398,23 +450,6 @@ export default function TaskDetailPage() {
       setDeleting(false);
     }
   };
-
-  const assigneeOptions = useMemo(() => {
-    const options = employees.map((e) => ({
-      id: e.id,
-      label: `${e.first_name} ${e.last_name}`.trim(),
-    }));
-    if (
-      task?.assigned_employee_id != null &&
-      !employees.some((e) => e.id === task.assigned_employee_id)
-    ) {
-      options.unshift({
-        id: task.assigned_employee_id,
-        label: task.assignee_name?.trim() || `Employee #${task.assigned_employee_id}`,
-      });
-    }
-    return options;
-  }, [employees, task?.assigned_employee_id, task?.assignee_name]);
 
   if (error) {
     return (
@@ -492,7 +527,9 @@ export default function TaskDetailPage() {
         <div className="flex items-center gap-2">
           <Select value={task.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-40 capitalize">
-              <SelectValue />
+              <SelectValue>
+                {task.status.replace(/_/g, " ")}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {orderedStatuses.map((s) => (
