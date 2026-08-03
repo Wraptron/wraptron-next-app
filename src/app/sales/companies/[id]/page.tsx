@@ -281,6 +281,7 @@ export default function CompanyDetailPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
         </Tabs>
 
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
