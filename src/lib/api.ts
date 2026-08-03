@@ -1787,6 +1787,14 @@ export const contactsApi = {
       method: "DELETE",
     });
   },
+
+  deleteBulk: async (ids: number[]): Promise<void> => {
+    if (ids.length === 0) return;
+    return fetchApi<void>("/api/contacts/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+  },
 };
 
 export type ContactActivityType = "task" | "call" | "whatsapp";

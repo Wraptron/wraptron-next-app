@@ -264,9 +264,16 @@ export function CollectionView({
     });
   };
 
-  const allSelected = items.length > 0 && selectedIds.length === items.length;
+  const isItemSelected = (id: string | number) =>
+    selectedIds.some((selectedId) => String(selectedId) === String(id));
+
+  const visibleItemsSelectedCount = items.filter((item) =>
+    isItemSelected(item.id),
+  ).length;
+  const allSelected =
+    items.length > 0 && visibleItemsSelectedCount === items.length;
   const someSelected =
-    selectedIds.length > 0 && selectedIds.length < items.length;
+    visibleItemsSelectedCount > 0 && visibleItemsSelectedCount < items.length;
   const headerChecked: boolean | "indeterminate" = allSelected
     ? true
     : someSelected
@@ -275,19 +282,35 @@ export function CollectionView({
 
   const toggleItemSelection = (id: string | number) => {
     if (!onSelectedIdsChange) return;
-    onSelectedIdsChange(
-      selectedIds.includes(id)
-        ? selectedIds.filter((selectedId) => selectedId !== id)
-        : [...selectedIds, id],
-    );
+    if (isItemSelected(id)) {
+      onSelectedIdsChange(
+        selectedIds.filter((selectedId) => String(selectedId) !== String(id)),
+      );
+    } else {
+      onSelectedIdsChange([...selectedIds, id]);
+    }
   };
 
   const toggleAllItems = () => {
     if (!onSelectedIdsChange) return;
-    if (items.length > 0 && selectedIds.length === items.length) {
-      onSelectedIdsChange([]);
+    if (allSelected) {
+      const visibleIdsSet = new Set(items.map((item) => String(item.id)));
+      onSelectedIdsChange(
+        selectedIds.filter(
+          (selectedId) => !visibleIdsSet.has(String(selectedId)),
+        ),
+      );
     } else {
-      onSelectedIdsChange(items.map((item) => item.id));
+      const selectedSet = new Set(
+        selectedIds.map((selectedId) => String(selectedId)),
+      );
+      const newSelected = [...selectedIds];
+      for (const item of items) {
+        if (!selectedSet.has(String(item.id))) {
+          newSelected.push(item.id);
+        }
+      }
+      onSelectedIdsChange(newSelected);
     }
   };
 
@@ -438,7 +461,7 @@ export function CollectionView({
             </TableRow>
           ) : (
             sortedItems.map((item) => {
-              const isSelected = selectedIds.includes(item.id);
+              const isSelected = isItemSelected(item.id);
               return (
                 <TableRow
                   key={item.id}

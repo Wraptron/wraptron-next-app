@@ -429,6 +429,8 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -473,14 +475,39 @@ export default function ContactsPage() {
 
   const confirmDelete = async () => {
     if (!contactToDelete) return;
+    setIsDeleting(true);
     try {
       await contactsApi.delete(contactToDelete.id);
       setContacts(contacts.filter((c) => c.id !== contactToDelete.id));
+      setSelectedContactIds((prev) =>
+        prev.filter((id) => id !== contactToDelete.id),
+      );
       setDeleteDialogOpen(false);
       setContactToDelete(null);
+      fetchContacts();
     } catch (error) {
       console.error("Error deleting contact:", error);
       alert("Failed to delete contact. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedContactIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      await contactsApi.deleteBulk(selectedContactIds);
+      const deletedSet = new Set(selectedContactIds);
+      setContacts((prev) => prev.filter((c) => !deletedSet.has(c.id)));
+      setSelectedContactIds([]);
+      setBulkDeleteDialogOpen(false);
+      fetchContacts();
+    } catch (error) {
+      console.error("Error deleting selected contacts:", error);
+      alert("Failed to delete selected contacts. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -704,6 +731,38 @@ export default function ContactsPage() {
         />
       </div>
 
+      {selectedContactIds.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
+              {selectedContactIds.length}
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {selectedContactIds.length}{" "}
+              {selectedContactIds.length === 1 ? "contact" : "contacts"} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedContactIds([])}
+            >
+              Deselect all
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Selected ({selectedContactIds.length})</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 py-8 text-center text-destructive">{error}</div>
       )}
@@ -799,11 +858,53 @@ export default function ContactsPage() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Contacts</DialogTitle>
+          </DialogHeader>
+          <p className="py-4 text-sm text-muted-foreground">
+            Are you sure you want to delete{" "}
+            <strong className="text-foreground">
+              {selectedContactIds.length}
+            </strong>{" "}
+            selected contact{selectedContactIds.length === 1 ? "" : "s"}? This
+            action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting
+                ? "Deleting…"
+                : `Delete ${selectedContactIds.length} Contact${selectedContactIds.length === 1 ? "" : "s"}`}
             </Button>
           </div>
         </DialogContent>
