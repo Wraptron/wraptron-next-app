@@ -43,19 +43,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, ChevronsUpDown, Plus, X } from "lucide-react";
-import { dealsApi, contactsApi, companiesApi, salesStagesApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateCompanyInput, type Contact, type Company, type SalesStage } from "@/lib/api";
+import { dealsApi, contactsApi, companiesApi, type Deal, type CreateDealInput, type CreateContactInput, type CreateCompanyInput, type Contact, type Company } from "@/lib/api";
 import { useCurrency } from "@/contexts/currency-context";
-
-const DEFAULT_DEAL_STAGES = [
-  "New Lead",
-  "Qualified",
-  "Requirement gathered",
-  "Solution proposed",
-  "Negotiation/Objection handling",
-  "Proposal Accepted",
-  "Project Implementation",
-  "Maintenance - Project Delivered",
-];
+import { DEFAULT_DEAL_STAGES, useSalesStages } from "@/hooks/use-sales-stages";
 
 const MAIN_CONTENT_PORTAL_ID = "main-content-portal";
 const DEAL_FORM_ID = "deal-form-sheet-form";
@@ -97,20 +87,9 @@ export function DealFormSheet({
   const [createCompanyLoading, setCreateCompanyLoading] = useState(false);
   const [newContact, setNewContact] = useState({ first_name: "", last_name: "", email: "" });
   const [newCompany, setNewCompany] = useState({ name: "", company_name: "" });
-  const [stages, setStages] = useState<SalesStage[]>([]);
   const setSheetOpen = useSheetPush()?.setSheetOpen;
-
-  const stagesSorted = useMemo(() => {
-    return [...stages].sort((a, b) => {
-      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
-      return a.id - b.id;
-    });
-  }, [stages]);
-
-  const stageNames =
-    stagesSorted.length > 0
-      ? stagesSorted.map((s) => s.name)
-      : DEFAULT_DEAL_STAGES;
+  const { stageNames, defaultStageName, loading: stagesLoading } =
+    useSalesStages(open);
 
   const stageSelectOptions = useMemo(() => {
     if (formData.stage && !stageNames.includes(formData.stage)) {
@@ -152,29 +131,37 @@ export function DealFormSheet({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     Promise.all([
       contactsApi.getAll({ limit: 1000 }),
       companiesApi.getAll({ limit: 1000 }),
-      salesStagesApi.getAll(),
-    ]).then(([contactsRes, companiesRes, stagesRes]) => {
-      setContacts(contactsRes.data);
-      setCompanies(companiesRes.data ?? []);
-      setStages(stagesRes.data ?? []);
-    });
+    ])
+      .then(([contactsRes, companiesRes]) => {
+        if (cancelled) return;
+        setContacts(contactsRes.data);
+        setCompanies(companiesRes.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setContacts([]);
+          setCompanies([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
-  /** New deals: default stage = first configured sales stage (when API returns stages). */
+  /** New deals: default stage = first configured sales stage from Settings. */
   useEffect(() => {
-    if (!open || deal) return;
-    if (stagesSorted.length === 0) return;
-    const first = stagesSorted[0].name;
+    if (!open || deal || stagesLoading) return;
     setFormData((prev) => {
       if (prev.stage !== "New Lead" && prev.stage !== DEFAULT_DEAL_STAGES[0]) {
         return prev;
       }
-      return { ...prev, stage: first };
+      return { ...prev, stage: defaultStageName };
     });
-  }, [open, deal, stagesSorted]);
+  }, [open, deal, stagesLoading, defaultStageName]);
 
   useEffect(() => {
     if (open && deal) {
@@ -531,9 +518,10 @@ export function DealFormSheet({
               <Select
                 value={formData.stage}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: value }))}
+                disabled={stagesLoading}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={stagesLoading ? "Loading stages…" : "Select stage"} />
                 </SelectTrigger>
                 <SelectContent>
                   {stageSelectOptions.map((stage) => (
