@@ -79,6 +79,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
 import {
   TaskListInlineTitleInput,
+  TaskListInlineAddRow,
+  hasInlineTaskDraft,
   inlineAddRowClassName,
   inlineTaskFieldClassName,
   listInlineSelectClassName,
@@ -1810,6 +1812,11 @@ function TaskListView({
     }
   };
 
+  const handleInlineAddCommit = () => {
+    void handleInlineCreateTask();
+    setInlineAddActive(false);
+  };
+
   const allTasksSelected =
     processedTasks.length > 0 &&
     selectedTasks.size === processedTasks.length;
@@ -1827,7 +1834,13 @@ function TaskListView({
     }
 
     return (
-      <TableRow className={inlineAddRowClassName}>
+      <TaskListInlineAddRow
+        active={inlineAddActive}
+        hasData={() => hasInlineTaskDraft(inlineTitle)}
+        onDismiss={resetInlineAdd}
+        onCommit={handleInlineAddCommit}
+        className={inlineAddRowClassName}
+      >
         <TableCell className="w-[40px]" />
         {columns.map((column) => (
           <TableCell
@@ -1872,7 +1885,7 @@ function TaskListView({
             ) : null}
           </TableCell>
         ))}
-      </TableRow>
+      </TaskListInlineAddRow>
     );
   };
 
