@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   employeesApi,
@@ -36,7 +36,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +51,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  TaskListInlineTitleInput,
+  inlineAddRowClassName,
+  inlineTaskFieldClassName,
+  listInlineSelectClassName,
+  TASK_PRIORITY_OPTIONS,
+} from "@/components/task-list-add-row";
+import {
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   Check,
@@ -260,20 +270,19 @@ export default function TasksBoardPage() {
   const [search, setSearch] = useState("");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newProject, setNewProject] = useState<string>("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newAssignee, setNewAssignee] = useState<string>("unassigned");
-  const [newPriority, setNewPriority] = useState("medium");
-  const [newDeadline, setNewDeadline] = useState("");
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
     {},
   );
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [inlineAddActive, setInlineAddActive] = useState(false);
+  const [inlineTitle, setInlineTitle] = useState("");
+  const [inlineProject, setInlineProject] = useState("");
+  const [inlineAssignee, setInlineAssignee] = useState("unassigned");
+  const [inlineDeadline, setInlineDeadline] = useState("");
+  const [inlinePriority, setInlinePriority] = useState("medium");
+  const createInFlightRef = useRef(false);
 
   useEffect(() => {
     setSelectedTaskIds([]);
@@ -299,14 +308,13 @@ export default function TasksBoardPage() {
       if (assigneeFilter !== "all") {
         filters.assigned_employee_id = parseInt(assigneeFilter);
       }
-      if (search.trim()) filters.q = search.trim();
       const res = await tasksApi.board(filters);
       setTasks(res.data);
     } catch (err) {
       console.error("Failed to load tasks:", err);
       setNotice(err instanceof Error ? err.message : "Failed to load tasks");
     }
-  }, [projectFilter, assigneeFilter, search]);
+  }, [projectFilter, assigneeFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -356,9 +364,21 @@ export default function TasksBoardPage() {
   );
 
   const visibleTasks = useMemo(() => {
-    if (!myTasksOnly || myEmployeeId == null) return tasks;
-    return tasks.filter((t) => t.assigned_employee_id === myEmployeeId);
-  }, [tasks, myTasksOnly, myEmployeeId]);
+    let result = tasks;
+    if (myTasksOnly && myEmployeeId != null) {
+      result = result.filter((t) => t.assigned_employee_id === myEmployeeId);
+    }
+    const query = search.trim().toLowerCase();
+    if (query) {
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          t.display_key.toLowerCase().includes(query) ||
+          (t.project_name?.toLowerCase().includes(query) ?? false),
+      );
+    }
+    return result;
+  }, [tasks, myTasksOnly, myEmployeeId, search]);
 
   const tasksById = useMemo(() => {
     const map = new Map<number, BoardTask>();
@@ -399,35 +419,35 @@ export default function TasksBoardPage() {
     return map;
   }, [statuses]);
 
-  const assigneeOptionsByTaskId = useMemo(() => {
-    const employeeLabelById = new Map<number, string>();
-    for (const employee of employees) {
-      employeeLabelById.set(
-        employee.id,
-        `${employee.first_name} ${employee.last_name}`.trim(),
-      );
-    }
-    const map = new Map<number, Array<{ id: number; label: string }>>();
-    for (const task of visibleTasks) {
-      const options = employees.map((employee) => ({
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((employee) => ({
         id: employee.id,
         label: `${employee.first_name} ${employee.last_name}`.trim(),
-      }));
+      })),
+    [employees],
+  );
+
+  const getAssigneeOptionsForTask = useCallback(
+    (task: BoardTask) => {
       if (
         task.assigned_employee_id != null &&
-        !employeeLabelById.has(task.assigned_employee_id)
+        !employeeOptions.some((option) => option.id === task.assigned_employee_id)
       ) {
-        options.unshift({
-          id: task.assigned_employee_id,
-          label:
-            task.assignee_name?.trim() ||
-            `Employee #${task.assigned_employee_id}`,
-        });
+        return [
+          {
+            id: task.assigned_employee_id,
+            label:
+              task.assignee_name?.trim() ||
+              `Employee #${task.assigned_employee_id}`,
+          },
+          ...employeeOptions,
+        ];
       }
-      map.set(task.id, options);
-    }
-    return map;
-  }, [employees, visibleTasks]);
+      return employeeOptions;
+    },
+    [employeeOptions],
+  );
 
   const taskHref = useCallback(
     (item: CollectionItem) => {
@@ -448,8 +468,23 @@ export default function TasksBoardPage() {
   const patchTask = useCallback(
     async (
       task: BoardTask,
-      changes: Partial<Pick<BoardTask, "status" | "category" | "assigned_employee_id" | "assignee_name" | "end_date">>,
-      payload: { status?: string; assigned_employee_id?: number | null; end_date?: string | null },
+      changes: Partial<
+        Pick<
+          BoardTask,
+          | "status"
+          | "category"
+          | "assigned_employee_id"
+          | "assignee_name"
+          | "end_date"
+          | "priority"
+        >
+      >,
+      payload: {
+        status?: string;
+        assigned_employee_id?: number | null;
+        end_date?: string | null;
+        priority?: string;
+      },
       errorMessage: string,
     ) => {
       const previous = task;
@@ -509,9 +544,8 @@ export default function TasksBoardPage() {
       const nextAssigneeName =
         assignedEmployeeId == null
           ? null
-          : assigneeOptionsByTaskId
-              .get(task.id)
-              ?.find((option) => option.id === assignedEmployeeId)?.label ?? null;
+          : employeeOptions.find((option) => option.id === assignedEmployeeId)
+              ?.label ?? null;
       await patchTask(
         task,
         { assigned_employee_id: assignedEmployeeId, assignee_name: nextAssigneeName },
@@ -519,7 +553,7 @@ export default function TasksBoardPage() {
         "Failed to update assignee",
       );
     },
-    [assigneeOptionsByTaskId, patchTask],
+    [employeeOptions, patchTask],
   );
 
   const handleInlineDeadlineChange = useCallback(
@@ -532,6 +566,20 @@ export default function TasksBoardPage() {
         { end_date: nextDeadline },
         { end_date: nextDeadline },
         "Failed to update deadline",
+      );
+    },
+    [patchTask],
+  );
+
+  const handleInlinePriorityChange = useCallback(
+    async (task: BoardTask, value: string) => {
+      const currentPriority = task.priority ?? "medium";
+      if (value === currentPriority) return;
+      await patchTask(
+        task,
+        { priority: value },
+        { priority: value },
+        "Failed to update priority",
       );
     },
     [patchTask],
@@ -594,28 +642,24 @@ export default function TasksBoardPage() {
           const task = tasksById.get(Number(item.id));
           if (!task) return "—";
           const isUpdating = !!updatingTaskIds[task.id];
+          const isPending = task.id < 0;
           return (
             <div onClick={(e) => e.stopPropagation()}>
-              <Select
+              <select
                 value={task.status}
-                onValueChange={(value) => void handleInlineStatusChange(task, value)}
-                disabled={isUpdating}
+                onChange={(event) =>
+                  void handleInlineStatusChange(task, event.target.value)
+                }
+                disabled={isUpdating || isPending}
+                className={cn(listInlineSelectClassName, "w-[160px]")}
+                aria-label={`Status for ${task.display_key}`}
               >
-                <SelectTrigger className="h-6.5 w-[160px] px-2 py-0.5 capitalize text-xs border-border/40 bg-transparent shadow-none hover:bg-muted/40 hover:border-border/70">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {orderedStatuses.map((status) => (
-                    <SelectItem
-                      key={status.id}
-                      value={status.name}
-                      className="capitalize"
-                    >
-                      {status.name.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {orderedStatuses.map((status) => (
+                  <option key={status.id} value={status.name}>
+                    {status.name.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
             </div>
           );
         },
@@ -637,30 +681,30 @@ export default function TasksBoardPage() {
           const task = tasksById.get(Number(item.id));
           if (!task) return "—";
           const isUpdating = !!updatingTaskIds[task.id];
-          const options = assigneeOptionsByTaskId.get(task.id) ?? [];
+          const isPending = task.id < 0;
+          const options = getAssigneeOptionsForTask(task);
           return (
             <div onClick={(e) => e.stopPropagation()}>
-              <Select
+              <select
                 value={
                   task.assigned_employee_id != null
                     ? String(task.assigned_employee_id)
                     : "unassigned"
                 }
-                onValueChange={(value) => void handleInlineAssigneeChange(task, value)}
-                disabled={isUpdating}
+                onChange={(event) =>
+                  void handleInlineAssigneeChange(task, event.target.value)
+                }
+                disabled={isUpdating || isPending}
+                className={cn(listInlineSelectClassName, "w-[170px]")}
+                aria-label={`Assignee for ${task.display_key}`}
               >
-                <SelectTrigger className="h-6.5 w-[170px] px-2 py-0.5 text-xs border-border/40 bg-transparent shadow-none hover:bg-muted/40 hover:border-border/70">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {options.map((option) => (
-                    <SelectItem key={option.id} value={String(option.id)}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="unassigned">Unassigned</option>
+                {options.map((option) => (
+                  <option key={option.id} value={String(option.id)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           );
         },
@@ -699,11 +743,28 @@ export default function TasksBoardPage() {
         className: "w-[100px]",
         sortValue: (item) => tasksById.get(Number(item.id))?.priority ?? "",
         cell: (item) => {
-          const priority = tasksById.get(Number(item.id))?.priority;
-          return priority ? (
-            <span className="capitalize">{priority}</span>
-          ) : (
-            "—"
+          const task = tasksById.get(Number(item.id));
+          if (!task) return "—";
+          const isUpdating = !!updatingTaskIds[task.id];
+          const isPending = task.id < 0;
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <select
+                value={task.priority ?? "medium"}
+                onChange={(event) =>
+                  void handleInlinePriorityChange(task, event.target.value)
+                }
+                disabled={isUpdating || isPending}
+                className={cn(listInlineSelectClassName, "w-[90px]")}
+                aria-label={`Priority for ${task.display_key}`}
+              >
+                {TASK_PRIORITY_OPTIONS.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            </div>
           );
         },
       },
@@ -735,13 +796,249 @@ export default function TasksBoardPage() {
       },
     ],
     [
-      assigneeOptionsByTaskId,
+      employeeOptions,
+      getAssigneeOptionsForTask,
       handleInlineAssigneeChange,
       handleInlineDeadlineChange,
+      handleInlinePriorityChange,
       handleInlineStatusChange,
       orderedStatuses,
       tasksById,
       updatingTaskIds,
+    ],
+  );
+
+  const defaultInlineProjectId = useMemo(() => {
+    if (projectFilter !== "all") return projectFilter;
+    return projects[0] ? String(projects[0].id) : "";
+  }, [projectFilter, projects]);
+
+  useEffect(() => {
+    if (!inlineAddActive) return;
+    setInlineProject((current) => current || defaultInlineProjectId);
+  }, [inlineAddActive, defaultInlineProjectId]);
+
+  const resetInlineAdd = useCallback(() => {
+    setInlineTitle("");
+    setInlineProject(defaultInlineProjectId);
+    setInlineAssignee("unassigned");
+    setInlineDeadline("");
+    setInlinePriority("medium");
+    setInlineAddActive(false);
+  }, [defaultInlineProjectId]);
+
+  const handleInlineCreateTask = useCallback(async () => {
+    const title = inlineTitle.trim();
+    const projectId = inlineProject || defaultInlineProjectId;
+    if (!title || !projectId) {
+      if (!projectId) {
+        setNotice("Select a project before creating a task.");
+      }
+      return;
+    }
+    if (createInFlightRef.current) return;
+
+    const parsedProjectId = parseInt(projectId, 10);
+    const assignedEmployeeId =
+      inlineAssignee !== "unassigned" ? parseInt(inlineAssignee, 10) : null;
+    const assigneeName =
+      assignedEmployeeId == null
+        ? null
+        : employeeOptions.find((option) => option.id === assignedEmployeeId)
+            ?.label ?? null;
+    const project = projects.find((entry) => entry.id === parsedProjectId);
+    const defaultStatus = orderedStatuses[0]?.name ?? "backlog";
+    const statusMeta = statusByName.get(defaultStatus.toLowerCase());
+    const tempId = -Date.now();
+    const now = new Date().toISOString();
+
+    const optimisticTask: BoardTask = {
+      id: tempId,
+      project_id: parsedProjectId,
+      title,
+      status: defaultStatus,
+      category: statusMeta?.category ?? "backlog",
+      priority: inlinePriority,
+      end_date: inlineDeadline || null,
+      number: 0,
+      display_key: "…",
+      project_key: project?.key ?? "",
+      project_name: project?.project_name ?? "",
+      branch_name: null,
+      assigned_employee_id: assignedEmployeeId,
+      assignee_name: assigneeName,
+      pr_count: 0,
+      latest_pr_state: null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    setInlineTitle("");
+    setInlineAssignee("unassigned");
+    setInlineDeadline("");
+    setInlinePriority("medium");
+    startTransition(() => {
+      setTasks((prev) => [optimisticTask, ...prev]);
+    });
+
+    createInFlightRef.current = true;
+    try {
+      const created = await tasksApi.create({
+        project_id: parsedProjectId,
+        title,
+        priority: inlinePriority,
+        assigned_employee_id: assignedEmployeeId,
+        end_date: inlineDeadline || null,
+      });
+      startTransition(() => {
+        setTasks((prev) =>
+          prev.map((task) => (task.id === tempId ? created : task)),
+        );
+      });
+    } catch (err) {
+      startTransition(() => {
+        setTasks((prev) => prev.filter((task) => task.id !== tempId));
+      });
+      setNotice(err instanceof Error ? err.message : "Failed to create task");
+    } finally {
+      createInFlightRef.current = false;
+    }
+  }, [
+    defaultInlineProjectId,
+    employeeOptions,
+    inlineAssignee,
+    inlineDeadline,
+    inlinePriority,
+    inlineProject,
+    inlineTitle,
+    orderedStatuses,
+    projects,
+    statusByName,
+  ]);
+
+  const renderInlineAddRow = useCallback(
+    ({
+      colSpan,
+      selectionEnabled,
+    }: {
+      colSpan: number;
+      columnCount: number;
+      selectionEnabled: boolean;
+    }) => {
+      if (!inlineAddActive) {
+        return null;
+      }
+
+      const defaultStatus = orderedStatuses[0]?.name ?? "backlog";
+
+      return (
+        <TableRow className={inlineAddRowClassName}>
+          {selectionEnabled && <TableCell className="w-[50px]" />}
+          <TableCell className="w-[110px]" />
+          <TableCell>
+            <TaskListInlineTitleInput
+              value={inlineTitle}
+              onChange={setInlineTitle}
+              onSubmit={() => void handleInlineCreateTask()}
+              onCancel={resetInlineAdd}
+              autoFocus
+            />
+          </TableCell>
+          <TableCell className="w-[220px]">
+            <span className="text-xs capitalize text-muted-foreground">
+              {defaultStatus.replace(/_/g, " ")}
+            </span>
+          </TableCell>
+          <TableCell>
+            <Select
+              value={inlineProject || defaultInlineProjectId}
+              onValueChange={setInlineProject}
+              disabled={projects.length === 0}
+            >
+              <SelectTrigger
+                className={cn(inlineTaskFieldClassName, "w-full max-w-[180px]")}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SelectValue placeholder="Project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={String(project.id)}>
+                    {project.project_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="w-[230px]">
+            <Select
+              value={inlineAssignee}
+              onValueChange={setInlineAssignee}
+            >
+              <SelectTrigger
+                className={cn(inlineTaskFieldClassName, "w-[170px]")}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={String(employee.id)}>
+                    {employee.first_name} {employee.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="w-[190px]">
+            <Input
+              type="date"
+              value={inlineDeadline}
+              onChange={(event) => setInlineDeadline(event.target.value)}
+              className={cn(inlineTaskFieldClassName, "w-[130px]")}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="New task deadline"
+            />
+          </TableCell>
+          <TableCell className="w-[100px]">
+            <Select value={inlinePriority} onValueChange={setInlinePriority}>
+              <SelectTrigger
+                className={cn(inlineTaskFieldClassName, "w-[90px] capitalize")}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_PRIORITY_OPTIONS.map((priority) => (
+                  <SelectItem
+                    key={priority}
+                    value={priority}
+                    className="capitalize"
+                  >
+                    {priority}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="w-[90px]" />
+        </TableRow>
+      );
+    },
+    [
+      defaultInlineProjectId,
+      employees,
+      handleInlineCreateTask,
+      inlineAddActive,
+      inlineAssignee,
+      inlineDeadline,
+      inlinePriority,
+      inlineProject,
+      inlineTitle,
+      orderedStatuses,
+      projects,
+      resetInlineAdd,
     ],
   );
 
@@ -776,32 +1073,12 @@ export default function TasksBoardPage() {
     [tasksById, statusByName, user?.role],
   );
 
-  const handleCreate = async () => {
-    if (!newTitle.trim() || !newProject) return;
-    setCreating(true);
-    try {
-      await tasksApi.create({
-        project_id: parseInt(newProject),
-        title: newTitle.trim(),
-        description: newDescription.trim() || undefined,
-        assigned_employee_id:
-          newAssignee !== "unassigned" ? parseInt(newAssignee) : null,
-        priority: newPriority,
-        end_date: newDeadline || null,
-      });
-      setCreateOpen(false);
-      setNewTitle("");
-      setNewDescription("");
-      setNewAssignee("unassigned");
-      setNewPriority("medium");
-      setNewDeadline("");
-      void loadTasks();
-    } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Failed to create task");
-    } finally {
-      setCreating(false);
-    }
-  };
+  const startInlineAdd = useCallback(() => {
+    startTransition(() => {
+      setViewMode("list");
+      setInlineAddActive(true);
+    });
+  }, [setViewMode]);
 
   const confirmBulkDelete = async () => {
     if (selectedTaskIds.length === 0) return;
@@ -812,7 +1089,6 @@ export default function TasksBoardPage() {
       setTasks((prev) => prev.filter((task) => !deletedSet.has(task.id)));
       setSelectedTaskIds([]);
       setBulkDeleteDialogOpen(false);
-      void loadTasks();
     } catch (err) {
       console.error("Error deleting selected tasks:", err);
       setNotice(
@@ -847,6 +1123,7 @@ export default function TasksBoardPage() {
           }}
           emptyMessage={emptyMessage}
           loadingMessage="Loading tasks…"
+          renderHeaderRow={renderInlineAddRow}
         />
       );
     }
@@ -942,7 +1219,7 @@ export default function TasksBoardPage() {
           onViewModeChange={setViewMode}
           newAction={{
             label: "New task",
-            onClick: () => setCreateOpen(true),
+            onClick: startInlineAdd,
             ariaLabel: "Create new task",
           }}
           className="ml-auto"
@@ -995,105 +1272,6 @@ export default function TasksBoardPage() {
       >
         {renderTasks(viewMode)}
       </div>
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New task</DialogTitle>
-            <DialogDescription>
-              New tasks start in the backlog.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="task-title">Title</Label>
-              <Input
-                id="task-title"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Fix login button"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Project</Label>
-              <Select value={newProject} onValueChange={setNewProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.key ? `${p.key} · ` : ""}
-                      {p.project_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="task-description">Description</Label>
-              <Textarea
-                id="task-description"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Assignee</Label>
-                <Select value={newAssignee} onValueChange={setNewAssignee}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {employees.map((e) => (
-                      <SelectItem key={e.id} value={String(e.id)}>
-                        {e.first_name} {e.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="new-task-deadline">Deadline</Label>
-                <Input
-                  id="new-task-deadline"
-                  type="date"
-                  value={newDeadline}
-                  onChange={(e) => setNewDeadline(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Priority</Label>
-                <Select value={newPriority} onValueChange={setNewPriority}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={creating || !newTitle.trim() || !newProject}
-            >
-              {creating ? "Creating…" : "Create task"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={bulkDeleteDialogOpen}
