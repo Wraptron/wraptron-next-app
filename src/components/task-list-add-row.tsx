@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,83 @@ export function TaskListPlusRow({
 
 export const inlineAddRowClassName =
   "border-b border-dashed bg-muted/10 hover:bg-muted/10";
+
+function isInlineAddOutsideTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) return true;
+  const element = target instanceof Element ? target : target.parentElement;
+  if (!element) return true;
+  return !element.closest(
+    '[data-slot="select-content"], [data-radix-popper-content-wrapper], [role="listbox"]',
+  );
+}
+
+export function useInlineAddClickOutside({
+  active,
+  hasData,
+  onDismiss,
+  onCommit,
+}: {
+  active: boolean;
+  hasData: () => boolean;
+  onDismiss: () => void;
+  onCommit: () => void;
+}) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (rowRef.current?.contains(target as Node)) return;
+      if (!isInlineAddOutsideTarget(target)) return;
+
+      if (hasData()) {
+        onCommit();
+      } else {
+        onDismiss();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [active, hasData, onCommit, onDismiss]);
+
+  return rowRef;
+}
+
+export function TaskListInlineAddRow({
+  active,
+  hasData,
+  onDismiss,
+  onCommit,
+  className,
+  children,
+}: {
+  active: boolean;
+  hasData: () => boolean;
+  onDismiss: () => void;
+  onCommit: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const rowRef = useInlineAddClickOutside({
+    active,
+    hasData,
+    onDismiss,
+    onCommit,
+  });
+
+  return (
+    <TableRow ref={rowRef} className={className}>
+      {children}
+    </TableRow>
+  );
+}
+
+export function hasInlineTaskDraft(title: string): boolean {
+  return title.trim().length > 0;
+}
 
 export const TASK_PRIORITY_OPTIONS = [
   "low",

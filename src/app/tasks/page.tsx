@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/select";
 import {
   TaskListInlineTitleInput,
+  TaskListInlineAddRow,
+  hasInlineTaskDraft,
   inlineAddRowClassName,
   inlineTaskFieldClassName,
   listInlineSelectClassName,
@@ -60,7 +62,6 @@ import {
 } from "@/components/task-list-add-row";
 import {
   TableCell,
-  TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
@@ -916,6 +917,11 @@ export default function TasksBoardPage() {
     statusByName,
   ]);
 
+  const handleInlineAddCommit = useCallback(() => {
+    void handleInlineCreateTask();
+    setInlineAddActive(false);
+  }, [handleInlineCreateTask]);
+
   const renderInlineAddRow = useCallback(
     ({
       colSpan,
@@ -932,7 +938,13 @@ export default function TasksBoardPage() {
       const defaultStatus = orderedStatuses[0]?.name ?? "backlog";
 
       return (
-        <TableRow className={inlineAddRowClassName}>
+        <TaskListInlineAddRow
+          active={inlineAddActive}
+          hasData={() => hasInlineTaskDraft(inlineTitle)}
+          onDismiss={resetInlineAdd}
+          onCommit={handleInlineAddCommit}
+          className={inlineAddRowClassName}
+        >
           {selectionEnabled && <TableCell className="w-[50px]" />}
           <TableCell className="w-[110px]" />
           <TableCell>
@@ -1023,12 +1035,13 @@ export default function TasksBoardPage() {
             </Select>
           </TableCell>
           <TableCell className="w-[90px]" />
-        </TableRow>
+        </TaskListInlineAddRow>
       );
     },
     [
       defaultInlineProjectId,
       employees,
+      handleInlineAddCommit,
       handleInlineCreateTask,
       inlineAddActive,
       inlineAssignee,
