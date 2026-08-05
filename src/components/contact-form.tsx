@@ -298,7 +298,7 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
           />
         </div>
         <div>
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title">Desigination</Label>
           <Input
             id="title"
             value={formData.title || ""}
@@ -411,7 +411,7 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
       </div>
 
       <div>
-        <Label htmlFor="country">Destination</Label>
+        <Label htmlFor="country">Country</Label>
         <Input
           id="country"
           value={formData.country || ""}
