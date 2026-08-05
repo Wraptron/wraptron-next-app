@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  startTransition,
   type ReactNode,
 } from "react";
 import Link from "next/link";
@@ -46,13 +47,11 @@ import {
   projectsApi,
   integrationsApi,
   taskStatusesApi,
-  employeesApi,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_ORDER,
   type Project,
   type Task,
   type TaskStatus,
-  type Employee,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -78,6 +77,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
+import {
+  TaskListInlineTitleInput,
+  inlineAddRowClassName,
+  inlineTaskFieldClassName,
+  listInlineSelectClassName,
+  TASK_PRIORITY_OPTIONS,
+} from "@/components/task-list-add-row";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
 import { cn } from "@/lib/utils";
@@ -833,8 +839,24 @@ export default function ProjectPage() {
             <TaskViewSwitcher
               tasks={project.tasks || []}
               projectId={projectId!}
-              onTaskUpdate={() => {
-                // Refresh project data
+              onTaskUpdate={(taskUpdate) => {
+                if (taskUpdate) {
+                  setProject((current) => {
+                    if (!current) return current;
+                    const tasks = current.tasks ?? [];
+                    const index = tasks.findIndex((t) => t.id === taskUpdate.id);
+                    if (index >= 0) {
+                      const next = [...tasks];
+                      next[index] = { ...next[index], ...taskUpdate };
+                      return { ...current, tasks: next };
+                    }
+                    return {
+                      ...current,
+                      tasks: [taskUpdate, ...tasks],
+                    };
+                  });
+                  return;
+                }
                 if (projectId) {
                   projectsApi.getById(projectId).then(setProject);
                 }
@@ -888,7 +910,7 @@ function TaskViewSwitcher({
 }: {
   tasks: Task[];
   projectId: number;
-  onTaskUpdate: () => void;
+  onTaskUpdate: (taskUpdate?: Task) => void;
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -911,17 +933,22 @@ function TaskViewSwitcher({
     }
   }, [viewMode]);
 
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [inlineAddRequestId, setInlineAddRequestId] = useState(0);
 
   const refreshTasks = () => {
     onTaskUpdate();
+  };
+
+  const startInlineAdd = () => {
+    setViewMode("list");
+    setInlineAddRequestId((id) => id + 1);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Button
-          onClick={() => setAddTaskOpen(true)}
+          onClick={startInlineAdd}
           size="sm"
           className="w-full sm:w-auto"
         >
@@ -969,6 +996,7 @@ function TaskViewSwitcher({
           tasks={tasks}
           projectId={projectId}
           onUpdate={refreshTasks}
+          inlineAddRequestId={inlineAddRequestId}
         />
       )}
       {viewMode === "board" && (
@@ -993,12 +1021,6 @@ function TaskViewSwitcher({
         />
       )}
 
-      <AddTaskDialog
-        open={addTaskOpen}
-        onOpenChange={setAddTaskOpen}
-        projectId={projectId}
-        onSuccess={refreshTasks}
-      />
     </div>
   );
 }
@@ -1439,12 +1461,17 @@ function TaskListView({
   tasks,
   projectId,
   onUpdate,
+  inlineAddRequestId = 0,
 }: {
   tasks: Task[];
   projectId: number;
-  onUpdate: () => void;
+  onUpdate: (taskUpdate?: Task) => void;
+  inlineAddRequestId?: number;
 }) {
   const router = useRouter();
+  const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
+    {},
+  );
 
   // Column Definitions
   const [columns, setColumns] = useState([
@@ -1462,9 +1489,108 @@ function TaskListView({
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Drag and Drop State
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  } | null>(null);
+
+  // Filter State
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [inlineAddActive, setInlineAddActive] = useState(false);
+  const [inlineTitle, setInlineTitle] = useState("");
+  const [inlineDeadline, setInlineDeadline] = useState("");
+  const [inlinePriority, setInlinePriority] = useState("medium");
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+
+  const mergedTasks = useMemo(() => {
+    const persistedIds = new Set(tasks.map((task) => task.id));
+    const pending = pendingTasks.filter((task) => !persistedIds.has(task.id));
+    return [...pending, ...tasks];
+  }, [pendingTasks, tasks]);
+
   useEffect(() => {
     setSelectedTasks(new Set());
-  }, [tasks]);
+  }, [mergedTasks]);
+
+  useEffect(() => {
+    if (inlineAddRequestId > 0) {
+      setInlineAddActive(true);
+    }
+  }, [inlineAddRequestId]);
+
+  const resetInlineAdd = () => {
+    setInlineTitle("");
+    setInlineDeadline("");
+    setInlinePriority("medium");
+    setInlineAddActive(false);
+  };
+
+  const handleInlinePriorityChange = async (task: Task, value: string) => {
+    const currentPriority = task.priority ?? "medium";
+    if (value === currentPriority || task.id < 0) return;
+
+    setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      const updated = await projectsApi.updateTask(projectId, task.id, {
+        priority: value,
+      });
+      onUpdate(updated);
+    } catch (err) {
+      console.error("Failed to update task priority:", err);
+      alert("Failed to update priority. Please try again.");
+    } finally {
+      setUpdatingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
+  };
+
+  const handleInlineCreateTask = async () => {
+    const title = inlineTitle.trim();
+    if (!title) return;
+
+    const deadline = inlineDeadline || undefined;
+    const tempId = -Date.now();
+    const now = new Date().toISOString();
+    const optimisticTask: Task = {
+      id: tempId,
+      project_id: projectId,
+      title,
+      status: "backlog",
+      priority: inlinePriority,
+      end_date: deadline,
+      created_at: now,
+      updated_at: now,
+    };
+
+    setInlineTitle("");
+    setInlineDeadline("");
+    setInlinePriority("medium");
+    startTransition(() => {
+      setPendingTasks((prev) => [optimisticTask, ...prev]);
+    });
+
+    try {
+      const created = await projectsApi.createTask(projectId, {
+        title,
+        priority: inlinePriority,
+        end_date: deadline,
+      });
+      setPendingTasks((prev) => prev.filter((task) => task.id !== tempId));
+      onUpdate(created);
+    } catch (err) {
+      console.error("Failed to create task:", err);
+      setPendingTasks((prev) => prev.filter((task) => task.id !== tempId));
+      alert("Failed to create task. Please try again.");
+    }
+  };
 
   const confirmBulkDelete = async () => {
     if (selectedTasks.size === 0) return;
@@ -1486,20 +1612,6 @@ function TaskListView({
     }
   };
 
-  // Drag and Drop State
-  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-
-  // Sorting State
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: "asc" | "desc";
-  } | null>(null);
-
-  // Filter State
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Toggle all selection
   const toggleSelectAll = () => {
     if (processedTasks.length === 0) return;
     if (selectedTasks.size === processedTasks.length) {
@@ -1569,44 +1681,52 @@ function TaskListView({
   };
 
   // Processed Tasks (Filtered & Sorted)
-  const processedTasks = [...tasks]
-    .filter((task) => {
-      return columns.every((col) => {
-        const filterValue = filters[col.id];
-        if (!filterValue) return true;
+  const processedTasks = useMemo(
+    () =>
+      [...mergedTasks]
+        .filter((task) => {
+          return columns.every((col) => {
+            const filterValue = filters[col.id];
+            if (!filterValue) return true;
 
-        let taskValue = "";
-        // Handle specific type conversions for filtering
-        if (
-          col.id === "created_at" ||
-          col.id === "start_date" ||
-          col.id === "end_date"
-        ) {
-          const dateVal = task[col.id as keyof Task];
-          taskValue = dateVal
-            ? new Date(String(dateVal)).toLocaleDateString()
-            : "";
-        } else {
-          taskValue = String(task[col.id as keyof Task] || "");
-        }
+            let taskValue = "";
+            if (
+              col.id === "created_at" ||
+              col.id === "start_date" ||
+              col.id === "end_date"
+            ) {
+              const dateVal = task[col.id as keyof Task];
+              taskValue = dateVal
+                ? new Date(String(dateVal)).toLocaleDateString()
+                : "";
+            } else {
+              taskValue = String(task[col.id as keyof Task] || "");
+            }
 
-        return taskValue.toLowerCase().includes(filterValue.toLowerCase());
-      });
-    })
-    .sort((a, b) => {
-      if (!sortConfig) return 0;
-      const { key, direction } = sortConfig;
+            return taskValue.toLowerCase().includes(filterValue.toLowerCase());
+          });
+        })
+        .sort((a, b) => {
+          if (!sortConfig) {
+            return (
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+            );
+          }
+          const { key, direction } = sortConfig;
 
-      const valA = a[key as keyof Task];
-      const valB = b[key as keyof Task];
+          const valA = a[key as keyof Task];
+          const valB = b[key as keyof Task];
 
-      if (valA === valB) return 0;
-      if (valA === undefined || valA === null) return 1;
-      if (valB === undefined || valB === null) return -1;
+          if (valA === valB) return 0;
+          if (valA === undefined || valA === null) return 1;
+          if (valB === undefined || valB === null) return -1;
 
-      const compareRes = valA < valB ? -1 : 1;
-      return direction === "asc" ? compareRes : -compareRes;
-    });
+          const compareRes = valA < valB ? -1 : 1;
+          return direction === "asc" ? compareRes : -compareRes;
+        }),
+    [mergedTasks, columns, filters, sortConfig],
+  );
 
   const renderCellContent = (task: Task, columnId: string) => {
     switch (columnId) {
@@ -1640,11 +1760,25 @@ function TaskListView({
           </div>
         );
       case "priority":
-        return task.priority ? (
-          <Badge variant="outline" className="text-xs capitalize">
-            {task.priority}
-          </Badge>
-        ) : null;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <select
+              value={task.priority ?? "medium"}
+              onChange={(event) =>
+                void handleInlinePriorityChange(task, event.target.value)
+              }
+              disabled={!!updatingTaskIds[task.id] || task.id < 0}
+              className={cn(listInlineSelectClassName, "w-[90px]")}
+              aria-label={`Priority for ${task.title}`}
+            >
+              {TASK_PRIORITY_OPTIONS.map((priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
       case "complexity":
         return task.complexity ? (
           <span className="text-sm text-muted-foreground capitalize">
@@ -1687,15 +1821,60 @@ function TaskListView({
       ? "indeterminate"
       : false;
 
-  if (tasks.length === 0) {
+  const renderInlineAddRow = () => {
+    if (!inlineAddActive) {
+      return null;
+    }
+
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">No tasks yet.</p>
-        </CardContent>
-      </Card>
+      <TableRow className={inlineAddRowClassName}>
+        <TableCell className="w-[40px]" />
+        {columns.map((column) => (
+          <TableCell
+            key={`add-${column.id}`}
+            className={column.align === "right" ? "text-right" : undefined}
+          >
+            {column.id === "title" ? (
+              <TaskListInlineTitleInput
+                value={inlineTitle}
+                onChange={setInlineTitle}
+                onSubmit={() => void handleInlineCreateTask()}
+                onCancel={resetInlineAdd}
+                autoFocus
+              />
+            ) : column.id === "status" ? (
+              <span className="text-xs capitalize text-muted-foreground">
+                backlog
+              </span>
+            ) : column.id === "end_date" ? (
+              <Input
+                type="date"
+                value={inlineDeadline}
+                onChange={(event) => setInlineDeadline(event.target.value)}
+                className={cn(inlineTaskFieldClassName, "w-[130px]")}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="New task deadline"
+              />
+            ) : column.id === "priority" ? (
+              <select
+                value={inlinePriority}
+                onChange={(event) => setInlinePriority(event.target.value)}
+                className={cn(listInlineSelectClassName, "w-[90px] capitalize")}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="New task priority"
+              >
+                {TASK_PRIORITY_OPTIONS.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </TableCell>
+        ))}
+      </TableRow>
     );
-  }
+  };
 
   return (
     <>
@@ -1820,16 +1999,8 @@ function TaskListView({
             )}
           </TableHeader>
           <TableBody>
-            {processedTasks.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length + 1}
-                  className="h-24 text-center"
-                >
-                  No results found.
-                </TableCell>
-              </TableRow>
-            ) : (
+            {renderInlineAddRow()}
+            {processedTasks.length === 0 ? null : (
               processedTasks.map((task) => (
                 <TableRow
                   key={task.id}
@@ -1846,7 +2017,6 @@ function TaskListView({
                       aria-label={`Select ${task.title}`}
                     />
                   </TableCell>
-                  {/* Dynamic Cells */}
                   {columns.map((column) => (
                     <TableCell
                       key={column.id}
@@ -2333,194 +2503,6 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
         )}
       </div>
     </div>
-  );
-}
-
-function AddTaskDialog({
-  open,
-  onOpenChange,
-  projectId,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId: number;
-  onSuccess: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("backlog");
-  const [assigneeId, setAssigneeId] = useState<string>("unassigned");
-  const [deadline, setDeadline] = useState("");
-  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-
-  useEffect(() => {
-    if (!open) return;
-    Promise.all([
-      taskStatusesApi.getAll(),
-      employeesApi.getAll({ employment_status: "active", limit: 500 }),
-    ])
-      .then(([statusesRes, employeesRes]) => {
-        setStatuses(statusesRes.data);
-        setEmployees(employeesRes.data);
-        if (statusesRes.data.length > 0) {
-          setStatus((prev) =>
-            prev === "pending" || prev === "backlog"
-              ? statusesRes.data[0].name
-              : prev,
-          );
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load task metadata options:", err);
-      });
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    setLoading(true);
-    try {
-      await projectsApi.createTask(projectId, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        status,
-        assigned_employee_id:
-          assigneeId !== "unassigned" ? parseInt(assigneeId, 10) : undefined,
-        end_date: deadline || undefined,
-      });
-
-      onSuccess();
-      onOpenChange(false);
-      setTitle("");
-      setDescription("");
-      setStatus(statuses[0]?.name ?? "backlog");
-      setAssigneeId("unassigned");
-      setDeadline("");
-    } catch (error) {
-      console.error("Failed to create task:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const statusOptions = useMemo(() => {
-    if (statuses.length > 0) {
-      return statuses.map((s) => ({
-        value: s.name,
-        label: s.name.replace(/_/g, " "),
-        category: WORKFLOW_CATEGORY_LABELS[s.category],
-      }));
-    }
-    return [
-      { value: "backlog", label: "Backlog", category: "Backlog" },
-      { value: "todo", label: "To Do", category: "Backlog" },
-      { value: "in_progress", label: "In Progress", category: "In Progress" },
-      { value: "review", label: "Review", category: "Review" },
-      { value: "done", label: "Done", category: "Done" },
-    ];
-  }, [statuses]);
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-desc">Description</Label>
-            <Textarea
-              id="task-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Task description"
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="task-status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger id="task-status" className="capitalize">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="capitalize"
-                    >
-                      {opt.label}
-                      {opt.category && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {opt.category}
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-assignee">Assignee</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger id="task-assignee">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.first_name} {e.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-deadline">Deadline</Label>
-              <Input
-                id="task-deadline"
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading || !title.trim()}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Add Task"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

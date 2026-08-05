@@ -144,6 +144,18 @@ interface CollectionViewProps {
   /** Column id rendered as primary cell (font-medium + optional link) */
   primaryColumnId?: string;
   getRowHref?: (item: CollectionItem) => string | undefined;
+  /** Excel-style header row (e.g. inline add task at top). Shown even when the list is empty. */
+  renderHeaderRow?: (context: {
+    colSpan: number;
+    columnCount: number;
+    selectionEnabled: boolean;
+  }) => React.ReactNode;
+  /** Excel-style footer row (e.g. inline add task). Shown even when the list is empty. */
+  renderFooterRow?: (context: {
+    colSpan: number;
+    columnCount: number;
+    selectionEnabled: boolean;
+  }) => React.ReactNode;
 }
 
 function buildDefaultColumns(
@@ -225,6 +237,8 @@ export function CollectionView({
   onSelectedIdsChange,
   primaryColumnId,
   getRowHref,
+  renderHeaderRow,
+  renderFooterRow,
 }: CollectionViewProps) {
   const columns = columnsProp ?? buildDefaultColumns(items, columnLabels);
   const resolvedPrimaryColumnId = primaryColumnId ?? columns[0]?.id;
@@ -426,7 +440,7 @@ export function CollectionView({
                 {loadingMessage}
               </TableCell>
             </TableRow>
-          ) : items.length === 0 ? (
+          ) : items.length === 0 && !renderHeaderRow && !renderFooterRow ? (
             <TableRow>
               <TableCell
                 colSpan={colSpan}
@@ -460,39 +474,80 @@ export function CollectionView({
               </TableCell>
             </TableRow>
           ) : (
-            sortedItems.map((item) => {
-              const isSelected = isItemSelected(item.id);
-              return (
-                <TableRow
-                  key={item.id}
-                  className={cn(
-                    (onRowClick || getRowHref) &&
-                      "cursor-pointer hover:bg-muted/50",
-                    isSelected && "bg-accent",
-                  )}
-                  onClick={onRowClick ? () => onRowClick(item) : undefined}
-                >
-                  {selectionEnabled && (
-                    <TableCell
-                      className="w-[50px]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleItemSelection(item.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select row ${item.id}`}
-                      />
-                    </TableCell>
-                  )}
-                  {columns.map((column) => (
-                    <TableCell key={column.id} className={column.className}>
-                      {renderDataCell(item, column)}
-                    </TableCell>
-                  ))}
+            <>
+              {renderHeaderRow?.({
+                colSpan,
+                columnCount: columns.length,
+                selectionEnabled,
+              })}
+              {items.length === 0 && hasActiveFilters ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={colSpan}
+                    className="h-16 text-center text-muted-foreground"
+                  >
+                    {filteredEmptyMessage ?? (
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {filteredEmptyTitle}
+                        </p>
+                        {filteredEmptyDescription && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {filteredEmptyDescription}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
-              );
-            })
+              ) : (
+                sortedItems.map((item) => {
+                  const isSelected = isItemSelected(item.id);
+                  return (
+                    <TableRow
+                      key={item.id}
+                      className={cn(
+                        (onRowClick || getRowHref) &&
+                          "cursor-pointer hover:bg-muted/50",
+                        isSelected && "bg-accent",
+                      )}
+                      onClick={
+                        onRowClick ? () => onRowClick(item) : undefined
+                      }
+                    >
+                      {selectionEnabled && (
+                        <TableCell
+                          className="w-[50px]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() =>
+                              toggleItemSelection(item.id)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Select row ${item.id}`}
+                          />
+                        </TableCell>
+                      )}
+                      {columns.map((column) => (
+                        <TableCell
+                          key={column.id}
+                          className={column.className}
+                        >
+                          {renderDataCell(item, column)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })
+              )}
+              {renderFooterRow?.({
+                colSpan,
+                columnCount: columns.length,
+                selectionEnabled,
+              })}
+            </>
           )}
         </TableBody>
       </Table>
