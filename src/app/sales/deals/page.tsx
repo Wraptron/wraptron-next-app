@@ -733,6 +733,18 @@ export default function DealsPage() {
               ],
             }}
           >
+            {selectedDeals.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={isBulkDeleting}
+                aria-label={`Delete ${selectedDeals.length} selected deal${selectedDeals.length === 1 ? "" : "s"}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               onClick={fetchDeals}
               variant="outline"
@@ -766,26 +778,6 @@ export default function DealsPage() {
           loadOptions={loadOptions}
         />
       </div>
-
-      {selectedDeals.length > 0 && (
-        <div className="mb-6 flex shrink-0 items-center justify-between rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
-          <span className="text-sm font-medium">
-            {selectedDeals.length} item{selectedDeals.length === 1 ? "" : "s"}{" "}
-            selected
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isBulkDeleting}
-              className="border-destructive/30 bg-background text-destructive hover:bg-destructive/10 hover:border-destructive/50"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      )}
 
       <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <DialogContent>

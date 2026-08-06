@@ -26,6 +26,7 @@ import {
   projectStatusesApi,
   productsApi,
   type CreateProjectInput,
+  type Project,
   type ProjectStatus,
   type Product,
   type StaffManagerUser,
@@ -51,6 +52,7 @@ export interface ProjectFormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  project?: Project | null;
 }
 
 const initialFormState = {
@@ -70,7 +72,9 @@ export function ProjectFormSheet({
   open,
   onOpenChange,
   onSuccess,
+  project,
 }: ProjectFormSheetProps) {
+  const isEditing = project != null;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
@@ -98,12 +102,6 @@ export function ProjectFormSheet({
     }
     return statusNames;
   }, [statusNames, formData.status]);
-
-  const selectedStaffManager = useMemo(
-    () =>
-      staffManagers.find((s) => s.id === formData.project_manager_id) ?? null,
-    [staffManagers, formData.project_manager_id],
-  );
 
   useEffect(() => {
     setContainer(document.getElementById(MAIN_CONTENT_PORTAL_ID));
@@ -148,6 +146,7 @@ export function ProjectFormSheet({
 
   useEffect(() => {
     if (!open) return;
+    if (isEditing) return;
     if (statusesSorted.length === 0) return;
     const first = statusesSorted[0].name;
     setFormData((prev) => {
@@ -156,7 +155,31 @@ export function ProjectFormSheet({
       }
       return { ...prev, status: first };
     });
-  }, [open, statusesSorted]);
+  }, [open, isEditing, statusesSorted]);
+
+  useEffect(() => {
+    if (open && project) {
+      setFormData({
+        project_name: project.project_name,
+        product_template_id: project.product_template_id ?? null,
+        project_manager_id:
+          project.project_manager_id ??
+          project.project_manager_user_id ??
+          null,
+        status: project.status || "Draft",
+        start_date: project.start_date
+          ? project.start_date.split("T")[0]
+          : "",
+        end_date: project.target_date
+          ? project.target_date.split("T")[0]
+          : "",
+        tags: "",
+        priority: "Medium",
+      });
+    } else if (open && !project) {
+      setFormData(initialFormState);
+    }
+  }, [open, project]);
 
   // Report actual sheet width so layout only pushes by required width
   useEffect(() => {
@@ -207,12 +230,23 @@ export function ProjectFormSheet({
         product_template_id: formData.product_template_id,
         project_manager_id: formData.project_manager_id,
       };
-      await projectsApi.create(payload);
+      if (isEditing) {
+        await projectsApi.update(project.id, payload);
+      } else {
+        await projectsApi.create(payload);
+      }
       handleOpenChange(false);
       onSuccess();
     } catch (err) {
-      console.error("Failed to create project:", err);
-      alert("Failed to create project. Please try again.");
+      console.error(
+        isEditing ? "Failed to update project:" : "Failed to create project:",
+        err,
+      );
+      alert(
+        isEditing
+          ? "Failed to update project. Please try again."
+          : "Failed to create project. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -229,9 +263,11 @@ export function ProjectFormSheet({
         className="flex flex-col w-[33.333vw] min-w-[280px] max-w-[100vw] overflow-hidden"
       >
         <SheetHeader>
-          <SheetTitle>Create Project</SheetTitle>
+          <SheetTitle>{isEditing ? "Edit Project" : "Create Project"}</SheetTitle>
           <SheetDescription>
-            Add a new project with name, product template, manager, and dates.
+            {isEditing
+              ? "Update project name, product template, manager, and dates."
+              : "Add a new project with name, product template, manager, and dates."}
           </SheetDescription>
         </SheetHeader>
 
@@ -288,17 +324,7 @@ export function ProjectFormSheet({
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="project_manager_id">Project manager</Label>
-                {selectedStaffManager?.email ? (
-                  <a
-                    href={`mailto:${selectedStaffManager.email}`}
-                    className="text-sm text-primary underline-offset-4 hover:underline shrink-0"
-                  >
-                    Email
-                  </a>
-                ) : null}
-              </div>
+              <Label htmlFor="project_manager_id">Project manager</Label>
               <Select
                 disabled={catalogLoading}
                 value={
@@ -429,6 +455,8 @@ export function ProjectFormSheet({
             <Button type="submit" disabled={loading || catalogLoading}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEditing ? (
+                "Update Project"
               ) : (
                 "Create Project"
               )}

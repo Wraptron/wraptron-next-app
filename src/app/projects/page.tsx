@@ -822,6 +822,18 @@ const Projects = () => {
             <p className="text-muted-foreground">{projects.length} projects</p>
           </div>
           <div className="flex items-center gap-2">
+            {viewMode === "list" && selectedProjects.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={isDeleting}
+                aria-label={`Delete ${selectedProjects.length} selected project${selectedProjects.length === 1 ? "" : "s"}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <ButtonGroup orientation="horizontal">
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
@@ -860,41 +872,6 @@ const Projects = () => {
             </Button>
           </div>
         </div>
-
-        {viewMode === "list" && selectedProjects.length > 0 && (
-          <div className="mb-6 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
-                {selectedProjects.length}
-              </span>
-              <span className="text-sm font-medium text-foreground">
-                {selectedProjects.length}{" "}
-                {selectedProjects.length === 1 ? "project" : "projects"}{" "}
-                selected
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedProjects([])}
-                disabled={isDeleting}
-              >
-                Deselect all
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                disabled={isDeleting}
-                className="gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>Delete Selected ({selectedProjects.length})</span>
-              </Button>
-            </div>
-          </div>
-        )}
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
