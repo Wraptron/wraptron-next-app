@@ -182,11 +182,11 @@ export default function ContactDetailPage() {
                 )}
               </div>
             </div>
-            {(contact.job_title || contactCompanyName(contact)) && (
+            {(contact.title || contact.job_title || contactCompanyName(contact)) && (
               <p className="mt-1 text-sm text-muted-foreground">
-                {contact.job_title ? (
+                {contact.title || contact.job_title ? (
                   <>
-                    {contact.job_title}
+                    {contact.title || contact.job_title}
                     {contactCompanyName(contact) ? (
                       <>
                         {" · "}

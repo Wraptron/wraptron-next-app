@@ -160,10 +160,16 @@ function buildContactTableColumns(
       },
     },
     {
-      id: "job_title",
-      header: "Job Title",
-      sortValue: (item) => byId.get(Number(item.id))?.job_title ?? "",
-      cell: (item) => byId.get(Number(item.id))?.job_title || "—",
+      id: "designation",
+      header: "Designation",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.title || c?.job_title || "";
+      },
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.title || c?.job_title || "—";
+      },
     },
     {
       id: "status",

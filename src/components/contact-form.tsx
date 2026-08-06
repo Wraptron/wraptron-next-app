@@ -67,6 +67,14 @@ function dealDisplayName(deal: Deal) {
   return (deal.title || `Deal #${deal.id}`).trim();
 }
 
+/** Prefer company_id, else first associated company (single-select). */
+function initialAssociatedCompanyIds(contact?: Contact): number[] {
+  if (!contact) return [];
+  if (contact.company_id) return [contact.company_id];
+  const first = contact.companies_associated?.[0];
+  return first != null ? [first] : [];
+}
+
 export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId, onLoadingChange }: ContactFormProps) {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -88,12 +96,14 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
     timezone: contact?.timezone || "",
     birthday: contact?.birthday || "",
     anniversary_date: contact?.anniversary_date || "",
-    companies_associated: contact?.companies_associated || [],
+    company_id: initialAssociatedCompanyIds(contact)[0],
+    companies_associated: initialAssociatedCompanyIds(contact),
     deals_associated: contact?.deals_associated || [],
   });
 
   useEffect(() => {
     if (contact) {
+      const associated = initialAssociatedCompanyIds(contact);
       setFormData({
         prefix: contact.prefix || "",
         first_name: contact.first_name || "",
@@ -107,7 +117,8 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
         timezone: contact.timezone || "",
         birthday: contact.birthday || "",
         anniversary_date: contact.anniversary_date || "",
-        companies_associated: contact.companies_associated || [],
+        company_id: associated[0],
+        companies_associated: associated,
         deals_associated: contact.deals_associated || [],
       });
     }
@@ -145,17 +156,13 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
     };
   }, []);
 
-  const toggleCompany = (companyId: number) => {
-    setFormData((prev) => {
-      const current = prev.companies_associated || [];
-      const exists = current.includes(companyId);
-      return {
-        ...prev,
-        companies_associated: exists
-          ? current.filter((id) => id !== companyId)
-          : [...current, companyId],
-      };
-    });
+  const selectCompany = (companyId: number | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      company_id: companyId ?? undefined,
+      companies_associated: companyId != null ? [companyId] : [],
+    }));
+    setCompaniesOpen(false);
   };
 
   const toggleDeal = (dealId: number) => {
@@ -171,9 +178,11 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
     });
   };
 
-  const selectedCompanies = companies.filter((c) =>
-    formData.companies_associated?.includes(c.company_id),
-  );
+  const selectedCompanyId = formData.companies_associated?.[0] ?? formData.company_id;
+  const selectedCompany =
+    selectedCompanyId != null
+      ? companies.find((c) => c.company_id === selectedCompanyId)
+      : undefined;
   const selectedDeals = deals.filter((d) =>
     formData.deals_associated?.includes(d.id),
   );
@@ -211,7 +220,8 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
         timezone: formData.timezone || undefined,
         birthday: formData.birthday || undefined,
         anniversary_date: formData.anniversary_date || undefined,
-        companies_associated: formData.companies_associated || [],
+        company_id: selectedCompanyId,
+        companies_associated: selectedCompanyId != null ? [selectedCompanyId] : [],
         deals_associated: formData.deals_associated || [],
       };
       
@@ -352,10 +362,10 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
             >
               {optionsLoading
                 ? "Loading companies..."
-                : selectedCompanies.length > 0
-                  ? `${selectedCompanies.length} compan${selectedCompanies.length === 1 ? "y" : "ies"} selected`
+                : selectedCompany
+                  ? companyDisplayName(selectedCompany)
                   : companies.length > 0
-                    ? `Select companies (${companies.length})`
+                    ? "Select company"
                     : "No companies available"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -370,14 +380,12 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
                 <CommandGroup>
                   {companies.map((company) => {
                     const label = companyDisplayName(company);
-                    const selected = formData.companies_associated?.includes(
-                      company.company_id,
-                    );
+                    const selected = selectedCompanyId === company.company_id;
                     return (
                       <CommandItem
                         key={company.company_id}
                         value={`${label} ${company.company_id}`}
-                        onSelect={() => toggleCompany(company.company_id)}
+                        onSelect={() => selectCompany(company.company_id)}
                       >
                         <span className="mr-2 w-4 shrink-0">{selected ? "✓" : ""}</span>
                         <span className="truncate">{label}</span>
@@ -389,25 +397,6 @@ export function ContactForm({ contact, onSuccess, onCancel, hideActions, formId,
             </Command>
           </PopoverContent>
         </Popover>
-        {selectedCompanies.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {selectedCompanies.map((company) => (
-              <div
-                key={company.company_id}
-                className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
-              >
-                <span>{companyDisplayName(company)}</span>
-                <button
-                  type="button"
-                  onClick={() => toggleCompany(company.company_id)}
-                  className="ml-1 hover:text-blue-600"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div>
