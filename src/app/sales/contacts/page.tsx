@@ -160,10 +160,16 @@ function buildContactTableColumns(
       },
     },
     {
-      id: "job_title",
-      header: "Job Title",
-      sortValue: (item) => byId.get(Number(item.id))?.job_title ?? "",
-      cell: (item) => byId.get(Number(item.id))?.job_title || "—",
+      id: "designation",
+      header: "Designation",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.title || c?.job_title || "";
+      },
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        return c?.title || c?.job_title || "—";
+      },
     },
     {
       id: "status",
@@ -707,7 +713,19 @@ export default function ContactsPage() {
               ],
             }}
             className="w-full md:w-auto"
-          />
+          >
+            {selectedContactIds.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setBulkDeleteDialogOpen(true)}
+                aria-label={`Delete ${selectedContactIds.length} selected contact${selectedContactIds.length === 1 ? "" : "s"}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </CollectionPageToolbar>
         </div>
 
         <CollectionFilterControls
@@ -730,38 +748,6 @@ export default function ContactsPage() {
           loadOptions={collectionFilters.loadOptions}
         />
       </div>
-
-      {selectedContactIds.length > 0 && (
-        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
-              {selectedContactIds.length}
-            </span>
-            <span className="text-sm font-medium text-foreground">
-              {selectedContactIds.length}{" "}
-              {selectedContactIds.length === 1 ? "contact" : "contacts"} selected
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedContactIds([])}
-            >
-              Deselect all
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteDialogOpen(true)}
-              className="gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete Selected ({selectedContactIds.length})</span>
-            </Button>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="mb-4 py-8 text-center text-destructive">{error}</div>

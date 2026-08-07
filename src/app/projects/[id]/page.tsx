@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +77,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
+import { ProjectFormSheet } from "@/components/project-form-sheet";
 import {
   TaskListInlineTitleInput,
   TaskListInlineAddRow,
@@ -455,12 +456,14 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setTitle, setSubtitle } = usePageTitle();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [charterOpen, setCharterOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const projectId = params?.id ? parseInt(params.id as string) : null;
 
@@ -487,6 +490,23 @@ export default function ProjectPage() {
     fetchProject();
   }, [projectId]);
 
+  useEffect(() => {
+    if (searchParams.get("edit") === "1" && project) {
+      setEditSheetOpen(true);
+      router.replace(`/projects/${project.id}`, { scroll: false });
+    }
+  }, [searchParams, project, router]);
+
+  const refreshProject = useCallback(async () => {
+    if (!projectId || isNaN(projectId)) return;
+    try {
+      const data = await projectsApi.getById(projectId);
+      setProject(data);
+    } catch (err) {
+      console.error("Error refreshing project:", err);
+    }
+  }, [projectId]);
+
   // Update page title when project is loaded
   useEffect(() => {
     if (project) {
@@ -507,7 +527,6 @@ export default function ProjectPage() {
     const tabLabels: Record<string, string> = {
       overview: "",
       requirements: "",
-      releases: "Releases",
       tasks: "Tasks",
       commits: "",
       teams: "",
@@ -585,19 +604,15 @@ export default function ProjectPage() {
                 <FileText className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">Project Charter</span>
               </Button>
-              <Link
-                href={`/projects/${projectId}/edit`}
-                className="flex-1 sm:flex-initial min-w-0"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditSheetOpen(true)}
+                className="flex-1 sm:flex-initial min-w-0 w-full sm:w-auto"
               >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  <Edit className="h-4 w-4 mr-2 shrink-0" />
-                  Edit Project
-                </Button>
-              </Link>
+                <Edit className="h-4 w-4 mr-2 shrink-0" />
+                Edit Project
+              </Button>
             </div>
           </div>
         </div>
@@ -606,6 +621,13 @@ export default function ProjectPage() {
           open={charterOpen}
           onOpenChange={setCharterOpen}
           project={project}
+        />
+
+        <ProjectFormSheet
+          open={editSheetOpen}
+          onOpenChange={setEditSheetOpen}
+          project={project}
+          onSuccess={refreshProject}
         />
 
         <Tabs
@@ -620,9 +642,6 @@ export default function ProjectPage() {
               </TabsTrigger>
               <TabsTrigger value="requirements" className="shrink-0">
                 Requirements
-              </TabsTrigger>
-              <TabsTrigger value="releases" className="shrink-0">
-                Releases
               </TabsTrigger>
               <TabsTrigger value="tasks" className="shrink-0">
                 Tasks

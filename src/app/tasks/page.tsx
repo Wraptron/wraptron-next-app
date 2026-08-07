@@ -1236,44 +1236,24 @@ export default function TasksBoardPage() {
             ariaLabel: "Create new task",
           }}
           className="ml-auto"
-        />
+        >
+          {viewMode === "list" && selectedTaskIds.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              aria-label={`Delete ${selectedTaskIds.length} selected task${selectedTaskIds.length === 1 ? "" : "s"}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </CollectionPageToolbar>
       </div>
 
       {notice && (
         <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
           {notice}
-        </div>
-      )}
-
-      {viewMode === "list" && selectedTaskIds.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">
-              {selectedTaskIds.length}
-            </span>
-            <span className="text-sm font-medium text-foreground">
-              {selectedTaskIds.length}{" "}
-              {selectedTaskIds.length === 1 ? "task" : "tasks"} selected
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedTaskIds([])}
-            >
-              Deselect all
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteDialogOpen(true)}
-              className="gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete Selected ({selectedTaskIds.length})</span>
-            </Button>
-          </div>
         </div>
       )}
 
