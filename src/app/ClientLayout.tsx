@@ -26,18 +26,26 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const isCustomerOnboardingPage =
     pathname?.startsWith("/customer-onboarding") ?? false;
   const isInvitePage = pathname?.startsWith("/invite") ?? false;
+  const isForgotPasswordPage =
+    pathname?.startsWith("/forgot-password") ?? false;
+  const isResetPasswordPage =
+    pathname?.startsWith("/reset-password") ?? false;
   const shouldHideSidebar =
     isHomePage ||
     isLoginPage ||
     isSignupPage ||
     isCustomerOnboardingPage ||
-    isInvitePage;
+    isInvitePage ||
+    isForgotPasswordPage ||
+    isResetPasswordPage;
   const shouldHideHeader =
     isHomePage ||
     isLoginPage ||
     isSignupPage ||
     isCustomerOnboardingPage ||
-    isInvitePage;
+    isInvitePage ||
+    isForgotPasswordPage ||
+    isResetPasswordPage;
 
   if (shouldHideSidebar) {
     return (

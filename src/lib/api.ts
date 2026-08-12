@@ -145,7 +145,9 @@ async function fetchApi<T>(
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login") &&
         !window.location.pathname.startsWith("/signup") &&
-        !window.location.pathname.startsWith("/invite")
+        !window.location.pathname.startsWith("/invite") &&
+        !window.location.pathname.startsWith("/forgot-password") &&
+        !window.location.pathname.startsWith("/reset-password")
       ) {
         window.location.href = "/login";
       }
@@ -210,6 +212,16 @@ export interface SignupInput {
 export interface LoginInput {
   email: string;
   password: string;
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export interface AuthResponse {
@@ -499,6 +511,26 @@ export const authApi = {
   // Login user
   login: async (data: LoginInput): Promise<AuthResponse> => {
     return fetchApi<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Request password reset email (always returns a generic message)
+  forgotPassword: async (
+    data: ForgotPasswordInput,
+  ): Promise<{ message: string }> => {
+    return fetchApi<{ message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Complete password reset with email token
+  resetPassword: async (
+    data: ResetPasswordInput,
+  ): Promise<{ message: string }> => {
+    return fetchApi<{ message: string }>("/api/auth/reset-password", {
       method: "POST",
       body: JSON.stringify(data),
     });
