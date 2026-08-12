@@ -16,7 +16,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/customer-onboarding", "/invite"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/signup",
+  "/customer-onboarding",
+  "/invite",
+  "/forgot-password",
+  "/reset-password",
+];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isAuthenticated, loading } = useAuth();
