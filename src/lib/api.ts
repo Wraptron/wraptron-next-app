@@ -2045,6 +2045,8 @@ export interface Deal {
   owner_name?: string;
   contacts_associated?: number[];
   companies_associated?: number[];
+  /** Set when a project is auto-created from a closed-won transition. */
+  project_id?: number;
 }
 
 export interface CreateDealInput {

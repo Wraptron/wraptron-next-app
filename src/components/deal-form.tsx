@@ -49,6 +49,7 @@ const FALLBACK_STAGE_NAMES = [
   "Solution proposed",
   "Negotiation/Objection handling",
   "Proposal Accepted",
+  "Closed Won",
   "Project Implementation",
   "Maintenance - Project Delivered",
 ];

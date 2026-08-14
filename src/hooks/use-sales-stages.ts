@@ -11,6 +11,7 @@ export const DEFAULT_DEAL_STAGES = [
   "Solution proposed",
   "Negotiation/Objection handling",
   "Proposal Accepted",
+  "Closed Won",
   "Project Implementation",
   "Maintenance - Project Delivered",
 ];
