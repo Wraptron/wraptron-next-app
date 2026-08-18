@@ -3904,6 +3904,8 @@ export interface InviteAdminUserInput {
   last_name?: string;
   phone_number?: string;
   role?: string;
+  org_role_id?: number;
+  role_id?: number;
 }
 
 export interface UpdateAdminUserInput extends Partial<CreateAdminUserInput> {

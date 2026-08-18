@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminApi, type AdminUser, type CreateAdminUserInput } from "@/lib/api";
+import {
+  adminApi,
+  organizationsApi,
+  type AdminUser,
+  type CreateAdminUserInput,
+  type OrganizationRole,
+} from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +49,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 
 
 /** Global account roles only — org roles (admin/staff/customer) live on membership. */
@@ -92,7 +99,10 @@ const getRoleLabel = (value: string) =>
 
 export function SettingsUserManagement() {
   const { user: currentUser } = useAuth();
+  const { activeOrg } = useOrganization();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [orgRoles, setOrgRoles] = useState<OrganizationRole[]>([]);
+  const [selectedOrgRoleId, setSelectedOrgRoleId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -119,6 +129,21 @@ export function SettingsUserManagement() {
     role: "user",
     is_active: true,
   });
+
+  useEffect(() => {
+    if (!activeOrg?.id) return;
+    organizationsApi
+      .listRoles(activeOrg.id)
+      .then((res) => {
+        setOrgRoles(res.roles);
+        const defaultRole =
+          res.roles.find((r) => r.role_type === "custom") ?? res.roles[0];
+        if (defaultRole) {
+          setSelectedOrgRoleId(String(defaultRole.id));
+        }
+      })
+      .catch(() => {});
+  }, [activeOrg?.id]);
 
   const fetchUsers = async () => {
     try {
@@ -168,7 +193,8 @@ export function SettingsUserManagement() {
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
-        role: toGlobalRole(formData.role ?? "user"),
+        role: "user",
+        org_role_id: selectedOrgRoleId ? Number(selectedOrgRoleId) : undefined,
       });
       setCreateDialogOpen(false);
       const invitedEmail = formData.email;
@@ -243,6 +269,11 @@ export function SettingsUserManagement() {
       role: "user",
       is_active: true,
     });
+    const defaultRole =
+      orgRoles.find((r) => r.role_type === "custom") ?? orgRoles[0];
+    if (defaultRole) {
+      setSelectedOrgRoleId(String(defaultRole.id));
+    }
     setShowPassword(false);
   };
 
@@ -340,31 +371,24 @@ export function SettingsUserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Global role *</Label>
+                <Label htmlFor="org-role">Role *</Label>
                 <Select
-                  value={
-                    GLOBAL_ROLE_VALUES.has(formData.role ?? "")
-                      ? formData.role
-                      : "user"
-                  }
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, role: value })
-                  }
+                  value={selectedOrgRoleId}
+                  onValueChange={setSelectedOrgRoleId}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="org-role">
+                    <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {GLOBAL_ROLES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
+                    {orgRoles.map((r) => (
+                      <SelectItem key={r.id} value={String(r.id)}>
+                        {r.name} {r.role_type === "owner" ? "(Owner)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Org roles (admin / staff / customer) are set on organization
-                  membership.
+                  Assign the role and permissions for this organization workspace.
                 </p>
               </div>
               {error && <div className="text-red-600 text-sm">{error}</div>}

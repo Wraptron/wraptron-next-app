@@ -128,7 +128,7 @@ export default function OrganizationSettingsPage() {
       setRoles(r.roles);
       setInvites(i.invites);
       setNewRoleId((prev) => {
-        if (prev) return prev;
+        if (prev && r.roles.some((role) => String(role.id) === prev)) return prev;
         const defaultRole =
           r.roles.find((role) => role.role_type === "custom") ?? r.roles[0];
         return defaultRole ? String(defaultRole.id) : "";
@@ -532,25 +532,21 @@ export default function OrganizationSettingsPage() {
                         {!m.is_active && (
                           <Badge variant="secondary">inactive</Badge>
                         )}
-                        {m.role_type === "owner" ? (
-                          <Badge>{m.role_name}</Badge>
-                        ) : (
-                          <Select
-                            value={String(m.role_id)}
-                            onValueChange={(roleId) => changeMemberRole(m, roleId)}
-                          >
-                            <SelectTrigger className="w-36">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {assignableRoles.map((role) => (
-                                <SelectItem key={role.id} value={String(role.id)}>
-                                  {role.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <Select
+                          value={String(m.role_id)}
+                          onValueChange={(roleId) => changeMemberRole(m, roleId)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={String(role.id)}>
+                                {role.name} {role.role_type === "owner" ? "(Owner)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -590,13 +586,13 @@ export default function OrganizationSettingsPage() {
                     className="max-w-xs"
                   />
                   <Select value={newRoleId} onValueChange={setNewRoleId}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Role" />
+                    <SelectTrigger className="w-44">
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {assignableRoles.map((role) => (
+                      {roles.map((role) => (
                         <SelectItem key={role.id} value={String(role.id)}>
-                          {role.name}
+                          {role.name} {role.role_type === "owner" ? "(Owner)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
