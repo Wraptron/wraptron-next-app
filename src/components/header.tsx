@@ -29,14 +29,27 @@ import { usePageTitle } from "@/contexts/page-title-context";
 import { useSidebar } from "@/contexts/sidebar-context";
 import { GlobalSearch } from "@/components/global-search";
 import { AppLauncherGrid } from "@/components/app-launcher-grid";
-import { canAccessStaffRoutes } from "@/lib/nav-access";
+import { useOrganization } from "@/contexts/organization-context";
+import { buildNavAccess, canAccessInternalNav } from "@/lib/nav-access";
 import { PORTAL_NOTIFICATIONS_HREF } from "@/lib/portal-nav";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
+  const { isOwner, isSuperAdmin, permissions } = useOrganization();
   const { title, subtitle } = usePageTitle();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [appsMenuOpen, setAppsMenuOpen] = useState(false);
+
+  const navAccess = React.useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner: isOwner || isSuperAdmin,
+        globalRole: user?.global_role ?? user?.role,
+      }),
+    [permissions, isOwner, isSuperAdmin, user?.global_role, user?.role],
+  );
+  const isStaff = canAccessInternalNav(navAccess);
 
   const handleLogout = () => {
     logout();
@@ -107,7 +120,7 @@ export default function TopNavbar() {
         {/* Right side - Org switcher, settings, notifications (portal), apps, profile */}
         <div className="flex items-center space-x-4">
           <OrgSwitcher />
-          {!canAccessStaffRoutes(user?.role) ? (
+          {!isStaff ? (
             <Link href={PORTAL_NOTIFICATIONS_HREF}>
               <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Notifications">
                 <Bell className="h-5 w-5" />
@@ -122,7 +135,7 @@ export default function TopNavbar() {
             </Link>
           </div>
           {/* App launcher */}
-          {canAccessStaffRoutes(user?.role) && (
+          {isStaff && (
             <DropdownMenu open={appsMenuOpen} onOpenChange={setAppsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-9 w-9 p-0">

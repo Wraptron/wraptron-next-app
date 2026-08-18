@@ -27,7 +27,7 @@ export default function Signup() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isAuthenticated, authLoading, router]);
 

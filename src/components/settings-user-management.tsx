@@ -6,6 +6,7 @@ import {
   organizationsApi,
   type AdminUser,
   type CreateAdminUserInput,
+  type OrganizationMember,
   type OrganizationRole,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,7 +103,9 @@ export function SettingsUserManagement() {
   const { activeOrg } = useOrganization();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgRoles, setOrgRoles] = useState<OrganizationRole[]>([]);
+  const [orgMembers, setOrgMembers] = useState<OrganizationMember[]>([]);
   const [selectedOrgRoleId, setSelectedOrgRoleId] = useState<string>("");
+  const [editOrgRoleId, setEditOrgRoleId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -118,6 +121,7 @@ export function SettingsUserManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [resendingId, setResendingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<
     CreateAdminUserInput & { is_active?: boolean }
   >({
@@ -130,7 +134,7 @@ export function SettingsUserManagement() {
     is_active: true,
   });
 
-  useEffect(() => {
+  const fetchOrgData = () => {
     if (!activeOrg?.id) return;
     organizationsApi
       .listRoles(activeOrg.id)
@@ -143,6 +147,17 @@ export function SettingsUserManagement() {
         }
       })
       .catch(() => {});
+
+    organizationsApi
+      .listMembers(activeOrg.id)
+      .then((res) => {
+        setOrgMembers(res.members);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchOrgData();
   }, [activeOrg?.id]);
 
   const fetchUsers = async () => {
@@ -217,19 +232,49 @@ export function SettingsUserManagement() {
       setError(null);
       await adminApi.updateUser(selectedUser.id, {
         email: formData.email,
-        password: formData.password || undefined,
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
-        role: toGlobalRole(formData.role ?? "user"),
         is_active: formData.is_active,
       });
+
+      if (activeOrg?.id && editOrgRoleId) {
+        await organizationsApi
+          .updateMember(activeOrg.id, selectedUser.id, {
+            role_id: Number(editOrgRoleId),
+          })
+          .catch(() => {});
+      }
+
       setEditDialogOpen(false);
       resetForm();
       setSelectedUser(null);
       fetchUsers();
+      fetchOrgData();
     } catch (err: any) {
       setError(err?.message || "Failed to update user");
+    }
+  };
+
+  const handleResendInvite = async (user: AdminUser) => {
+    try {
+      setResendingId(user.id);
+      setError(null);
+      setSuccessMessage(null);
+      const member = orgMembers.find((m) => m.user_id === user.id);
+      await adminApi.inviteUser({
+        email: user.email,
+        first_name: user.first_name || undefined,
+        last_name: user.last_name || undefined,
+        phone_number: user.phone_number || undefined,
+        role: "user",
+        org_role_id: member?.role_id,
+      });
+      setSuccessMessage(`A new invitation email has been sent to ${user.email}.`);
+    } catch (err: any) {
+      setError(err?.message || `Failed to resend invite to ${user.email}`);
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -246,13 +291,20 @@ export function SettingsUserManagement() {
 
   const openEditDialog = (user: AdminUser) => {
     setSelectedUser(user);
+    const member = orgMembers.find((m) => m.user_id === user.id);
+    if (member) {
+      setEditOrgRoleId(String(member.role_id));
+    } else {
+      const defaultRole =
+        orgRoles.find((r) => r.role_type === "custom") ?? orgRoles[0];
+      setEditOrgRoleId(defaultRole ? String(defaultRole.id) : "");
+    }
     setFormData({
       email: user.email,
       password: "",
       first_name: user.first_name || "",
       last_name: user.last_name || "",
       phone_number: user.phone_number || "",
-      // Coerce legacy org-style global roles so the select + API stay valid
       role: toGlobalRole(user.role),
       is_active: user.is_active,
     });
@@ -495,19 +547,28 @@ export function SettingsUserManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.email}</TableCell>
-                        <TableCell>
-                          {user.first_name || user.last_name
-                            ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getRoleColor(user.role)}>
-                            {getRoleLabel(user.role)}
-                          </Badge>
-                        </TableCell>
+                    {users.map((user) => {
+                      const member = orgMembers.find((m) => m.user_id === user.id);
+                      const roleDisplay = member
+                        ? member.role_name
+                        : getRoleLabel(user.role);
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.email}</TableCell>
+                          <TableCell>
+                            {user.first_name || user.last_name
+                              ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={getRoleColor(
+                                member?.role_type === "owner" ? "admin" : "user",
+                              )}
+                            >
+                              {roleDisplay}
+                            </Badge>
+                          </TableCell>
                         <TableCell>
                           <Badge
                             className={
@@ -525,15 +586,29 @@ export function SettingsUserManagement() {
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(user.created_at)}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Resend invitation email"
+                                disabled={resendingId === user.id}
+                                onClick={() => handleResendInvite(user)}
+                              >
+                                {resendingId === user.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                ) : (
+                                  <Mail className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Edit user"
+                                onClick={() => openEditDialog(user)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                             {currentUser?.id !== user.id && (
                               <Button
                                 variant="ghost"
@@ -547,8 +622,9 @@ export function SettingsUserManagement() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
+                    );
+                  })}
+                </TableBody>
                 </Table>
               </div>
 
@@ -600,40 +676,15 @@ export function SettingsUserManagement() {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="edit-password">
-                Password (leave blank to keep current)
-              </Label>
-              <div className="relative">
-                <Input
-                  id="edit-password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter new password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-first_name">First Name</Label>
                 <Input
                   id="edit-first_name"
                   value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, first_name: e.target.value })
+                  }
                   placeholder="John"
                 />
               </div>
@@ -642,7 +693,9 @@ export function SettingsUserManagement() {
                 <Input
                   id="edit-last_name"
                   value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, last_name: e.target.value })
+                  }
                   placeholder="Doe"
                 />
               </div>
@@ -652,36 +705,31 @@ export function SettingsUserManagement() {
               <Input
                 id="edit-phone_number"
                 value={formData.phone_number}
-                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone_number: e.target.value })
+                }
                 placeholder="+1234567890"
               />
             </div>
             <div>
-              <Label htmlFor="edit-role">Global role *</Label>
+              <Label htmlFor="edit-org-role">Role *</Label>
               <Select
-                value={
-                  GLOBAL_ROLE_VALUES.has(formData.role ?? "")
-                    ? formData.role
-                    : "user"
-                }
-                onValueChange={(value) =>
-                  setFormData({ ...formData, role: value })
-                }
+                value={editOrgRoleId}
+                onValueChange={setEditOrgRoleId}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger id="edit-org-role">
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {GLOBAL_ROLES.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
+                  {orgRoles.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.name} {r.role_type === "owner" ? "(Owner)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Org roles (admin / staff / customer) are set on organization
-                membership.
+                Assign role and module permissions for this organization.
               </p>
             </div>
             <div>

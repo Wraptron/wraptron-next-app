@@ -17,8 +17,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 import { userAppsApi, type UserApp } from "@/lib/api";
-import { filterByStaffAccess } from "@/lib/nav-access";
+import { buildNavAccess, canAccessMenuItem } from "@/lib/nav-access";
 import {
   Dialog,
   DialogContent,
@@ -148,6 +149,7 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { isOwner, isSuperAdmin, permissions } = useOrganization();
   const [userApps, setUserApps] = useState<UserApp[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
@@ -160,9 +162,19 @@ export function AppLauncherGrid({ variant, onNavigate }: AppLauncherGridProps) {
   const lucideIconClass = isCompact ? "w-6 h-6" : "w-8 h-8";
   const userFaviconIconClass = isCompact ? "w-6 h-6" : "w-7 h-7";
 
+  const navAccess = useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner: isOwner || isSuperAdmin,
+        globalRole: user?.global_role ?? user?.role,
+      }),
+    [permissions, isOwner, isSuperAdmin, user?.global_role, user?.role],
+  );
+
   const builtinApps = useMemo(
-    () => filterByStaffAccess(BUILTIN_APPS, user?.role),
-    [user?.role],
+    () => BUILTIN_APPS.filter((app) => canAccessMenuItem(app.id, navAccess)),
+    [navAccess],
   );
 
   const loadUserApps = useCallback(async () => {
