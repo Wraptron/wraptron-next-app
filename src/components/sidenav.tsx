@@ -254,12 +254,12 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     icon: FileSpreadsheet,
     href: "/workspace/timesheet",
   },
-  {
-    id: "payslips",
-    label: "Payslips",
-    icon: FileText,
-    href: "/workspace/payslips",
-  },
+  // {
+  //   id: "payslips",
+  //   label: "Payslips",
+  //   icon: FileText,
+  //   href: "/workspace/payslips",
+  // },
 ];
 
 const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
