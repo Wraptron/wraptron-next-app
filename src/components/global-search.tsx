@@ -32,8 +32,9 @@ import {
 } from "@/lib/api";
 import { EMPLOYEES_BASE_PATH } from "@/lib/employee-routes";
 import { filterAppSearchRoutes } from "@/lib/app-search-routes";
-import { canAccessStaffRoutes } from "@/lib/nav-access";
+import { buildNavAccess, canAccessInternalNav } from "@/lib/nav-access";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 
 type ResultKind =
   | "page"
@@ -75,17 +76,29 @@ export function GlobalSearch() {
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
   const { user } = useAuth();
-  const staffAccess = canAccessStaffRoutes(user?.role);
+  const { isOwner, isSuperAdmin, permissions } = useOrganization();
+
+  const navAccess = React.useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner: isOwner || isSuperAdmin,
+        globalRole: user?.global_role ?? user?.role,
+      }),
+    [permissions, isOwner, isSuperAdmin, user?.global_role, user?.role],
+  );
+
+  const staffAccess = canAccessInternalNav(navAccess);
 
   const pageResults: SearchResultItem[] = React.useMemo(() => {
-    return filterAppSearchRoutes(query, { role: user?.role }).map((r) => ({
+    return filterAppSearchRoutes(query, { navAccess, role: user?.role }).map((r) => ({
       key: `page-${r.href}`,
       kind: "page" as const,
       title: r.label,
       subtitle: r.section,
       url: r.href,
     }));
-  }, [query, user?.role]);
+  }, [query, navAccess, user?.role]);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {

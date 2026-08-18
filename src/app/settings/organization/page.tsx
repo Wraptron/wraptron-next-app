@@ -7,7 +7,6 @@ import { useOrganization } from "@/contexts/organization-context";
 import {
   organizationsApi,
   getApiErrorMessage,
-  type OrganizationInvite,
   type OrganizationMember,
   type OrganizationRole,
 } from "@/lib/api";
@@ -93,7 +92,6 @@ export default function OrganizationSettingsPage() {
 
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
-  const [invites, setInvites] = useState<OrganizationInvite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -103,36 +101,23 @@ export default function OrganizationSettingsPage() {
   const [editingPerms, setEditingPerms] = useState<Set<string>>(new Set());
   const [permsLoading, setPermsLoading] = useState(false);
 
-  const [newEmail, setNewEmail] = useState("");
-  const [newRoleId, setNewRoleId] = useState<string>("");
-
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<OrganizationMember | null>(null);
   const [confirmDeleteRole, setConfirmDeleteRole] =
     useState<OrganizationRole | null>(null);
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
-  const assignableRoles = roles.filter((role) => role.role_type !== "owner");
-  const pendingInvites = invites.filter((inv) => inv.status === "pending");
 
   const load = useCallback(async () => {
     if (!orgId) return;
     setError(null);
     try {
-      const [m, r, i] = await Promise.all([
+      const [m, r] = await Promise.all([
         organizationsApi.listMembers(orgId),
         organizationsApi.listRoles(orgId),
-        organizationsApi.listInvites(orgId),
       ]);
       setMembers(m.members);
       setRoles(r.roles);
-      setInvites(i.invites);
-      setNewRoleId((prev) => {
-        if (prev) return prev;
-        const defaultRole =
-          r.roles.find((role) => role.role_type === "custom") ?? r.roles[0];
-        return defaultRole ? String(defaultRole.id) : "";
-      });
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to load organization settings"));
     }
@@ -272,45 +257,6 @@ export default function OrganizationSettingsPage() {
     }
   };
 
-  const inviteMember = async () => {
-    if (!orgId || !newEmail.trim() || !newRoleId) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await organizationsApi.createInvite(orgId, {
-        email: newEmail.trim(),
-        role_id: Number(newRoleId),
-      });
-      setNewEmail("");
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to send invite"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const resendInvite = async (invite: OrganizationInvite) => {
-    if (!orgId) return;
-    setError(null);
-    try {
-      await organizationsApi.resendInvite(orgId, invite.id);
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to resend invite"));
-    }
-  };
-
-  const revokeInvite = async (invite: OrganizationInvite) => {
-    if (!orgId) return;
-    setError(null);
-    try {
-      await organizationsApi.revokeInvite(orgId, invite.id);
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to revoke invite"));
-    }
-  };
 
   return (
     <PageShell>
@@ -325,7 +271,6 @@ export default function OrganizationSettingsPage() {
           <TabsList>
             <TabsTrigger value="roles">Roles</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
-            <TabsTrigger value="invites">Invites</TabsTrigger>
           </TabsList>
 
           <TabsContent value="roles" className="space-y-4">
@@ -532,25 +477,21 @@ export default function OrganizationSettingsPage() {
                         {!m.is_active && (
                           <Badge variant="secondary">inactive</Badge>
                         )}
-                        {m.role_type === "owner" ? (
-                          <Badge>{m.role_name}</Badge>
-                        ) : (
-                          <Select
-                            value={String(m.role_id)}
-                            onValueChange={(roleId) => changeMemberRole(m, roleId)}
-                          >
-                            <SelectTrigger className="w-36">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {assignableRoles.map((role) => (
-                                <SelectItem key={role.id} value={String(role.id)}>
-                                  {role.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <Select
+                          value={String(m.role_id)}
+                          onValueChange={(roleId) => changeMemberRole(m, roleId)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={String(role.id)}>
+                                {role.name} {role.role_type === "owner" ? "(Owner)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -565,86 +506,6 @@ export default function OrganizationSettingsPage() {
                   {members.length === 0 && (
                     <div className="p-4 text-center text-sm text-muted-foreground">
                       No members yet.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="invites" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Invites</CardTitle>
-                <CardDescription>
-                  Invite users by email. Pending invites expire after 30 days.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="user@example.com"
-                    className="max-w-xs"
-                  />
-                  <Select value={newRoleId} onValueChange={setNewRoleId}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assignableRoles.map((role) => (
-                        <SelectItem key={role.id} value={String(role.id)}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    onClick={inviteMember}
-                    disabled={busy || !newEmail.trim() || !newRoleId}
-                  >
-                    Send invite
-                  </Button>
-                </div>
-
-                <div className="divide-y rounded-md border">
-                  {pendingInvites.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="flex flex-wrap items-center justify-between gap-2 p-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{inv.email}</div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {inv.role_name ?? `Role #${inv.role_id}`} · expires{" "}
-                          {new Date(inv.expires_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => resendInvite(inv)}
-                        >
-                          Resend
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => revokeInvite(inv)}
-                        >
-                          Revoke
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {pendingInvites.length === 0 && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No pending invites.
                     </div>
                   )}
                 </div>

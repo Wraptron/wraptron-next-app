@@ -3891,11 +3891,21 @@ export interface AdminUser {
 
 export interface CreateAdminUserInput {
   email: string;
-  password: string;
+  password?: string;
   first_name?: string;
   last_name?: string;
   phone_number?: string;
   role?: string;
+}
+
+export interface InviteAdminUserInput {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role?: string;
+  org_role_id?: number;
+  role_id?: number;
 }
 
 export interface UpdateAdminUserInput extends Partial<CreateAdminUserInput> {
@@ -3968,7 +3978,17 @@ export const adminApi = {
     return fetchApi<{ user: AdminUser }>(`/api/admin/users/${id}`);
   },
 
-  // Create user
+  // Invite user (sends email link to set password)
+  inviteUser: async (
+    data: InviteAdminUserInput,
+  ): Promise<{ user: AdminUser; message: string }> => {
+    return fetchApi<{ user: AdminUser; message: string }>("/api/admin/users/invite", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Create user (backwards compatibility wrapper around inviteUser)
   createUser: async (
     data: CreateAdminUserInput,
   ): Promise<{ user: AdminUser }> => {
@@ -3977,6 +3997,7 @@ export const adminApi = {
       body: JSON.stringify(data),
     });
   },
+
 
   // Update user
   updateUser: async (

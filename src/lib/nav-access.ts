@@ -13,7 +13,9 @@ export interface NavAccess {
 /** Sidebar / launcher menu id → required permission (usually resource.read). */
 export const MENU_PERMISSION: Record<string, string | null> = {
   dashboard: null,
-  customers: "sales.read",
+  sales: "sales.read",
+  crm: "sales.read",
+  customers: "customers.read",
   projects: "projects.read",
   tasks: "tasks.read",
   products: "products.read",
@@ -24,7 +26,6 @@ export const MENU_PERMISSION: Record<string, string | null> = {
   "human-resource": "hr.read",
   "human-resources": "hr.read",
   settings: "settings.read",
-  crm: "customers.read",
 };
 
 const PATH_PERMISSION_RULES: ReadonlyArray<readonly [string, string]> = [
@@ -181,8 +182,8 @@ export function filterByStaffAccess<T extends { id: string }>(
   return items.filter((item) => !staffOnlyIds.has(item.id));
 }
 
-export function defaultPostLoginPath(access: NavAccess): string {
-  return canAccessInternalNav(access) ? "/" : "/dashboard";
+export function defaultPostLoginPath(_access?: NavAccess): string {
+  return "/dashboard";
 }
 
 export function isStaffOnlyQuickLinkHref(href: string): boolean {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Dashboard, type DashboardModule } from "@/components/dashboard";
 import { ClientPortalHome } from "@/components/portal/client-portal-home";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 import { usePageTitle } from "@/contexts/page-title-context";
-import { canAccessStaffRoutes } from "@/lib/nav-access";
+import { buildNavAccess, canAccessInternalNav } from "@/lib/nav-access";
 
 const DASHBOARD_MODULES: DashboardModule[] = [
   {
@@ -79,7 +80,19 @@ const DASHBOARD_MODULES: DashboardModule[] = [
 export default function DashboardPage() {
   const { setTitle } = usePageTitle();
   const { user } = useAuth();
-  const isStaff = canAccessStaffRoutes(user?.role);
+  const { isOwner, isSuperAdmin, permissions } = useOrganization();
+
+  const navAccess = useMemo(
+    () =>
+      buildNavAccess({
+        permissions,
+        isOwner: isOwner || isSuperAdmin,
+        globalRole: user?.global_role ?? user?.role,
+      }),
+    [permissions, isOwner, isSuperAdmin, user?.global_role, user?.role],
+  );
+
+  const isStaff = canAccessInternalNav(navAccess);
 
   useEffect(() => {
     setTitle("Dashboard");

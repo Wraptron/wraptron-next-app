@@ -3,9 +3,11 @@
  * Keep in sync with sidebar and major `app/` routes.
  */
 import {
+  canAccessPath,
   canAccessStaffRoutes,
   isStaffOnlyPath,
   normalizeRole,
+  type NavAccess,
 } from "./nav-access";
 
 export interface AppSearchRoute {
@@ -293,11 +295,21 @@ const SUGGESTED_LIMIT = 16;
 
 export function filterAppSearchRoutes(
   query: string,
-  options: { role?: string | null },
+  options: { role?: string | null; navAccess?: NavAccess },
 ): AppSearchRoute[] {
-  const isAdmin = normalizeRole(options.role) === "admin";
-  const staffAccess = canAccessStaffRoutes(options.role);
   const visible = APP_SEARCH_ROUTES.filter((r) => {
+    if (options.navAccess) {
+      if (
+        r.adminOnly &&
+        !options.navAccess.isOwner &&
+        normalizeRole(options.navAccess.globalRole) !== "super_admin"
+      ) {
+        return false;
+      }
+      return canAccessPath(r.href, options.navAccess);
+    }
+    const isAdmin = normalizeRole(options.role) === "admin";
+    const staffAccess = canAccessStaffRoutes(options.role);
     if (r.adminOnly && !isAdmin) return false;
     if (!staffAccess && isStaffOnlyPath(r.href)) return false;
     return true;
