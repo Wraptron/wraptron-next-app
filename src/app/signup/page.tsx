@@ -15,6 +15,7 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    companyName: "",
     email: "",
     phoneNumber: "",
     password: "",
@@ -53,6 +54,11 @@ export default function Signup() {
       return;
     }
 
+    if (!formData.companyName.trim()) {
+      setError("Company / Workspace name is required");
+      return;
+    }
+
     if (!formData.phoneNumber) {
       setError("Phone number is required");
       return;
@@ -82,6 +88,7 @@ export default function Signup() {
         formData.lastName || undefined,
         undefined,
         formData.phoneNumber || undefined,
+        formData.companyName.trim(),
       );
     } catch (err: unknown) {
       const message =
@@ -153,6 +160,20 @@ export default function Signup() {
                     setFormData({ ...formData, lastName: e.target.value })
                   }
                   placeholder="Doe"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company / Workspace Name</Label>
+                <Input
+                  type="text"
+                  name="companyName"
+                  id="companyName"
+                  value={formData.companyName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, companyName: e.target.value })
+                  }
+                  placeholder="Acme Solutions"
+                  required
                 />
               </div>
               <div className="space-y-2">

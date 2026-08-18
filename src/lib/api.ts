@@ -206,6 +206,7 @@ export interface SignupInput {
   first_name?: string;
   last_name?: string;
   phone_number?: string;
+  company_name?: string;
   role?: string;
 }
 
@@ -227,6 +228,7 @@ export interface ResetPasswordInput {
 export interface AuthResponse {
   user: User;
   token: string;
+  organization?: OrganizationSummary;
 }
 
 export type OrgRoleType = "owner" | "custom";

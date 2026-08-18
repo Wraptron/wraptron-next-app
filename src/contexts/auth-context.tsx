@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { authApi, setAuthToken, type User } from "@/lib/api";
+import { authApi, setAuthToken, setActiveOrgId, type User } from "@/lib/api";
 import { buildNavAccess, defaultPostLoginPath } from "@/lib/nav-access";
 import {
   effectiveRole,
@@ -36,6 +36,7 @@ interface AuthContextType {
     lastName?: string,
     role?: string,
     phoneNumber?: string,
+    companyName?: string,
   ) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -105,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName?: string,
     role?: string,
     phoneNumber?: string,
+    companyName?: string,
   ) => {
     try {
       const response = await authApi.signup({
@@ -113,8 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         first_name: firstName,
         last_name: lastName,
         phone_number: phoneNumber,
+        company_name: companyName,
         role,
       });
+      if (response.organization?.id != null) {
+        setActiveOrgId(Number(response.organization.id));
+      }
       setAuthToken(response.token);
       setUser(response.user);
       router.push(
