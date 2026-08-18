@@ -38,8 +38,12 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  UserPlus,
+  Mail,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+
 
 /** Global account roles only — org roles (admin/staff/customer) live on membership. */
 const GLOBAL_ROLES = [
@@ -102,6 +106,8 @@ export function SettingsUserManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
   const [formData, setFormData] = useState<
     CreateAdminUserInput & { is_active?: boolean }
   >({
@@ -151,24 +157,33 @@ export function SettingsUserManagement() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const handleCreate = async () => {
+  const handleInvite = async () => {
+    if (!formData.email) return;
     try {
+      setInviting(true);
       setError(null);
-      await adminApi.createUser({
+      setSuccessMessage(null);
+      await adminApi.inviteUser({
         email: formData.email,
-        password: formData.password,
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
         role: toGlobalRole(formData.role ?? "user"),
       });
       setCreateDialogOpen(false);
+      const invitedEmail = formData.email;
       resetForm();
+      setSuccessMessage(
+        `Invitation email sent to ${invitedEmail}. A link to set password has been triggered.`
+      );
       fetchUsers();
     } catch (err: any) {
-      setError(err?.message || "Failed to create user");
+      setError(err?.message || "Failed to invite user");
+    } finally {
+      setInviting(false);
     }
   };
+
 
   const handleEdit = async () => {
     if (!selectedUser) return;
@@ -261,17 +276,23 @@ export function SettingsUserManagement() {
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create User
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-blue-600" />
+                Invite User
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-md text-sm">
+                An invitation email will be sent to this email ID with a secure link to set their password.
+              </div>
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -282,34 +303,6 @@ export function SettingsUserManagement() {
                   placeholder="user@example.com"
                   required
                 />
-              </div>
-              <div>
-                <Label htmlFor="password">Password *</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    placeholder="Enter password"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -375,12 +368,13 @@ export function SettingsUserManagement() {
                 </p>
               </div>
               {error && <div className="text-red-600 text-sm">{error}</div>}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate} disabled={!formData.email || !formData.password}>
-                  Create User
+                <Button onClick={handleInvite} disabled={!formData.email || inviting}>
+                  {inviting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Send Invite
                 </Button>
               </div>
             </div>
@@ -431,11 +425,24 @@ export function SettingsUserManagement() {
         </CardContent>
       </Card>
 
+      {successMessage && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
           {error}
         </div>
       )}
+
 
       <Card>
         <CardHeader>
