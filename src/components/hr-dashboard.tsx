@@ -31,7 +31,7 @@ import {
   type HrDashboardData,
   type HrDashboardPeriod,
 } from "@/lib/api";
-import { EMPLOYEES_BASE_PATH } from "@/lib/employee-routes";
+import { EMPLOYEES_BASE_PATH, HR_METRICS_PATH } from "@/lib/employee-routes";
 
 const PERIOD_OPTIONS: { value: HrDashboardPeriod; label: string }[] = [
   { value: "today", label: "Today" },
@@ -152,12 +152,20 @@ export function HrDashboard() {
             workforce.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm" className="shrink-0">
-          <Link href={EMPLOYEES_BASE_PATH}>
-            View employees
-            <ArrowRight className="ml-1.5 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button asChild variant="outline" size="sm">
+            <Link href={HR_METRICS_PATH}>
+              Performance matrix
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={EMPLOYEES_BASE_PATH}>
+              View employees
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <Tabs

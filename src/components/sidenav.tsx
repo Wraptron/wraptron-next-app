@@ -276,6 +276,12 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
     href: "/hr/employees",
   },
   {
+    id: "metrics-report",
+    label: "Performance matrix",
+    icon: FileSpreadsheet,
+    href: "/hr/metrics",
+  },
+  {
     id: "skills-matrix",
     label: "Skill matrix",
     icon: Grid3x3,
