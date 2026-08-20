@@ -16,6 +16,7 @@ import {
   Briefcase,
   TrendingUp,
   Settings,
+  Calendar,
   AlignHorizontalJustifyStart,
   User,
   CheckSquare,
@@ -274,6 +275,18 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
     label: "Employees",
     icon: Users,
     href: "/hr/employees",
+  },
+  {
+    id: "metrics-report",
+    label: "Performance matrix",
+    icon: FileSpreadsheet,
+    href: "/hr/metrics",
+  },
+  {
+    id: "calendar-holidays",
+    label: "Calendar & holidays",
+    icon: Calendar,
+    href: "/hr/calendar",
   },
   {
     id: "skills-matrix",
