@@ -10,3 +10,7 @@ export const HR_SKILL_MATRIX_PATH = "/hr/skills";
 /** Employee metrics and performance matrix report. */
 export const HR_METRICS_PATH = "/hr/metrics";
 
+/** Calendar setup, public holidays, and weekend policies. */
+export const HR_CALENDAR_PATH = "/hr/calendar";
+
+

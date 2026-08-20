@@ -1648,6 +1648,110 @@ export const employeesApi = {
 };
 
 // ============================================================================
+// Holidays & Calendar Setup Types and API
+// ============================================================================
+
+export type WeekendPolicy = "sat_sun_off" | "sun_only_off" | "alt_sat_sun_off" | "none";
+
+export interface OrganizationHoliday {
+  id: number;
+  organization_id: number;
+  name: string;
+  date: string;
+  type: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkPolicy {
+  weekend_policy: WeekendPolicy;
+  working_hours_per_day: number;
+}
+
+export interface DayBreakdownItem {
+  date: string;
+  day_of_week: number;
+  is_weekend: boolean;
+  is_holiday: boolean;
+  holiday_name?: string;
+  is_working_day: boolean;
+}
+
+export interface WorkingDaysBreakdown {
+  month: number;
+  year: number;
+  weekend_policy: WeekendPolicy;
+  total_calendar_days: number;
+  weekend_days: number;
+  holiday_days: number;
+  total_working_days: number;
+  holidays: OrganizationHoliday[];
+  day_breakdown: DayBreakdownItem[];
+}
+
+export const holidaysApi = {
+  getAll: async (params?: { year?: number; month?: number }): Promise<{ holidays: OrganizationHoliday[] }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.year != null) searchParams.append("year", params.year.toString());
+    if (params?.month != null) searchParams.append("month", params.month.toString());
+    const query = searchParams.toString();
+    return fetchApi<{ holidays: OrganizationHoliday[] }>(`/api/holidays${query ? `?${query}` : ""}`);
+  },
+
+  create: async (data: {
+    name: string;
+    date: string;
+    type?: string;
+    description?: string;
+  }): Promise<{ holiday: OrganizationHoliday }> => {
+    return fetchApi<{ holiday: OrganizationHoliday }>("/api/holidays", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; date?: string; type?: string; description?: string },
+  ): Promise<{ holiday: OrganizationHoliday }> => {
+    return fetchApi<{ holiday: OrganizationHoliday }>(`/api/holidays/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<{ success: boolean }> => {
+    return fetchApi<{ success: boolean }>(`/api/holidays/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  getPolicy: async (): Promise<WorkPolicy> => {
+    return fetchApi<WorkPolicy>("/api/holidays/policy");
+  },
+
+  updatePolicy: async (data: {
+    weekend_policy: WeekendPolicy;
+    working_hours_per_day?: number;
+  }): Promise<WorkPolicy & { message: string }> => {
+    return fetchApi<WorkPolicy & { message: string }>("/api/holidays/policy", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getWorkingDays: async (params: {
+    month: number;
+    year: number;
+  }): Promise<WorkingDaysBreakdown> => {
+    return fetchApi<WorkingDaysBreakdown>(
+      `/api/holidays/working-days?month=${params.month}&year=${params.year}`,
+    );
+  },
+};
+
+// ============================================================================
 // Attendance Types and API
 // ============================================================================
 

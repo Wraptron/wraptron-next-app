@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  Filter,
   Layers,
   Loader2,
   RefreshCw,
@@ -63,7 +62,7 @@ import {
   type EmployeeMetricRow,
   type EmployeeMetricsReportResponse,
 } from "@/lib/api";
-import { EMPLOYEES_BASE_PATH } from "@/lib/employee-routes";
+import { EMPLOYEES_BASE_PATH, HR_CALENDAR_PATH } from "@/lib/employee-routes";
 import { useOrganization } from "@/contexts/organization-context";
 
 const MONTHS = [
@@ -160,14 +159,85 @@ function MetricSummaryCard({
   );
 }
 
+interface CustomChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    name: string;
+    dataKey: string;
+    payload: {
+      fullName: string;
+      empCode?: string;
+      department?: string | null;
+      load: number;
+      performance: number;
+      attendance: number;
+    };
+  }>;
+  label?: string;
+}
+
+function CustomChartTooltip({ active, payload }: CustomChartTooltipProps) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0]?.payload;
+  if (!data) return null;
+
+  return (
+    <div className="rounded-xl border border-border/80 bg-popover/95 p-3.5 shadow-2xl backdrop-blur-md text-xs space-y-2.5 min-w-[240px]">
+      <div className="border-b border-border/60 pb-1.5">
+        <p className="font-bold text-popover-foreground text-sm leading-tight">
+          {data.fullName}
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+          {data.empCode || "—"} {data.department ? `· ${data.department}` : ""}
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        {/* Workload Share */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-xs bg-indigo-500 shrink-0 shadow-2xs" />
+            <span className="font-medium">Workload Share (Load %):</span>
+          </div>
+          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+            {data.load.toFixed(2)}%
+          </span>
+        </div>
+
+        {/* Task Completion */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-xs bg-emerald-500 shrink-0 shadow-2xs" />
+            <span className="font-medium">Task Completion (Perf %):</span>
+          </div>
+          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+            {data.performance.toFixed(2)}%
+          </span>
+        </div>
+
+        {/* Attendance */}
+        <div className="flex items-center justify-between gap-3 pt-1.5 border-t border-border/40 text-[11px]">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-blue-500/70 shrink-0" />
+            <span>Attendance Rate:</span>
+          </div>
+          <span className="font-mono font-semibold text-foreground/80">
+            {data.attendance.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HrMetricsMatrix() {
   const { activeOrg, switchOrg, organizations } = useOrganization();
 
-  // Default to July 2026 to match the user's report data, or current date if in 2026+
-  const [selectedMonth, setSelectedMonth] = useState<number>(7);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [customDays, setCustomDays] = useState<string>("22");
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  // Default to current month and year
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -175,28 +245,26 @@ export function HrMetricsMatrix() {
   const [reportData, setReportData] =
     useState<EmployeeMetricsReportResponse | null>(null);
 
-  // Available year options
-  const yearOptions = [2024, 2025, 2026, 2027, 2028];
+  // Available year options (surrounding current year)
+  const currentYear = now.getFullYear();
+  const yearOptions = [
+    currentYear - 2,
+    currentYear - 1,
+    currentYear,
+    currentYear + 1,
+    currentYear + 2,
+  ];
 
   const loadReport = useCallback(
-    async (
-      month: number,
-      year: number,
-      totalDays?: number,
-      department?: string,
-    ) => {
+    async (month: number, year: number) => {
       setLoading(true);
       setError(null);
       try {
         const res = await employeesApi.getMetricsReport({
           month,
           year,
-          total_days: totalDays && totalDays > 0 ? totalDays : undefined,
-          department:
-            department && department !== "all" ? department : undefined,
         });
         setReportData(res);
-        setCustomDays(res.total_working_days.toString());
       } catch (err) {
         console.error("Failed to load metrics report:", err);
         setError("Unable to load performance and attendance metrics.");
@@ -209,47 +277,13 @@ export function HrMetricsMatrix() {
   );
 
   useEffect(() => {
-    void loadReport(
-      selectedMonth,
-      selectedYear,
-      undefined,
-      departmentFilter,
-    );
-  }, [selectedMonth, selectedYear, departmentFilter, activeOrg?.id, loadReport]);
-
-  const handleApplyCustomDays = () => {
-    const daysNum = parseInt(customDays, 10);
-    void loadReport(
-      selectedMonth,
-      selectedYear,
-      !isNaN(daysNum) && daysNum > 0 ? daysNum : undefined,
-      departmentFilter,
-    );
-  };
-
-  const handleResetDays = () => {
-    void loadReport(
-      selectedMonth,
-      selectedYear,
-      undefined,
-      departmentFilter,
-    );
-  };
+    void loadReport(selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear, activeOrg?.id, loadReport]);
 
   const handleSelectPreset = (month: number, year: number) => {
     setSelectedMonth(month);
     setSelectedYear(year);
   };
-
-  // Distinct departments from data
-  const availableDepartments = useMemo(() => {
-    if (!reportData?.rows) return [];
-    const depts = new Set<string>();
-    for (const r of reportData.rows) {
-      if (r.department) depts.add(r.department);
-    }
-    return Array.from(depts).sort();
-  }, [reportData?.rows]);
 
   // Filtered rows by search query
   const filteredRows = useMemo(() => {
@@ -327,9 +361,11 @@ export function HrMetricsMatrix() {
     return filteredRows.map((r) => ({
       name: r.name.split(" ")[0], // First name for chart readability
       fullName: r.name,
-      load: r.load_percent,
-      performance: r.performance_percent,
-      attendance: r.attendance_percent,
+      empCode: r.emp_code,
+      department: r.department,
+      load: Number(r.load_percent.toFixed(2)),
+      performance: Number(r.performance_percent.toFixed(2)),
+      attendance: Number(r.attendance_percent.toFixed(2)),
     }));
   }, [filteredRows]);
 
@@ -341,7 +377,7 @@ export function HrMetricsMatrix() {
       "Employee Name",
       "Employee Code",
       "Department",
-      "Total Days",
+      "Working Days (Calendar)",
       "Days Present",
       "Total Working Hours",
       "Avg Daily Hours",
@@ -407,13 +443,10 @@ export function HrMetricsMatrix() {
       {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
               Performance & Attendance Report
             </h1>
-            <Badge variant="outline" className="font-mono text-xs">
-              {reportData?.period_label || "Monthly"}
-            </Badge>
             {activeOrg?.name ? (
               <Badge variant="secondary" className="text-xs font-normal">
                 Org: {activeOrg.name}
@@ -425,215 +458,42 @@ export function HrMetricsMatrix() {
             hours, and task completion performance matrix.
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
             disabled={loading || !filteredRows.length}
-            className="gap-1.5 shadow-sm"
+            className="h-8 gap-1.5 shadow-2xs text-xs"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
             Export CSV
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 shadow-2xs text-xs"
+          >
+            <Link href={HR_CALENDAR_PATH}>
+              <Calendar className="h-3.5 w-3.5" />
+              Calendar & Holidays
+            </Link>
           </Button>
           <Button
             asChild
             variant="default"
             size="sm"
-            className="gap-1.5 shadow-sm"
+            className="h-8 gap-1.5 shadow-2xs text-xs"
           >
             <Link href={EMPLOYEES_BASE_PATH}>
-              <Users className="h-4 w-4" />
+              <Users className="h-3.5 w-3.5" />
               Employee Directory
             </Link>
           </Button>
         </div>
       </header>
-
-      {/* Control / Filters Bar */}
-      <Card className="border-border/80 bg-card/60 shadow-sm backdrop-blur-sm">
-        <CardContent className="p-4 sm:p-5 space-y-4">
-          {/* Quick presets */}
-          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-border/50 text-xs">
-            <span className="font-semibold text-muted-foreground mr-1">Quick Presets:</span>
-            <button
-              type="button"
-              onClick={() => handleSelectPreset(7, 2026)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                selectedMonth === 7 && selectedYear === 2026
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted hover:bg-muted/80 text-foreground"
-              }`}
-            >
-              July 2026 (Demo Sheet)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectPreset(8, 2026)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                selectedMonth === 8 && selectedYear === 2026
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted hover:bg-muted/80 text-foreground"
-              }`}
-            >
-              August 2026
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectPreset(6, 2026)}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                selectedMonth === 6 && selectedYear === 2026
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted hover:bg-muted/80 text-foreground"
-              }`}
-            >
-              June 2026
-            </button>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 items-end">
-            {/* Month Picker */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-primary" />
-                Month
-              </label>
-              <Select
-                value={selectedMonth.toString()}
-                onValueChange={(val) => setSelectedMonth(parseInt(val, 10))}
-              >
-                <SelectTrigger className="h-9 bg-background">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m) => (
-                    <SelectItem key={m.value} value={m.value.toString()}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Year Picker */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Year
-              </label>
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(val) => setSelectedYear(parseInt(val, 10))}
-              >
-                <SelectTrigger className="h-9 bg-background">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((y) => (
-                    <SelectItem key={y} value={y.toString()}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Total Working Days (Editable) */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Total Working Days
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleResetDays}
-                      className="text-[11px] text-primary hover:underline"
-                    >
-                      Auto
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Reset to standard business days (Mon-Fri) in month
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex gap-1.5">
-                <Input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={customDays}
-                  onChange={(e) => setCustomDays(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleApplyCustomDays();
-                  }}
-                  placeholder="e.g. 22"
-                  className="h-9 bg-background font-mono tabular-nums"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleApplyCustomDays}
-                  className="h-9 px-2.5 shrink-0"
-                >
-                  Apply
-                </Button>
-              </div>
-            </div>
-
-            {/* Department Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Filter className="h-3.5 w-3.5 text-primary" />
-                Department
-              </label>
-              <Select
-                value={departmentFilter}
-                onValueChange={setDepartmentFilter}
-              >
-                <SelectTrigger className="h-9 bg-background">
-                  <SelectValue placeholder="All Departments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {availableDepartments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Search Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Search className="h-3.5 w-3.5 text-primary" />
-                Search
-              </label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Filter name or code…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 bg-background pr-8"
-                />
-                {searchQuery ? (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    ×
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Error Banner */}
       {error ? (
@@ -683,34 +543,109 @@ export function HrMetricsMatrix() {
 
       {/* Main Metrics Matrix Table */}
       <Card className="border-border/80 shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle className="text-base font-semibold">
-                Employee Report: {reportData?.period_label || "Selected Period"}
+        <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4 space-y-3">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+            {/* Left: Title + Month/Year Selectors + Working Days Badge */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <CardTitle className="text-base font-semibold whitespace-nowrap">
+                Employee Report:
               </CardTitle>
-              <CardDescription className="text-xs">
-                Showing {filteredRows.length} active employee
-                {filteredRows.length === 1 ? "" : "s"} · Standard working days:{" "}
-                <span className="font-mono font-medium text-foreground">
-                  {reportData?.total_working_days ?? 22} days
+
+              {/* Month Picker */}
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(val) => setSelectedMonth(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[125px] font-semibold text-xs bg-background shadow-2xs">
+                  <Calendar className="h-3.5 w-3.5 text-primary mr-1 shrink-0" />
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m) => (
+                    <SelectItem key={m.value} value={m.value.toString()}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Year Picker */}
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(val) => setSelectedYear(parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 w-[85px] font-semibold text-xs bg-background shadow-2xs">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Working Days Badge */}
+              <Badge
+                variant="outline"
+                className="font-mono text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary border-primary/20 gap-1.5 shadow-2xs"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                {reportData?.total_working_days ?? 22} Working Days
+                <Link
+                  href={HR_CALENDAR_PATH}
+                  className="text-[10px] text-muted-foreground hover:text-primary hover:underline ml-1"
+                  title="Configure calendar & holidays"
+                >
+                  (Setup)
+                </Link>
+              </Badge>
+            </div>
+
+            {/* Right: Search Box & Legend */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Filter name, code, dept…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 pr-8 bg-background text-xs shadow-2xs"
+                />
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-2.5 text-xs text-muted-foreground shrink-0">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  ≥ 80%
                 </span>
-              </CardDescription>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-blue-500" />
+                  60%–79%
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  &lt; 60%
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Performance ≥ 80%
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                60% – 79%
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                &lt; 60%
-              </span>
-            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            Showing {filteredRows.length} active employee
+            {filteredRows.length === 1 ? "" : "s"} for {reportData?.period_label || "selected period"} · Standard working days derived automatically from Calendar Setup.
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -755,7 +690,7 @@ export function HrMetricsMatrix() {
                       Name
                     </TableHead>
                     <TableHead className="text-center font-semibold text-foreground">
-                      Total Days
+                      Working Days
                     </TableHead>
                     <TableHead className="text-center font-semibold text-foreground">
                       Days Present
@@ -954,75 +889,83 @@ export function HrMetricsMatrix() {
 
       {/* Visual Analytics Section: Workload Share & Performance Chart */}
       {filteredRows.length > 0 && !loading ? (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+        <Card className="border-border/80 shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <CardTitle className="text-base font-semibold">
                   Workload (Load %) vs Task Completion (Performance %)
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Visual comparison across active employees for{" "}
-                  {reportData?.period_label}
+                  {reportData?.period_label || "selected period"}
                 </CardDescription>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-xs bg-indigo-500 shadow-2xs" />
+                  Workload Share (Load %)
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-xs bg-emerald-500 shadow-2xs" />
+                  Task Completion (Performance %)
+                </span>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px] w-full pt-2">
+          <CardContent className="p-6">
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={chartData}
-                  margin={{ top: 10, right: 20, left: -10, bottom: 20 }}
+                  margin={{ top: 15, right: 20, left: -5, bottom: 25 }}
+                  barGap={6}
                 >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <defs>
+                    <linearGradient id="loadBarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.75} />
+                    </linearGradient>
+                    <linearGradient id="perfBarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.75} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff" opacity={0.12} />
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={{ stroke: "#ffffff", opacity: 0.25 }}
+                    tick={{ fontSize: 12, fill: "#ffffff", fontWeight: 500 }}
                     interval={0}
+                    dy={10}
                   />
                   <YAxis
-                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "#ffffff", fontWeight: 500 }}
                     unit="%"
                     domain={[0, 100]}
+                    ticks={[0, 25, 50, 75, 100]}
+                    dx={-2}
                   />
                   <RechartsTooltip
-                    formatter={(val: number, name: string) => [
-                      `${val.toFixed(2)}%`,
-                      name === "load"
-                        ? "Workload Share (Load %)"
-                        : "Task Completion (Performance %)",
-                    ]}
-                    labelFormatter={(label, payload) => {
-                      const item = payload?.[0]?.payload as { fullName?: string };
-                      return item?.fullName || label;
-                    }}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      borderColor: "hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                      fontSize: "12px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    align="right"
-                    wrapperStyle={{ paddingBottom: "10px", fontSize: "12px" }}
+                    content={<CustomChartTooltip />}
+                    cursor={{ fill: "hsl(var(--muted))", opacity: 0.25, radius: 6 }}
                   />
                   <Bar
                     dataKey="load"
                     name="Workload Share (Load %)"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={45}
+                    fill="url(#loadBarGradient)"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={38}
                   />
                   <Bar
                     dataKey="performance"
-                    name="Completion (Performance %)"
-                    fill="#10b981"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={45}
+                    name="Task Completion (Performance %)"
+                    fill="url(#perfBarGradient)"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={38}
                   />
                 </BarChart>
               </ResponsiveContainer>
