@@ -229,15 +229,34 @@ export function HrCalendarSetup() {
     }
   };
 
+type BlankCalendarCell = {
+  isBlank: true;
+  key: string;
+};
+
+type DayCalendarCell = {
+  isBlank: false;
+  key: string;
+  date: string;
+  dayNum: number;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  holidayName?: string;
+  isWorkingDay: boolean;
+  isToday: boolean;
+};
+
+type CalendarCell = BlankCalendarCell | DayCalendarCell;
+
   // Build full month calendar cells with leading blanks for day of week alignment
-  const calendarCells = useMemo(() => {
+  const calendarCells = useMemo<CalendarCell[]>(() => {
     if (!breakdown?.day_breakdown) return [];
     const firstDayOfWeek =
       breakdown.day_breakdown.length > 0
         ? breakdown.day_breakdown[0].day_of_week
         : 0;
 
-    const blanks = Array.from({ length: firstDayOfWeek }).map((_, i) => ({
+    const blanks: BlankCalendarCell[] = Array.from({ length: firstDayOfWeek }).map((_, i) => ({
       isBlank: true,
       key: `blank-${i}`,
     }));
@@ -245,7 +264,7 @@ export function HrCalendarSetup() {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    const days = breakdown.day_breakdown.map((d) => ({
+    const days: DayCalendarCell[] = breakdown.day_breakdown.map((d) => ({
       isBlank: false,
       key: d.date,
       date: d.date,
