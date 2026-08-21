@@ -237,6 +237,12 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     keywords: "skills competency matrix",
     section: "Human resources",
   },
+  {
+    href: "/hr/attendance",
+    label: "Attendance & reminders",
+    keywords: "attendance reminders check-in check-out policy notification hr",
+    section: "Human resources",
+  },
   { href: "/workspace/attendance", label: "Attendance", section: "Workspace" },
   {
     href: "/workspace/attendance/timesheet",

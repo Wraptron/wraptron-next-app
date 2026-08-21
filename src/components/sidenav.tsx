@@ -35,6 +35,7 @@ import {
   Info,
   Bug,
   Activity,
+  BellRing,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -287,6 +288,12 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
     label: "Calendar & holidays",
     icon: Calendar,
     href: "/hr/calendar",
+  },
+  {
+    id: "attendance-reminders",
+    label: "Attendance & reminders",
+    icon: BellRing,
+    href: "/hr/attendance",
   },
   {
     id: "skills-matrix",
