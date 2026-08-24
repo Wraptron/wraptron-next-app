@@ -307,6 +307,17 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
             size="sm"
             className="gap-1.5 shadow-sm"
           >
+            <Link href="/workspace/attendance/hr">
+              <Clock className="h-4 w-4" />
+              Attendance Reminders
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shadow-sm"
+          >
             <Link href={HR_METRICS_PATH}>
               Performance Matrix
               <ArrowRight className="h-4 w-4" />

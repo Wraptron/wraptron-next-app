@@ -107,7 +107,7 @@ export default function AttendancePage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
             <p className="text-muted-foreground mt-1">

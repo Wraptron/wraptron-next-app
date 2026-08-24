@@ -1841,7 +1841,39 @@ export const attendanceApi = {
   }> => {
     return fetchApi("/api/attendance/team");
   },
+  getSettings: async (): Promise<{ settings: AttendanceSettings }> => {
+    return fetchApi("/api/attendance/settings");
+  },
+  updateSettings: async (
+    data: Partial<AttendanceSettings>,
+  ): Promise<{ settings: AttendanceSettings; message: string }> => {
+    return fetchApi("/api/attendance/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  triggerReminders: async (): Promise<{
+    success: boolean;
+    message: string;
+    stats: { checkInRemindersSent: number; checkOutRemindersSent: number };
+  }> => {
+    return fetchApi("/api/attendance/reminders/trigger", {
+      method: "POST",
+    });
+  },
 };
+
+export interface AttendanceSettings {
+  organization_id: number;
+  enable_checkin_reminder: boolean;
+  checkin_reminder_time: string;
+  enable_checkout_reminder: boolean;
+  checkout_reminder_time: string;
+  timezone: string;
+  exclude_weekends: boolean;
+  exclude_holidays: boolean;
+  updated_at?: string;
+}
 
 // ============================================================================
 // CRM Module Types and API
