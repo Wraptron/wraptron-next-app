@@ -22,12 +22,12 @@ import {
   Bell,
   CheckCircle2,
   AlertTriangle,
-  Play,
   Loader2,
   Save,
   Globe,
   ShieldCheck,
 } from "lucide-react";
+import { TimePicker } from "@/components/ui/time-picker";
 import Link from "next/link";
 import { attendanceApi, type AttendanceSettings, getApiErrorMessage } from "@/lib/api";
 
@@ -48,13 +48,8 @@ export function HrAttendancePolicy() {
 
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [testingReminders, setTestingReminders] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{
-    checkInRemindersSent: number;
-    checkOutRemindersSent: number;
-  } | null>(null);
 
   const [settings, setSettings] = useState<AttendanceSettings>({
     organization_id: 0,
@@ -101,7 +96,6 @@ export function HrAttendancePolicy() {
       setSavingSettings(true);
       setErrorMessage(null);
       setSaveSuccessMessage(null);
-      setTestResult(null);
 
       const payload = {
         ...settings,
@@ -133,42 +127,33 @@ export function HrAttendancePolicy() {
     }
   };
 
-  const handleTestRun = async () => {
-    try {
-      setTestingReminders(true);
-      setErrorMessage(null);
-      setTestResult(null);
-      const res = await attendanceApi.triggerReminders();
-      setTestResult(res.stats);
-    } catch (err) {
-      console.error("Failed to run test reminder check:", err);
-      setErrorMessage(getApiErrorMessage(err, "Failed to trigger reminder check."));
-    } finally {
-      setTestingReminders(false);
-    }
-  };
-
   const isAnyReminderActive = settings.enable_checkin_reminder || settings.enable_checkout_reminder;
 
   return (
-    <div className="w-full space-y-6 px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      {/* Top Header & Breadcrumb */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl text-foreground">
-            Attendance & Reminders
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure automated morning check-in and evening check-out reminder notifications for your company.
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <Link href="/hr" className="hover:underline flex items-center gap-1">
+              <ArrowLeft className="h-3 w-3" />
+              HR Portal
+            </Link>
+            <span>/</span>
+            <span className="text-foreground font-medium">Attendance & Reminders</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Attendance Reminder Policy</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure automated check-in and check-out email notification schedules for your team.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={isAnyReminderActive ? "default" : "secondary"} className="text-xs">
-            {isAnyReminderActive ? "Reminders Active" : "Reminders Inactive"}
+          <Badge variant={isAnyReminderActive ? "default" : "outline"} className="px-3 py-1 text-xs">
+            {isAnyReminderActive ? "Reminders Active" : "Reminders Disabled"}
           </Badge>
-          <Link href="/workspace/attendance">
-            <Button variant="outline" size="sm" className="text-xs">
-              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-              View Attendance
+          <Link href="/hr/attendance">
+            <Button variant="outline" size="sm" className="gap-1 text-xs">
+              View Logged Attendance
             </Button>
           </Link>
         </div>
@@ -237,15 +222,11 @@ export function HrAttendancePolicy() {
                     <Label htmlFor="checkin_time" className="text-xs font-medium min-w-[130px]">
                       Send Reminder After:
                     </Label>
-                    <Input
-                      id="checkin_time"
-                      type="time"
-                      className="w-36 h-9"
+                    <TimePicker
                       value={settings.checkin_reminder_time}
-                      onChange={(e) =>
-                        setSettings((s) => ({ ...s, checkin_reminder_time: e.target.value }))
+                      onChange={(val) =>
+                        setSettings((s) => ({ ...s, checkin_reminder_time: val }))
                       }
-                      required
                     />
                     <span className="text-xs text-muted-foreground">
                       (e.g., 09:20 AM)
@@ -279,18 +260,14 @@ export function HrAttendancePolicy() {
                     <Label htmlFor="checkout_time" className="text-xs font-medium min-w-[130px]">
                       Send Reminder After:
                     </Label>
-                    <Input
-                      id="checkout_time"
-                      type="time"
-                      className="w-36 h-9"
+                    <TimePicker
                       value={settings.checkout_reminder_time}
-                      onChange={(e) =>
-                        setSettings((s) => ({ ...s, checkout_reminder_time: e.target.value }))
+                      onChange={(val) =>
+                        setSettings((s) => ({ ...s, checkout_reminder_time: val }))
                       }
-                      required
                     />
                     <span className="text-xs text-muted-foreground">
-                      (e.g., 06:00 PM / 18:00)
+                      (e.g., 06:00 PM)
                     </span>
                   </div>
                 )}
@@ -350,23 +327,7 @@ export function HrAttendancePolicy() {
               </div>
 
               {/* 4. Action Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestRun}
-                  disabled={testingReminders || savingSettings}
-                  className="text-xs flex items-center gap-1.5"
-                >
-                  {testingReminders ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Play className="h-3.5 w-3.5 text-primary" />
-                  )}
-                  Test Reminder Check Now
-                </Button>
-
+              <div className="flex items-center justify-end gap-3 pt-2 border-t">
                 <Button
                   type="submit"
                   size="sm"
@@ -381,19 +342,6 @@ export function HrAttendancePolicy() {
                   Save Reminder Settings
                 </Button>
               </div>
-
-              {/* Test results indicator */}
-              {testResult && (
-                <div className="p-3 bg-muted rounded-lg text-xs space-y-1">
-                  <p className="font-semibold text-foreground">Test Run Result:</p>
-                  <p className="text-muted-foreground">
-                    • Check-in reminders sent: <strong>{testResult.checkInRemindersSent}</strong>
-                  </p>
-                  <p className="text-muted-foreground">
-                    • Check-out reminders sent: <strong>{testResult.checkOutRemindersSent}</strong>
-                  </p>
-                </div>
-              )}
             </form>
           )}
         </CardContent>

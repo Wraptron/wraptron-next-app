@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { authApi, setAuthToken, setActiveOrgId, type User } from "@/lib/api";
+import { authApi, setAuthToken, setActiveOrgId, ApiError, type User } from "@/lib/api";
 import { buildNavAccess, defaultPostLoginPath } from "@/lib/nav-access";
 import {
   effectiveRole,
@@ -72,8 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
     } catch (error) {
       console.error("❌ Auth check failed:", error);
-      // Only clear token if it's actually invalid (401), not for network errors
-      if (error instanceof Error && error.message.includes("401")) {
+      // Clear token if it's actually invalid (401), not for network errors
+      if (
+        (error instanceof ApiError && error.status === 401) ||
+        (error instanceof Error && error.message.includes("401"))
+      ) {
         setUser(null);
         setAuthToken(null);
       }
