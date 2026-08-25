@@ -1842,7 +1842,25 @@ export const attendanceApi = {
     return fetchApi("/api/attendance/team");
   },
   getSettings: async (): Promise<{ settings: AttendanceSettings }> => {
-    return fetchApi("/api/attendance/settings");
+    try {
+      return await fetchApi("/api/attendance/settings");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        return {
+          settings: {
+            organization_id: 0,
+            enable_checkin_reminder: false,
+            checkin_reminder_time: "09:20:00",
+            enable_checkout_reminder: false,
+            checkout_reminder_time: "18:00:00",
+            timezone: "Asia/Kolkata",
+            exclude_weekends: true,
+            exclude_holidays: true,
+          },
+        };
+      }
+      throw err;
+    }
   },
   updateSettings: async (
     data: Partial<AttendanceSettings>,
