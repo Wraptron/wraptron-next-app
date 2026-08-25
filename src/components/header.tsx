@@ -159,7 +159,9 @@ export default function TopNavbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/api/placeholder/32/32" alt="Profile" />
+                  {((user as any)?.avatar_url || (user as any)?.avatar) ? (
+                    <AvatarImage src={(user as any)?.avatar_url || (user as any)?.avatar} alt="Profile" />
+                  ) : null}
                   <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
