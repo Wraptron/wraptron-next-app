@@ -567,6 +567,8 @@ export interface Task {
   id: number;
   project_id: number;
   assigned_employee_id?: number | null;
+  approver_employee_id?: number | null;
+  approver_name?: string | null;
   title: string;
   description?: string;
   status: string;
@@ -591,6 +593,7 @@ export interface CreateTaskInput {
   title: string;
   description?: string;
   assigned_employee_id?: number | null;
+  approver_employee_id?: number | null;
   status?: string;
   end_date?: string;
   priority?: string;
@@ -1233,6 +1236,7 @@ export interface Product {
   is_featured?: boolean;
   featured_sort_order?: number;
   image_url?: string;
+  hsn_code?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1289,6 +1293,7 @@ export interface CreateProductInput {
   is_featured?: boolean;
   featured_sort_order?: number;
   image_url?: string;
+  hsn_code?: string | null;
 }
 
 export interface ProductCategory {
@@ -1440,7 +1445,7 @@ export interface Employee {
 }
 
 export interface CreateEmployeeInput {
-  emp_code: string;
+  emp_code?: string;
   first_name: string;
   middle_name?: string;
   last_name: string;
@@ -2743,6 +2748,8 @@ export interface BoardTask {
   branch_name: string | null;
   assigned_employee_id: number | null;
   assignee_name: string | null;
+  approver_employee_id: number | null;
+  approver_name: string | null;
   pr_count: number;
   latest_pr_state: "open" | "merged" | "closed" | null;
   created_at: string;
@@ -2771,7 +2778,7 @@ export interface TaskActivityEntry {
   new_value: string | null;
   changed_by: string | null;
   created_at: string;
-  /** Resolved employee name when field_name is assigned_employee_id */
+  /** Resolved employee name when field_name is assigned_employee_id or approver_employee_id */
   new_assignee_name?: string | null;
   old_assignee_name?: string | null;
 }
@@ -2792,6 +2799,7 @@ export interface TaskDetail extends BoardTask {
 export interface TaskBoardFilters {
   project_id?: number;
   assigned_employee_id?: number;
+  approver_employee_id?: number;
   status?: string;
   category?: WorkflowCategory;
   q?: string;
@@ -2811,6 +2819,9 @@ export const tasksApi = {
     if (filters?.assigned_employee_id) {
       params.set("assigned_employee_id", String(filters.assigned_employee_id));
     }
+    if (filters?.approver_employee_id) {
+      params.set("approver_employee_id", String(filters.approver_employee_id));
+    }
     if (filters?.status) params.set("status", filters.status);
     if (filters?.category) params.set("category", filters.category);
     if (filters?.q) params.set("q", filters.q);
@@ -2827,6 +2838,7 @@ export const tasksApi = {
     title: string;
     description?: string;
     assigned_employee_id?: number | null;
+    approver_employee_id?: number | null;
     priority?: string;
     end_date?: string | null;
   }): Promise<BoardTask> => {
@@ -2843,6 +2855,7 @@ export const tasksApi = {
       description?: string | null;
       status?: string;
       assigned_employee_id?: number | null;
+      approver_employee_id?: number | null;
       end_date?: string | null;
       priority?: string;
     },

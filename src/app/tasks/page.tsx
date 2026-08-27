@@ -1,7 +1,7 @@
 "use client";
 
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   employeesApi,
   projectsApi,
@@ -64,7 +64,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { isTaskOverdue } from "@/lib/filter-tasks-client-side";
 import {
+  AlertTriangle,
   Check,
   Copy,
   GitMerge,
@@ -81,13 +83,16 @@ function canMove(
   to: WorkflowCategory,
 ): { allowed: boolean; reason?: string } {
   if (from === to) return { allowed: true };
+  if (from === "review" && to === "done") {
+    return { allowed: true };
+  }
   const r = (role ?? "").toLowerCase();
   if (r === "admin") return { allowed: true };
   if (r !== "staff") return { allowed: false, reason: "Staff access required" };
   if (from === "done" || to === "done") {
     return {
       allowed: false,
-      reason: "Only admins can move tasks into or out of Done",
+      reason: "Only admins or designated approvers can move tasks into or out of Done",
     };
   }
   if (
@@ -252,6 +257,9 @@ function TaskBoardCard({
 
 export default function TasksBoardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const overdueParam = searchParams.get("overdue") === "true";
+
   const { user } = useAuth();
   const { setTitle } = usePageTitle();
   const [viewMode, setViewMode] = useCollectionViewMode(
@@ -270,6 +278,30 @@ export default function TasksBoardPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const [overdueOnly, setOverdueOnly] = useState(overdueParam);
+
+  useEffect(() => {
+    if (searchParams.has("overdue")) {
+      setOverdueOnly(searchParams.get("overdue") === "true");
+    }
+  }, [searchParams]);
+
+  const handleOverdueChange = useCallback(
+    (checked: boolean) => {
+      setOverdueOnly(checked);
+      const params = new URLSearchParams(searchParams.toString());
+      if (checked) {
+        params.set("overdue", "true");
+      } else {
+        params.delete("overdue");
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `/tasks?${queryString}` : "/tasks", {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
 
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
     {},
@@ -287,7 +319,7 @@ export default function TasksBoardPage() {
 
   useEffect(() => {
     setSelectedTaskIds([]);
-  }, [projectFilter, assigneeFilter, search, myTasksOnly]);
+  }, [projectFilter, assigneeFilter, search, myTasksOnly, overdueOnly]);
 
   useEffect(() => {
     setTitle("Tasks");
@@ -369,6 +401,9 @@ export default function TasksBoardPage() {
     if (myTasksOnly && myEmployeeId != null) {
       result = result.filter((t) => t.assigned_employee_id === myEmployeeId);
     }
+    if (overdueOnly) {
+      result = result.filter(isTaskOverdue);
+    }
     const query = search.trim().toLowerCase();
     if (query) {
       result = result.filter(
@@ -379,7 +414,7 @@ export default function TasksBoardPage() {
       );
     }
     return result;
-  }, [tasks, myTasksOnly, myEmployeeId, search]);
+  }, [tasks, myTasksOnly, myEmployeeId, overdueOnly, search]);
 
   const tasksById = useMemo(() => {
     const map = new Map<number, BoardTask>();
@@ -466,6 +501,27 @@ export default function TasksBoardPage() {
     [loadTasks],
   );
 
+  const getApproverOptionsForTask = useCallback(
+    (task: BoardTask) => {
+      if (
+        task.approver_employee_id != null &&
+        !employeeOptions.some((option) => option.id === task.approver_employee_id)
+      ) {
+        return [
+          {
+            id: task.approver_employee_id,
+            label:
+              task.approver_name?.trim() ||
+              `Employee #${task.approver_employee_id}`,
+          },
+          ...employeeOptions,
+        ];
+      }
+      return employeeOptions;
+    },
+    [employeeOptions],
+  );
+
   const patchTask = useCallback(
     async (
       task: BoardTask,
@@ -476,6 +532,8 @@ export default function TasksBoardPage() {
           | "category"
           | "assigned_employee_id"
           | "assignee_name"
+          | "approver_employee_id"
+          | "approver_name"
           | "end_date"
           | "priority"
         >
@@ -483,6 +541,7 @@ export default function TasksBoardPage() {
       payload: {
         status?: string;
         assigned_employee_id?: number | null;
+        approver_employee_id?: number | null;
         end_date?: string | null;
         priority?: string;
       },
@@ -552,6 +611,26 @@ export default function TasksBoardPage() {
         { assigned_employee_id: assignedEmployeeId, assignee_name: nextAssigneeName },
         { assigned_employee_id: assignedEmployeeId },
         "Failed to update assignee",
+      );
+    },
+    [employeeOptions, patchTask],
+  );
+
+  const handleInlineApproverChange = useCallback(
+    async (task: BoardTask, value: string) => {
+      const approverEmployeeId = value === "unassigned" ? null : parseInt(value, 10);
+      if (value !== "unassigned" && Number.isNaN(approverEmployeeId)) return;
+      if (approverEmployeeId === task.approver_employee_id) return;
+      const nextApproverName =
+        approverEmployeeId == null
+          ? null
+          : employeeOptions.find((option) => option.id === approverEmployeeId)
+              ?.label ?? null;
+      await patchTask(
+        task,
+        { approver_employee_id: approverEmployeeId, approver_name: nextApproverName },
+        { approver_employee_id: approverEmployeeId },
+        "Failed to update approver",
       );
     },
     [employeeOptions, patchTask],
@@ -711,6 +790,44 @@ export default function TasksBoardPage() {
         },
       },
       {
+        id: "approver",
+        header: "Approver",
+        sortValue: (item) =>
+          tasksById.get(Number(item.id))?.approver_name ?? "",
+        className: "w-[230px]",
+        cell: (item) => {
+          const task = tasksById.get(Number(item.id));
+          if (!task) return "—";
+          const isUpdating = !!updatingTaskIds[task.id];
+          const isPending = task.id < 0;
+          const options = getApproverOptionsForTask(task);
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <select
+                value={
+                  task.approver_employee_id != null
+                    ? String(task.approver_employee_id)
+                    : "unassigned"
+                }
+                onChange={(event) =>
+                  void handleInlineApproverChange(task, event.target.value)
+                }
+                disabled={isUpdating || isPending}
+                className={cn(listInlineSelectClassName, "w-[170px]")}
+                aria-label={`Approver for ${task.display_key}`}
+              >
+                <option value="unassigned">Unassigned</option>
+                {options.map((option) => (
+                  <option key={option.id} value={String(option.id)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        },
+      },
+      {
         id: "deadline",
         header: "Deadline",
         className: "w-[190px]",
@@ -769,37 +886,13 @@ export default function TasksBoardPage() {
           );
         },
       },
-      {
-        id: "prs",
-        header: "PRs",
-        className: "w-[90px]",
-        sortValue: (item) => tasksById.get(Number(item.id))?.pr_count ?? 0,
-        cell: (item) => {
-          const task = tasksById.get(Number(item.id));
-          if (!task || task.pr_count === 0) {
-            return <span className="text-muted-foreground">—</span>;
-          }
-          const prMeta = task.latest_pr_state
-            ? PR_STATE_META[task.latest_pr_state]
-            : null;
-          return (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-xs font-medium",
-                prMeta?.className,
-              )}
-            >
-              {prMeta?.icon}
-              {task.pr_count}
-            </span>
-          );
-        },
-      },
     ],
     [
       employeeOptions,
       getAssigneeOptionsForTask,
+      getApproverOptionsForTask,
       handleInlineAssigneeChange,
+      handleInlineApproverChange,
       handleInlineDeadlineChange,
       handleInlinePriorityChange,
       handleInlineStatusChange,
@@ -868,6 +961,8 @@ export default function TasksBoardPage() {
       branch_name: null,
       assigned_employee_id: assignedEmployeeId,
       assignee_name: assigneeName,
+      approver_employee_id: null,
+      approver_name: null,
       pr_count: 0,
       latest_pr_state: null,
       created_at: now,
@@ -1114,7 +1209,9 @@ export default function TasksBoardPage() {
     }
   };
 
-  const emptyMessage = "No tasks found. Create one to get started.";
+  const emptyMessage = overdueOnly
+    ? "No overdue tasks found."
+    : "No tasks found. Create one to get started.";
 
   const renderTasks = (mode: CollectionViewMode) => {
     if (mode === "list") {
@@ -1223,8 +1320,27 @@ export default function TasksBoardPage() {
             checked={myTasksOnly}
             onCheckedChange={setMyTasksOnly}
           />
-          <Label htmlFor="my-tasks" className="text-sm">
+          <Label htmlFor="my-tasks" className="text-sm cursor-pointer">
             My tasks
+          </Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="overdue-tasks"
+            checked={overdueOnly}
+            onCheckedChange={handleOverdueChange}
+          />
+          <Label
+            htmlFor="overdue-tasks"
+            className="flex items-center gap-1.5 text-sm cursor-pointer"
+          >
+            <AlertTriangle
+              className={cn(
+                "h-3.5 w-3.5",
+                overdueOnly ? "text-red-500" : "text-muted-foreground",
+              )}
+            />
+            Overdue tasks
           </Label>
         </div>
         <CollectionPageToolbar
