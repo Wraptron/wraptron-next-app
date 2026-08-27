@@ -1,7 +1,7 @@
 "use client";
 
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   employeesApi,
   projectsApi,
@@ -64,7 +64,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { isTaskOverdue } from "@/lib/filter-tasks-client-side";
 import {
+  AlertTriangle,
   Check,
   Copy,
   GitMerge,
@@ -255,6 +257,9 @@ function TaskBoardCard({
 
 export default function TasksBoardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const overdueParam = searchParams.get("overdue") === "true";
+
   const { user } = useAuth();
   const { setTitle } = usePageTitle();
   const [viewMode, setViewMode] = useCollectionViewMode(
@@ -273,6 +278,30 @@ export default function TasksBoardPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const [overdueOnly, setOverdueOnly] = useState(overdueParam);
+
+  useEffect(() => {
+    if (searchParams.has("overdue")) {
+      setOverdueOnly(searchParams.get("overdue") === "true");
+    }
+  }, [searchParams]);
+
+  const handleOverdueChange = useCallback(
+    (checked: boolean) => {
+      setOverdueOnly(checked);
+      const params = new URLSearchParams(searchParams.toString());
+      if (checked) {
+        params.set("overdue", "true");
+      } else {
+        params.delete("overdue");
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `/tasks?${queryString}` : "/tasks", {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
 
   const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>(
     {},
@@ -290,7 +319,7 @@ export default function TasksBoardPage() {
 
   useEffect(() => {
     setSelectedTaskIds([]);
-  }, [projectFilter, assigneeFilter, search, myTasksOnly]);
+  }, [projectFilter, assigneeFilter, search, myTasksOnly, overdueOnly]);
 
   useEffect(() => {
     setTitle("Tasks");
@@ -372,6 +401,9 @@ export default function TasksBoardPage() {
     if (myTasksOnly && myEmployeeId != null) {
       result = result.filter((t) => t.assigned_employee_id === myEmployeeId);
     }
+    if (overdueOnly) {
+      result = result.filter(isTaskOverdue);
+    }
     const query = search.trim().toLowerCase();
     if (query) {
       result = result.filter(
@@ -382,7 +414,7 @@ export default function TasksBoardPage() {
       );
     }
     return result;
-  }, [tasks, myTasksOnly, myEmployeeId, search]);
+  }, [tasks, myTasksOnly, myEmployeeId, overdueOnly, search]);
 
   const tasksById = useMemo(() => {
     const map = new Map<number, BoardTask>();
@@ -1177,7 +1209,9 @@ export default function TasksBoardPage() {
     }
   };
 
-  const emptyMessage = "No tasks found. Create one to get started.";
+  const emptyMessage = overdueOnly
+    ? "No overdue tasks found."
+    : "No tasks found. Create one to get started.";
 
   const renderTasks = (mode: CollectionViewMode) => {
     if (mode === "list") {
@@ -1286,8 +1320,27 @@ export default function TasksBoardPage() {
             checked={myTasksOnly}
             onCheckedChange={setMyTasksOnly}
           />
-          <Label htmlFor="my-tasks" className="text-sm">
+          <Label htmlFor="my-tasks" className="text-sm cursor-pointer">
             My tasks
+          </Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="overdue-tasks"
+            checked={overdueOnly}
+            onCheckedChange={handleOverdueChange}
+          />
+          <Label
+            htmlFor="overdue-tasks"
+            className="flex items-center gap-1.5 text-sm cursor-pointer"
+          >
+            <AlertTriangle
+              className={cn(
+                "h-3.5 w-3.5",
+                overdueOnly ? "text-red-500" : "text-muted-foreground",
+              )}
+            />
+            Overdue tasks
           </Label>
         </div>
         <CollectionPageToolbar

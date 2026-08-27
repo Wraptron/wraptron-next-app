@@ -323,7 +323,7 @@ export function ProjectDashboard() {
           description="Open tasks past due date"
           icon={AlertTriangle}
           loading={loading}
-          href="/projects/tasks?overdue=true"
+          href="/tasks?overdue=true"
         />
       </section>
 

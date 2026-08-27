@@ -36,8 +36,12 @@ function parseDateOnly(value?: string | null): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function isTaskOverdue(task: Task): boolean {
-  if (isTaskCompleted(task.status)) return false;
+export function isTaskOverdue(task: {
+  status?: string | null;
+  category?: string | null;
+  end_date?: string | null;
+}): boolean {
+  if (isTaskCompleted(task.status) || task.category === "done") return false;
   const endDate = parseDateOnly(task.end_date);
   if (!endDate) return false;
   return endDate.getTime() < Date.now();
