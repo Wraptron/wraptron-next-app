@@ -24,7 +24,7 @@ export function normalizeTaskStatus(status?: string | null): string {
   return STATUS_ALIASES[key] ?? key;
 }
 
-function isTaskCompleted(status?: string | null): boolean {
+export function isTaskCompleted(status?: string | null): boolean {
   if (!status?.trim()) return false;
   const key = status.toLowerCase().replace(/\s/g, "_");
   return key === "done" || key === "completed";
@@ -45,6 +45,24 @@ export function isTaskOverdue(task: {
   const endDate = parseDateOnly(task.end_date);
   if (!endDate) return false;
   return endDate.getTime() < Date.now();
+}
+
+export function isTaskUnassigned(task: {
+  status?: string | null;
+  category?: string | null;
+  assigned_employee_id?: number | null;
+}): boolean {
+  if (isTaskCompleted(task.status) || task.category === "done") return false;
+  return !task.assigned_employee_id;
+}
+
+export function isTaskNoDeadline(task: {
+  status?: string | null;
+  category?: string | null;
+  end_date?: string | null;
+}): boolean {
+  if (isTaskCompleted(task.status) || task.category === "done") return false;
+  return !task.end_date?.trim();
 }
 
 function isDateInRange(
