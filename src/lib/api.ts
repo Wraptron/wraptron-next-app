@@ -769,6 +769,8 @@ export interface ProjectDashboardData {
   completed_tasks: number;
   total_tasks: number;
   overdue_tasks: number;
+  unassigned_tasks: number;
+  no_deadline_tasks: number;
   projects_by_member: ProjectDashboardMemberProjects[];
   member_tasks: ProjectDashboardMemberTasks[];
   active_projects_by_status: ProjectDashboardStatusCount[];

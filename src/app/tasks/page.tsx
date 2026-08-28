@@ -64,7 +64,11 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { isTaskOverdue } from "@/lib/filter-tasks-client-side";
+import {
+  isTaskOverdue,
+  isTaskUnassigned,
+  isTaskNoDeadline,
+} from "@/lib/filter-tasks-client-side";
 import {
   AlertTriangle,
   Check,
@@ -259,6 +263,8 @@ export default function TasksBoardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const overdueParam = searchParams.get("overdue") === "true";
+  const unassignedParam = searchParams.get("unassigned") === "true";
+  const noDeadlineParam = searchParams.get("no_deadline") === "true";
 
   const { user } = useAuth();
   const { setTitle } = usePageTitle();
@@ -279,10 +285,18 @@ export default function TasksBoardPage() {
   const [search, setSearch] = useState("");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(overdueParam);
+  const [unassignedOnly, setUnassignedOnly] = useState(unassignedParam);
+  const [noDeadlineOnly, setNoDeadlineOnly] = useState(noDeadlineParam);
 
   useEffect(() => {
     if (searchParams.has("overdue")) {
       setOverdueOnly(searchParams.get("overdue") === "true");
+    }
+    if (searchParams.has("unassigned")) {
+      setUnassignedOnly(searchParams.get("unassigned") === "true");
+    }
+    if (searchParams.has("no_deadline")) {
+      setNoDeadlineOnly(searchParams.get("no_deadline") === "true");
     }
   }, [searchParams]);
 
@@ -404,6 +418,12 @@ export default function TasksBoardPage() {
     if (overdueOnly) {
       result = result.filter(isTaskOverdue);
     }
+    if (unassignedOnly) {
+      result = result.filter(isTaskUnassigned);
+    }
+    if (noDeadlineOnly) {
+      result = result.filter(isTaskNoDeadline);
+    }
     const query = search.trim().toLowerCase();
     if (query) {
       result = result.filter(
@@ -414,7 +434,15 @@ export default function TasksBoardPage() {
       );
     }
     return result;
-  }, [tasks, myTasksOnly, myEmployeeId, overdueOnly, search]);
+  }, [
+    tasks,
+    myTasksOnly,
+    myEmployeeId,
+    overdueOnly,
+    unassignedOnly,
+    noDeadlineOnly,
+    search,
+  ]);
 
   const tasksById = useMemo(() => {
     const map = new Map<number, BoardTask>();

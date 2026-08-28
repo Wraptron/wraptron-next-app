@@ -5,9 +5,11 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  CalendarOff,
   CheckSquare,
   FolderKanban,
   Loader2,
+  UserX,
   Users,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -324,6 +326,13 @@ export function ProjectDashboard() {
           icon={AlertTriangle}
           loading={loading}
           href="/tasks?overdue=true"
+        />
+        <MetricCard
+          title="Unassigned & No due date"
+          value={`${(dashboard?.unassigned_tasks ?? 0).toLocaleString()} / ${(dashboard?.no_deadline_tasks ?? 0).toLocaleString()}`}
+          description="Unassigned / No due date tasks"
+          icon={UserX}
+          loading={loading}
         />
       </section>
 
