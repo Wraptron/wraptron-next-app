@@ -8,7 +8,9 @@ import {
   CalendarOff,
   CheckSquare,
   FolderKanban,
+  ListChecks,
   Loader2,
+  PlusCircle,
   UserX,
   Users,
 } from "lucide-react";
@@ -78,6 +80,33 @@ function chartHeight(rowCount: number, min = 240, max = 480) {
   return Math.min(max, Math.max(min, rowCount * 36 + 48));
 }
 
+type MetricVariant = "default" | "success" | "warning" | "amber" | "info";
+
+const variantStyles: Record<
+  MetricVariant,
+  { iconBg: string; borderAccent?: string }
+> = {
+  default: {
+    iconBg: "bg-primary/10 text-primary",
+  },
+  success: {
+    iconBg: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
+    borderAccent: "hover:border-emerald-500/40",
+  },
+  warning: {
+    iconBg: "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400",
+    borderAccent: "hover:border-rose-500/40",
+  },
+  amber: {
+    iconBg: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+    borderAccent: "hover:border-amber-500/40",
+  },
+  info: {
+    iconBg: "bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400",
+    borderAccent: "hover:border-sky-500/40",
+  },
+};
+
 function MetricCard({
   title,
   value,
@@ -85,6 +114,8 @@ function MetricCard({
   icon: Icon,
   loading,
   href,
+  variant = "default",
+  badge,
 }: {
   title: string;
   value: string;
@@ -92,29 +123,46 @@ function MetricCard({
   icon: React.ComponentType<{ className?: string }>;
   loading?: boolean;
   href?: string;
+  variant?: MetricVariant;
+  badge?: string;
 }) {
+  const styles = variantStyles[variant];
+
   const content = (
     <Card
-      className={
+      className={`group relative overflow-hidden border-border/80 transition-all duration-200 ${
         href
-          ? "border-border/80 transition-colors hover:border-primary/40 hover:bg-muted/30"
-          : "border-border/80"
-      }
+          ? `hover:shadow-md hover:-translate-y-0.5 hover:bg-muted/20 ${styles.borderAccent || "hover:border-primary/40"}`
+          : "hover:shadow-sm"
+      }`}
     >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <CardDescription>{title}</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums">
+        <div className="space-y-1.5 pr-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <CardDescription className="font-medium text-muted-foreground">{title}</CardDescription>
+            {badge ? (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {badge}
+              </span>
+            ) : null}
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight tabular-nums">
             {loading ? "—" : value}
           </CardTitle>
           {description ? (
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground/80">{description}</p>
           ) : null}
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" aria-hidden />
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${styles.iconBg}`}>
+          <Icon className="h-5 w-5" aria-hidden />
         </div>
       </CardHeader>
+      {href ? (
+        <div className="px-6 pb-3 pt-1 flex items-center text-xs font-medium text-muted-foreground/70 group-hover:text-foreground transition-colors">
+          <span>View tasks</span>
+          <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </div>
+      ) : null}
     </Card>
   );
 
@@ -258,9 +306,8 @@ export function ProjectDashboard() {
     [teamWorkloadData],
   );
 
-  const completedTasksValue = loading
-    ? "—"
-    : `${(dashboard?.completed_tasks ?? 0).toLocaleString()} / ${(dashboard?.total_tasks ?? 0).toLocaleString()}`;
+  const totalTasks = dashboard?.total_tasks ?? 0;
+  const completedTasks = dashboard?.completed_tasks ?? 0;
 
   return (
     <div className="w-full px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10 space-y-6">
@@ -303,7 +350,7 @@ export function ProjectDashboard() {
 
       <section
         aria-label="Project metrics"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
       >
         <MetricCard
           title="Active projects"
@@ -311,13 +358,25 @@ export function ProjectDashboard() {
           description={`Projects updated ${periodLabel.toLowerCase()}`}
           icon={FolderKanban}
           loading={loading}
+          variant="default"
+        />
+        <MetricCard
+          title="Total tasks"
+          value={totalTasks.toLocaleString()}
+          description={`All tracked tasks · ${periodLabel.toLowerCase()}`}
+          icon={ListChecks}
+          loading={loading}
+          variant="default"
+          badge="All items"
         />
         <MetricCard
           title="Completed tasks"
-          value={completedTasksValue}
-          description={`Done / total tasks · ${periodLabel.toLowerCase()}`}
+          value={completedTasks.toLocaleString()}
+          description={`Finished tasks · ${periodLabel.toLowerCase()}`}
           icon={CheckSquare}
           loading={loading}
+          variant="success"
+          badge="Done"
         />
         <MetricCard
           title="Overdue tasks"
@@ -326,13 +385,28 @@ export function ProjectDashboard() {
           icon={AlertTriangle}
           loading={loading}
           href="/tasks?overdue=true"
+          variant="warning"
+          badge="Action needed"
         />
         <MetricCard
-          title="Unassigned & No due date"
-          value={`${(dashboard?.unassigned_tasks ?? 0).toLocaleString()} / ${(dashboard?.no_deadline_tasks ?? 0).toLocaleString()}`}
-          description="Unassigned / No due date tasks"
+          title="Unassigned tasks"
+          value={(dashboard?.unassigned_tasks ?? 0).toLocaleString()}
+          description="Tasks requiring assignee"
           icon={UserX}
           loading={loading}
+          href="/tasks?unassigned=true"
+          variant="amber"
+          badge="Unassigned"
+        />
+        <MetricCard
+          title="No due date"
+          value={(dashboard?.no_deadline_tasks ?? 0).toLocaleString()}
+          description="Tasks without target deadline"
+          icon={CalendarOff}
+          loading={loading}
+          href="/tasks?no_deadline=true"
+          variant="info"
+          badge="Unscheduled"
         />
       </section>
 
@@ -518,22 +592,31 @@ export function ProjectDashboard() {
       </div>
 
       <section aria-label="Quick links">
-        <Card className="border-border/80">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
+        <Card className="border-border/80 bg-card/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+              <Users className="h-4 w-4 text-primary" />
               Quick links
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/projects">Projects</Link>
+          <CardContent className="flex flex-wrap gap-2.5">
+            <Button asChild variant="outline" size="sm" className="hover:border-primary/50 transition-colors">
+              <Link href="/projects" className="flex items-center gap-1.5">
+                <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Projects</span>
+              </Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/projects/tasks">Tasks</Link>
+            <Button asChild variant="outline" size="sm" className="hover:border-primary/50 transition-colors">
+              <Link href="/tasks" className="flex items-center gap-1.5">
+                <CheckSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Tasks</span>
+              </Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/projects/new">New project</Link>
+            <Button asChild variant="outline" size="sm" className="hover:border-primary/50 transition-colors">
+              <Link href="/projects/new" className="flex items-center gap-1.5">
+                <PlusCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>New project</span>
+              </Link>
             </Button>
           </CardContent>
         </Card>
