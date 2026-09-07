@@ -100,6 +100,7 @@ type FormState = {
   address: string;
   country: string;
   website: string;
+  companyDescription: string;
   gstin: string;
   gstType: GstTypeId | "";
   portalAccess: "yes" | "no" | "";
@@ -114,6 +115,7 @@ const initialForm: FormState = {
   address: "",
   country: "",
   website: "",
+  companyDescription: "",
   gstin: "",
   gstType: "",
   portalAccess: "",
@@ -244,6 +246,9 @@ export default function CustomerOnboardingPage() {
         address: needsCo ? form.address.trim() : "",
         country: needsCo ? form.country.trim() : "",
         website: needsCo ? form.website.trim() || undefined : undefined,
+        companyDescription: needsCo
+          ? form.companyDescription.trim() || undefined
+          : undefined,
         gstType: form.gstType,
         portalAccess: form.portalAccess as "yes" | "no",
         gstin: gstTypeRequiresGstin(form.gstType)
@@ -409,6 +414,7 @@ export default function CustomerOnboardingPage() {
                                 address: "",
                                 country: "",
                                 website: "",
+                                companyDescription: "",
                               }
                             : {}),
                         }));
@@ -504,7 +510,7 @@ export default function CustomerOnboardingPage() {
                       Company details
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Business identity, location, and website.
+                      Business identity, location, website, and a brief description.
                     </p>
                   </div>
 
@@ -563,6 +569,22 @@ export default function CustomerOnboardingPage() {
                           autoComplete="url"
                         />
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyDescription">
+                        Brief description about your business
+                      </Label>
+                      <Textarea
+                        id="companyDescription"
+                        value={form.companyDescription}
+                        onChange={(e) =>
+                          update("companyDescription", e.target.value)
+                        }
+                        placeholder="What your company does, who you serve, and the products or services you offer"
+                        rows={4}
+                        maxLength={2000}
+                        className="resize-y min-h-[100px]"
+                      />
                     </div>
                   </div>
                 </div>

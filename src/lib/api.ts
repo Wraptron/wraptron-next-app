@@ -1152,6 +1152,7 @@ export interface CustomerOnboardingSubmitInput {
   address: string;
   country: string;
   website?: string;
+  companyDescription?: string;
   gstType: string;
   portalAccess: "yes" | "no";
   gstin?: string;
