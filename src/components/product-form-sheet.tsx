@@ -23,6 +23,7 @@ import {
 const emptyFormState = {
   part_code: "",
   part_name: "",
+  hsn_code: "",
   product_description: "",
   selling_price: "",
   buying_price: "",
@@ -32,6 +33,7 @@ function productToFormState(p: Product) {
   return {
     part_code: p.part_code ?? "",
     part_name: p.part_name ?? "",
+    hsn_code: p.hsn_code ?? "",
     product_description: p.product_description ?? "",
     selling_price:
       p.selling_price != null && !Number.isNaN(p.selling_price)
@@ -87,13 +89,14 @@ export function ProductFormSheet({
       if (isEdit && product) {
         const code = formData.part_code.trim();
         if (!code) {
-          alert("Part code is required.");
+          alert("Product code is required.");
           setLoading(false);
           return;
         }
         const payload: Partial<CreateProductInput> = {
           part_code: code,
           part_name: name,
+          hsn_code: formData.hsn_code.trim() || undefined,
           product_description: formData.product_description.trim() || undefined,
           selling_price: formData.selling_price
             ? parseFloat(formData.selling_price)
@@ -107,6 +110,7 @@ export function ProductFormSheet({
         const payload: CreateProductInput = {
           part_code: `PRD-${Date.now()}`,
           part_name: name,
+          hsn_code: formData.hsn_code.trim() || undefined,
           product_description: formData.product_description.trim() || undefined,
           selling_price: formData.selling_price
             ? parseFloat(formData.selling_price)
@@ -147,7 +151,7 @@ export function ProductFormSheet({
           <SheetTitle>{isEdit ? "Edit product" : "Add product"}</SheetTitle>
           <SheetDescription>
             {isEdit
-              ? "Update part code, name, description, and pricing."
+              ? "Update product code, name, description, and pricing."
               : "Add a new product with name, description, and pricing."}
           </SheetDescription>
         </SheetHeader>
@@ -159,7 +163,7 @@ export function ProductFormSheet({
           <div className="space-y-4 p-4">
             {isEdit && (
               <div className="space-y-2">
-                <Label htmlFor="product-part-code">Part code *</Label>
+                <Label htmlFor="product-part-code">Product code *</Label>
                 <Input
                   id="product-part-code"
                   value={formData.part_code}
@@ -183,6 +187,19 @@ export function ProductFormSheet({
                 }
                 placeholder="e.g. Widget A"
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="product-hsn-code">HSN code</Label>
+              <Input
+                id="product-hsn-code"
+                value={formData.hsn_code}
+                onChange={(e) =>
+                  setFormData({ ...formData, hsn_code: e.target.value })
+                }
+                placeholder="e.g. 84713010"
+                className="font-mono"
               />
             </div>
 

@@ -59,6 +59,7 @@ const initialFormState = {
   title: "",
   description: "",
   assigned_employee_id: "",
+  approver_employee_id: "",
   status: "pending",
   end_date: "",
   billable: "billable",
@@ -180,6 +181,16 @@ export function TaskFormSheet({
             ? {
                 assigned_employee_id: parseInt(
                   formData.assigned_employee_id,
+                  10,
+                ),
+              }
+            : {}),
+        ...(formData.approver_employee_id === "unassigned"
+          ? { approver_employee_id: null }
+          : formData.approver_employee_id
+            ? {
+                approver_employee_id: parseInt(
+                  formData.approver_employee_id,
                   10,
                 ),
               }
@@ -328,6 +339,37 @@ export function TaskFormSheet({
               >
                 <SelectTrigger id="task-assigned-to">
                   <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {`${employee.first_name} ${employee.last_name}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="task-approver">Approver</Label>
+              <Select
+                value={
+                  formData.approver_employee_id === "unassigned" ||
+                  !formData.approver_employee_id
+                    ? "unassigned"
+                    : formData.approver_employee_id
+                }
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    approver_employee_id:
+                      value === "unassigned" ? "unassigned" : value,
+                  })
+                }
+              >
+                <SelectTrigger id="task-approver">
+                  <SelectValue placeholder="Select approver" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>

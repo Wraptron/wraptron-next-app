@@ -76,13 +76,16 @@ function canMove(
   to: WorkflowCategory,
 ): { allowed: boolean; reason?: string } {
   if (from === to) return { allowed: true };
+  if (from === "review" && to === "done") {
+    return { allowed: true };
+  }
   const r = (role ?? "").toLowerCase();
   if (r === "admin") return { allowed: true };
   if (r !== "staff") return { allowed: false, reason: "Staff access required" };
   if (from === "done" || to === "done") {
     return {
       allowed: false,
-      reason: "Only admins can move tasks into or out of Done",
+      reason: "Only admins or designated approvers can move tasks into or out of Done",
     };
   }
   if (
@@ -116,6 +119,13 @@ function describeActivity(entry: TaskDetail["activity"][number]): string {
         return `${who} unassigned the task`;
       }
       return `${who} assigned the task to ${
+        entry.new_assignee_name?.trim() || `employee #${entry.new_value}`
+      }`;
+    case "approver_employee_id":
+      if (!entry.new_value) {
+        return `${who} removed the approver`;
+      }
+      return `${who} set approver to ${
         entry.new_assignee_name?.trim() || `employee #${entry.new_value}`
       }`;
     case "end_date":
@@ -390,6 +400,23 @@ export default function TaskDetailPage() {
     return options;
   }, [employees, task?.assigned_employee_id, task?.assignee_name]);
 
+  const approverOptions = useMemo(() => {
+    const options = employees.map((e) => ({
+      id: e.id,
+      label: `${e.first_name} ${e.last_name}`.trim(),
+    }));
+    if (
+      task?.approver_employee_id != null &&
+      !employees.some((e) => e.id === task.approver_employee_id)
+    ) {
+      options.unshift({
+        id: task.approver_employee_id,
+        label: task.approver_name?.trim() || `Employee #${task.approver_employee_id}`,
+      });
+    }
+    return options;
+  }, [employees, task?.approver_employee_id, task?.approver_name]);
+
   const handleAssigneeChange = async (value: string) => {
     if (!task) return;
     const assigned_employee_id =
@@ -421,6 +448,41 @@ export default function TaskDetailPage() {
       setTask(previous);
       setNotice(
         err instanceof Error ? err.message : "Failed to update assignee",
+      );
+    }
+  };
+
+  const handleApproverChange = async (value: string) => {
+    if (!task) return;
+    const approver_employee_id =
+      value === "unassigned" ? null : parseInt(value, 10);
+    if (value !== "unassigned" && Number.isNaN(approver_employee_id)) return;
+    if (approver_employee_id === task.approver_employee_id) return;
+
+    const nextApproverName =
+      approver_employee_id == null
+        ? null
+        : approverOptions.find((option) => option.id === approver_employee_id)
+            ?.label ?? null;
+
+    const previous = task;
+    setTask((prev) =>
+      prev
+        ? {
+            ...prev,
+            approver_employee_id,
+            approver_name: nextApproverName,
+          }
+        : prev,
+    );
+    try {
+      const updated = await tasksApi.update(task.id, { approver_employee_id });
+      setTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      refreshTaskHistory();
+    } catch (err) {
+      setTask(previous);
+      setNotice(
+        err instanceof Error ? err.message : "Failed to update approver",
       );
     }
   };
@@ -580,6 +642,29 @@ export default function TaskDetailPage() {
             <SelectContent>
               <SelectItem value="unassigned">Unassigned</SelectItem>
               {assigneeOptions.map((e) => (
+                <SelectItem key={e.id} value={String(e.id)}>
+                  {e.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Approver:</span>
+          <Select
+            value={
+              task.approver_employee_id != null
+                ? String(task.approver_employee_id)
+                : "unassigned"
+            }
+            onValueChange={handleApproverChange}
+          >
+            <SelectTrigger className="w-44 h-8">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {approverOptions.map((e) => (
                 <SelectItem key={e.id} value={String(e.id)}>
                   {e.label}
                 </SelectItem>

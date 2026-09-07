@@ -111,7 +111,7 @@ function buildProductTableColumns(
     },
     {
       id: "part_code",
-      header: "Part code",
+      header: "Product code",
       headerClassName: "w-[120px]",
       sortValue: (item) => byId.get(Number(item.id))?.part_code ?? "",
       cell: (item) => {
@@ -119,6 +119,20 @@ function buildProductTableColumns(
         return (
           <span className="font-mono text-sm text-foreground">
             {product?.part_code ?? "—"}
+          </span>
+        );
+      },
+    },
+    {
+      id: "hsn_code",
+      header: "HSN code",
+      headerClassName: "w-[110px]",
+      sortValue: (item) => byId.get(Number(item.id))?.hsn_code ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="font-mono text-xs text-muted-foreground">
+            {product?.hsn_code ?? "—"}
           </span>
         );
       },

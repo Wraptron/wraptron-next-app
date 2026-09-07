@@ -279,7 +279,7 @@ export function EmployeeFormSheet({
     setLoading(true);
     try {
       const payload: CreateEmployeeInput & EmployeeLinkUserPayload = {
-        emp_code: formData.emp_code.trim(),
+        emp_code: formData.emp_code?.trim() || undefined,
         first_name: formData.first_name.trim(),
         middle_name: formData.middle_name?.trim() || undefined,
         last_name: formData.last_name.trim(),
@@ -384,17 +384,6 @@ export function EmployeeFormSheet({
                     required
                   />
                 </div>
-              </div>
-              <div>
-                <Label>Employee Code *</Label>
-                <Input
-                  value={formData.emp_code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, emp_code: e.target.value })
-                  }
-                  required
-                  disabled={!!employee}
-                />
               </div>
               <div>
                 <Label>Father Name</Label>
