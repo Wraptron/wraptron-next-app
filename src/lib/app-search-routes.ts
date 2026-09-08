@@ -273,6 +273,12 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     section: "Tasks",
   },
   {
+    href: "/whois",
+    label: "Domain Logger",
+    keywords: "whois lookup registrar domains dns",
+    section: "Main",
+  },
+  {
     href: "/settings",
     label: "Settings",
     keywords: "preferences profile invoice",

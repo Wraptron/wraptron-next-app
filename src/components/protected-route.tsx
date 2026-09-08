@@ -48,12 +48,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     isClientPortalPath(pathname) ||
     canAccessPath(pathname, navAccess);
 
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    pathname?.startsWith(route),
+  );
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-        pathname?.startsWith(route),
-      );
-
       if (!isPublicRoute) {
         router.push("/login");
       }
@@ -63,19 +63,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (!loading && isAuthenticated && pathname && !pathAllowed) {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, loading, pathname, pathAllowed, router]);
+  }, [isAuthenticated, loading, pathname, pathAllowed, router, isPublicRoute]);
 
-  if (loading) {
+  if (loading && !isPublicRoute) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
-
-  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-    pathname?.startsWith(route),
-  );
 
   if (!isAuthenticated && !isPublicRoute) {
     return (
@@ -93,13 +89,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
   if (
     isAuthenticated &&
     orgsLoaded &&
     !activeOrg &&
     !isSuperAdmin &&
-    !isPublic
+    !isPublicRoute
   ) {
     return <NoOrganizationScreen />;
   }

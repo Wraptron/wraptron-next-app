@@ -3016,6 +3016,74 @@ export const userAppsApi = {
 };
 
 // ============================================================================
+// Domain Logger (WHOIS lookup + saved domains)
+// ============================================================================
+
+export interface ParsedWhois {
+  registrar: string | null;
+  registrarUrl: string | null;
+  creationDate: string | null;
+  expiryDate: string | null;
+  updatedDate: string | null;
+  status: string[];
+  nameServers: string[];
+  registrantOrg: string | null;
+  registrantCountry: string | null;
+  dnssec: string | null;
+}
+
+export interface WhoisLookupResponse {
+  domain: string;
+  parsed: ParsedWhois;
+  raw: string;
+  checkedAt: string;
+}
+
+export interface SavedDomain {
+  id: string;
+  domain: string;
+  registrar: string | null;
+  registrar_url: string | null;
+  creation_date: string | null;
+  expiry_date: string | null;
+  updated_date: string | null;
+  status: string[] | null;
+  name_servers: string[] | null;
+  registrant_org: string | null;
+  registrant_country: string | null;
+  dnssec: string | null;
+  raw: string | null;
+  checked_at: string;
+  created_at: string;
+}
+
+export const whoisApi = {
+  lookup: async (domain: string): Promise<WhoisLookupResponse> => {
+    return fetchApi<WhoisLookupResponse>(
+      `/api/whois?domain=${encodeURIComponent(domain)}`,
+      { timeoutMs: 25000 },
+    );
+  },
+};
+
+export const domainsApi = {
+  list: async (): Promise<{ data: SavedDomain[] }> => {
+    return fetchApi<{ data: SavedDomain[] }>("/api/domains");
+  },
+  save: async (data: WhoisLookupResponse): Promise<SavedDomain> => {
+    return fetchApi<SavedDomain>("/api/domains", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  remove: async (id: string): Promise<void> => {
+    await fetchApi<{ ok: boolean; id: string }>(`/api/domains/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ============================================================================
 // Invoices + invoice company settings
 // ============================================================================
 

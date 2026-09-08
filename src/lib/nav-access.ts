@@ -25,6 +25,7 @@ export const MENU_PERMISSION: Record<string, string | null> = {
   workspace: "hr.read",
   "human-resource": "hr.read",
   "human-resources": "hr.read",
+  "domain-logger": null,
   settings: "settings.read",
 };
 
