@@ -28,6 +28,7 @@ import {
   Store,
   ClipboardList,
   Monitor,
+  Globe,
   Sparkles,
   Layers,
   Flag,
@@ -132,6 +133,12 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     label: "Human resources",
     icon: Users,
     href: "/hr/dashboard",
+  },
+  {
+    id: "domain-logger",
+    label: "Domain Logger",
+    icon: Globe,
+    href: "/whois",
   },
   {
     id: "settings",
