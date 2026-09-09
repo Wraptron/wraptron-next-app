@@ -76,7 +76,7 @@ function Field({
   );
 }
 
-export default function WhoisPage() {
+export default function DomainPage() {
   const { setTitle } = usePageTitle();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -98,7 +98,7 @@ export default function WhoisPage() {
   }, []);
 
   useEffect(() => {
-    setTitle("Domain Logger");
+    setTitle("Domain");
     return () => setTitle(null);
   }, [setTitle]);
 
@@ -201,10 +201,10 @@ export default function WhoisPage() {
     <div className="mx-auto w-full max-w-3xl space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Domain WHOIS lookup
+          Domain
         </h1>
         <p className="text-sm text-muted-foreground">
-          Look up registration details, then save domains you want to keep.
+          Look up registration details, then save domains to your account.
         </p>
       </div>
 
@@ -336,9 +336,9 @@ export default function WhoisPage() {
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold">Saved domains</h2>
+          <h2 className="text-lg font-semibold">Your saved domains</h2>
           <p className="text-sm text-muted-foreground">
-            Stored lookups, newest first.
+            Visible only to you, newest first.
           </p>
         </div>
         {savedError ? (

@@ -99,6 +99,7 @@ const nextConfig: NextConfig = {
       },
       { source: "/ppm", destination: "/projects", permanent: true },
       { source: "/projects/tasks", destination: "/tasks", permanent: true },
+      { source: "/whois", destination: "/domain", permanent: true },
     ];
   },
   async rewrites() {
