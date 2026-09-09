@@ -93,32 +93,6 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     section: "Products",
   },
   {
-    href: "/product",
-    label: "Product (marketing)",
-    keywords: "marketing wraptron",
-    section: "Product",
-  },
-  {
-    href: "/product/interfaces",
-    label: "Product — Interface",
-    section: "Product",
-  },
-  {
-    href: "/product/features",
-    label: "Product — Features",
-    section: "Product",
-  },
-  {
-    href: "/product/tech-stack",
-    label: "Product — Tech stack",
-    section: "Product",
-  },
-  {
-    href: "/product/milestone",
-    label: "Product — Milestone",
-    section: "Product",
-  },
-  {
     href: "/hiring",
     label: "Hiring",
     keywords: "recruitment jobs",

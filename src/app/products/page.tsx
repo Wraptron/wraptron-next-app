@@ -150,6 +150,20 @@ function buildProductTableColumns(
       },
     },
     {
+      id: "category",
+      header: "Category",
+      headerClassName: "min-w-[120px]",
+      sortValue: (item) => byId.get(Number(item.id))?.category_name ?? "",
+      cell: (item) => {
+        const product = byId.get(Number(item.id));
+        return (
+          <span className="text-muted-foreground">
+            {product?.category_name ?? "—"}
+          </span>
+        );
+      },
+    },
+    {
       id: "description",
       header: "Description",
       headerClassName: "min-w-[200px] max-w-[320px]",
@@ -237,6 +251,11 @@ function ProductKanbanCard({
         <Badge className={statusBadgeClass(product.status)}>
           {product.status || "No status"}
         </Badge>
+        {product.category_name ? (
+          <Badge variant="outline" className="ml-1.5">
+            {product.category_name}
+          </Badge>
+        ) : null}
         <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
           <div className="font-mono text-foreground/80">
             {product.part_code}
@@ -397,10 +416,7 @@ export default function ProductsPage() {
 
   return (
     <PageShell fill className="bg-background text-foreground">
-      <section
-        id="interface"
-        className="scroll-mt-24 flex min-h-0 flex-1 flex-col space-y-6"
-      >
+      <section className="flex min-h-0 flex-1 flex-col space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Products</h1>
