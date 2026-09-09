@@ -91,11 +91,11 @@ const BUILTIN_APPS: BuiltinApp[] = [
     color: "bg-indigo-500",
   },
   {
-    id: "domain-logger",
-    name: "Domain Logger",
+    id: "domain",
+    name: "Domain",
     description: "WHOIS lookup and saved domains",
     icon: Globe,
-    href: "/whois",
+    href: "/domain",
     color: "bg-orange-500",
   },
   {

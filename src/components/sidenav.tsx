@@ -135,16 +135,25 @@ const MAIN_MENU_ITEMS: MenuItem[] = [
     href: "/hr/dashboard",
   },
   {
-    id: "domain-logger",
-    label: "Domain Logger",
+    id: "domain",
+    label: "Domain",
     icon: Globe,
-    href: "/whois",
+    href: "/domain",
   },
   {
     id: "settings",
     label: "Settings",
     icon: Settings,
     href: "/settings",
+  },
+];
+
+const DOMAIN_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "domain",
+    label: "Domain",
+    icon: Globe,
+    href: "/domain",
   },
 ];
 
@@ -517,6 +526,7 @@ export default function SideNav() {
   const isWorkspacePage =
     pathname?.startsWith("/workspace") && !isEmployeeManagementSection;
   const isSettingsPage = pathname?.startsWith("/settings");
+  const isDomainPage = pathname?.startsWith("/domain");
   // When on /hr only — used for layout tweaks (e.g. admin block), not employee pages
   const isHumanResourcePage = pathname?.startsWith("/hr");
 
@@ -545,6 +555,8 @@ export default function SideNav() {
     menuItems = WORKSPACE_MENU_ITEMS;
   } else if (isSettingsPage) {
     menuItems = getSettingsMenuItems(navAccess);
+  } else if (isDomainPage) {
+    menuItems = DOMAIN_MENU_ITEMS;
   } else {
     menuItems = allMenuItems;
   }
@@ -686,6 +698,11 @@ export default function SideNav() {
       return;
     }
 
+    if (isDomainPage) {
+      setActiveItem(DOMAIN_MENU_ITEMS[0]?.id || "domain");
+      return;
+    }
+
     const mainItem = menuItems.find((item) => pathname.startsWith(item.href));
     if (mainItem) setActiveItem(mainItem.id);
   }, [
@@ -699,6 +716,7 @@ export default function SideNav() {
     isEmployeeManagementSection,
     isWorkspacePage,
     isSettingsPage,
+    isDomainPage,
     navAccess,
     searchParams,
   ]);
