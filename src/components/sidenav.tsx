@@ -29,9 +29,6 @@ import {
   ClipboardList,
   Monitor,
   Globe,
-  Sparkles,
-  Layers,
-  Flag,
   Grid3x3,
   Info,
   Bug,
@@ -231,21 +228,6 @@ const PRODUCTS_MENU_ITEMS: MenuItem[] = [
     href: "/products",
   },
 ];
-
-/** Standalone pages under `/product/...` */
-const PRODUCT_PAGE_SECTION_ITEMS_TEMPLATE: Omit<MenuItem, "href">[] = [
-  { id: "product-interface", label: "Interface", icon: Monitor },
-  { id: "product-features", label: "Features", icon: Sparkles },
-  { id: "product-tech-stack", label: "Tech Stack", icon: Layers },
-  { id: "product-milestone", label: "Milestone", icon: Flag },
-];
-
-const PRODUCT_SECTION_HREF: Record<string, string> = {
-  "product-interface": "/product/interfaces",
-  "product-features": "/product/features",
-  "product-tech-stack": "/product/tech-stack",
-  "product-milestone": "/product/milestone",
-};
 
 const WORKSPACE_MENU_ITEMS: MenuItem[] = [
   {
@@ -508,11 +490,9 @@ export default function SideNav() {
   // When on /projects or /tasks, show Projects and Tasks in sidebar
   const isProjectsPage =
     pathname?.startsWith("/projects") || pathname?.startsWith("/tasks");
-  // When on /products or /product/..., show Products submenu (catalog + section pages)
+  // When on /products (or /product redirect), show Products submenu
   const isProductNavContext =
-    pathname === "/product" ||
-    pathname?.startsWith("/products") ||
-    pathname?.startsWith("/product/");
+    pathname === "/product" || pathname?.startsWith("/products");
   // When on /sales or customer onboarding, show Sales submenu (includes onboarding form link)
   const isSalesPage =
     pathname?.startsWith("/sales") ||
@@ -530,21 +510,11 @@ export default function SideNav() {
   // When on /hr only — used for layout tweaks (e.g. admin block), not employee pages
   const isHumanResourcePage = pathname?.startsWith("/hr");
 
-  const productsMenuItems = useMemo((): MenuItem[] => {
-    return [
-      ...PRODUCTS_MENU_ITEMS,
-      ...PRODUCT_PAGE_SECTION_ITEMS_TEMPLATE.map((item) => ({
-        ...item,
-        href: PRODUCT_SECTION_HREF[item.id],
-      })),
-    ];
-  }, []);
-
   let menuItems: MenuItem[];
   if (isProjectsPage) {
     menuItems = PROJECTS_MENU_ITEMS;
   } else if (isProductNavContext) {
-    menuItems = productsMenuItems;
+    menuItems = PRODUCTS_MENU_ITEMS;
   } else if (isSalesPage) {
     menuItems = SALES_MENU_ITEMS;
   } else if (isAccountsPage) {
@@ -578,18 +548,7 @@ export default function SideNav() {
       return;
     }
 
-    // Products catalog + /product/{interfaces|features|tech-stack|milestone}
     if (isProductNavContext) {
-      const pathToSection: Record<string, string> = {
-        "/product/interfaces": "product-interface",
-        "/product/features": "product-features",
-        "/product/tech-stack": "product-tech-stack",
-        "/product/milestone": "product-milestone",
-      };
-      if (pathname && pathToSection[pathname]) {
-        setActiveItem(pathToSection[pathname]);
-        return;
-      }
       setActiveItem("products-list");
       return;
     }

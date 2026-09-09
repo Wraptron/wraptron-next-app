@@ -13,12 +13,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import {
   productsApi,
+  productCategoriesApi,
   type CreateProductInput,
   type Product,
+  type ProductCategory,
 } from "@/lib/api";
+
+const NONE_CATEGORY = "__none__";
 
 const emptyFormState = {
   part_code: "",
@@ -27,6 +39,7 @@ const emptyFormState = {
   product_description: "",
   selling_price: "",
   buying_price: "",
+  category_id: NONE_CATEGORY,
 };
 
 function productToFormState(p: Product) {
@@ -43,6 +56,8 @@ function productToFormState(p: Product) {
       p.total_cost != null && !Number.isNaN(p.total_cost)
         ? String(p.total_cost)
         : "",
+    category_id:
+      p.category_id != null ? String(p.category_id) : NONE_CATEGORY,
   };
 }
 
@@ -63,6 +78,7 @@ export function ProductFormSheet({
   const isEdit = Boolean(product?.id);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(emptyFormState);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -71,6 +87,18 @@ export function ProductFormSheet({
     } else {
       setFormData(emptyFormState);
     }
+    let cancelled = false;
+    productCategoriesApi
+      .getAll()
+      .then((res) => {
+        if (!cancelled) setCategories(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, product]);
 
   const handleOpenChange = (next: boolean) => {
@@ -104,6 +132,10 @@ export function ProductFormSheet({
           total_cost: formData.buying_price
             ? parseFloat(formData.buying_price)
             : undefined,
+          category_id:
+            formData.category_id && formData.category_id !== NONE_CATEGORY
+              ? parseInt(formData.category_id, 10)
+              : null,
         };
         await productsApi.update(product.id, payload);
       } else {
@@ -118,6 +150,10 @@ export function ProductFormSheet({
           total_cost: formData.buying_price
             ? parseFloat(formData.buying_price)
             : undefined,
+          category_id:
+            formData.category_id && formData.category_id !== NONE_CATEGORY
+              ? parseInt(formData.category_id, 10)
+              : undefined,
           status: "active",
         };
         await productsApi.create(payload);
@@ -188,6 +224,40 @@ export function ProductFormSheet({
                 placeholder="e.g. Widget A"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="product-category">Category</Label>
+              <Select
+                value={formData.category_id}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, category_id: value })
+                }
+              >
+                <SelectTrigger id="product-category" className="w-full">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_CATEGORY}>None</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No categories yet. Add them in{" "}
+                  <Link
+                    href="/settings?section=apps"
+                    className="underline underline-offset-2"
+                  >
+                    Settings → Apps
+                  </Link>
+                  .
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">

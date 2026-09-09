@@ -18,8 +18,8 @@ import {
   type InvoiceSettings,
   type WorkflowCategory,
 } from "@/lib/api";
-import { SettingsProductCatalogTypes } from "@/components/settings-product-catalog-types";
 import { SettingsPricingCalculator } from "@/components/settings-pricing-calculator";
+import { SettingsProductCategories } from "@/components/settings-product-categories";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { SettingsUserManagement } from "@/components/settings-user-management";
 import { SettingsZohoIntegrations } from "@/components/settings-zoho-integrations";
@@ -972,10 +972,10 @@ export default function Settings() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Products</h2>
             <p className="text-sm text-muted-foreground">
-              Interface types and feature types.
+              Categories used on the product form.
             </p>
           </div>
-          <SettingsProductCatalogTypes />
+          <SettingsProductCategories />
         </>
       )}
 

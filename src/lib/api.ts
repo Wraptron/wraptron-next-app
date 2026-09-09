@@ -1292,7 +1292,7 @@ export interface CreateProductInput {
   customer_packaging_specs?: string;
   customer_dispatch_requirements?: string;
   status?: string;
-  category_id?: number;
+  category_id?: number | null;
   is_featured?: boolean;
   featured_sort_order?: number;
   image_url?: string;
@@ -1304,6 +1304,8 @@ export interface ProductCategory {
   name: string;
   slug: string;
   sort_order: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CatalogProduct {
@@ -1377,6 +1379,38 @@ export const productsApi = {
 
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/products/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+export const productCategoriesApi = {
+  getAll: async (): Promise<{ data: ProductCategory[] }> => {
+    return fetchApi<{ data: ProductCategory[] }>("/api/product-categories");
+  },
+
+  create: async (data: {
+    name: string;
+    sort_order?: number;
+  }): Promise<ProductCategory> => {
+    return fetchApi<ProductCategory>("/api/product-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { name?: string; sort_order?: number },
+  ): Promise<ProductCategory> => {
+    return fetchApi<ProductCategory>(`/api/product-categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/product-categories/${id}`, {
       method: "DELETE",
     });
   },
@@ -3371,184 +3405,6 @@ export const billsApi = {
   },
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/bills/${id}`, { method: "DELETE" });
-  },
-};
-
-// ============================================================================
-// Product catalog: interface / feature types & items
-// ============================================================================
-
-export interface InterfaceType {
-  id: number;
-  name: string;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FeatureType {
-  id: number;
-  name: string;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CatalogInterface {
-  id: number;
-  name: string;
-  interface_type_id: number;
-  interface_type_name?: string;
-  cost: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CatalogFeature {
-  id: number;
-  name: string;
-  feature_type_id: number;
-  feature_type_name?: string;
-  cost: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export const interfaceTypesApi = {
-  getAll: async (): Promise<{ data: InterfaceType[] }> => {
-    return fetchApi<{ data: InterfaceType[] }>("/api/interface-types");
-  },
-  create: async (data: {
-    name: string;
-    sort_order?: number;
-  }): Promise<InterfaceType> => {
-    return fetchApi<InterfaceType>("/api/interface-types", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-  update: async (
-    id: number,
-    data: { name?: string; sort_order?: number },
-  ): Promise<InterfaceType> => {
-    return fetchApi<InterfaceType>(`/api/interface-types/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-  delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/interface-types/${id}`, { method: "DELETE" });
-  },
-};
-
-export const featureTypesApi = {
-  getAll: async (): Promise<{ data: FeatureType[] }> => {
-    return fetchApi<{ data: FeatureType[] }>("/api/feature-types");
-  },
-  create: async (data: {
-    name: string;
-    sort_order?: number;
-  }): Promise<FeatureType> => {
-    return fetchApi<FeatureType>("/api/feature-types", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-  update: async (
-    id: number,
-    data: { name?: string; sort_order?: number },
-  ): Promise<FeatureType> => {
-    return fetchApi<FeatureType>(`/api/feature-types/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-  delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/feature-types/${id}`, { method: "DELETE" });
-  },
-};
-
-export const catalogInterfacesApi = {
-  getAll: async (params?: {
-    search?: string;
-  }): Promise<{ data: CatalogInterface[] }> => {
-    const q = params?.search
-      ? `?search=${encodeURIComponent(params.search)}`
-      : "";
-    return fetchApi<{ data: CatalogInterface[] }>(
-      `/api/catalog-interfaces${q}`,
-    );
-  },
-  getById: async (id: number): Promise<CatalogInterface> => {
-    return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`);
-  },
-  create: async (data: {
-    name: string;
-    interface_type_id: number;
-    cost?: number | null;
-  }): Promise<CatalogInterface> => {
-    return fetchApi<CatalogInterface>("/api/catalog-interfaces", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-  update: async (
-    id: number,
-    data: {
-      name?: string;
-      interface_type_id?: number;
-      cost?: number | null;
-    },
-  ): Promise<CatalogInterface> => {
-    return fetchApi<CatalogInterface>(`/api/catalog-interfaces/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-  delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/catalog-interfaces/${id}`, {
-      method: "DELETE",
-    });
-  },
-};
-
-export const catalogFeaturesApi = {
-  getAll: async (params?: {
-    search?: string;
-  }): Promise<{ data: CatalogFeature[] }> => {
-    const q = params?.search
-      ? `?search=${encodeURIComponent(params.search)}`
-      : "";
-    return fetchApi<{ data: CatalogFeature[] }>(`/api/catalog-features${q}`);
-  },
-  getById: async (id: number): Promise<CatalogFeature> => {
-    return fetchApi<CatalogFeature>(`/api/catalog-features/${id}`);
-  },
-  create: async (data: {
-    name: string;
-    feature_type_id: number;
-    cost?: number | null;
-  }): Promise<CatalogFeature> => {
-    return fetchApi<CatalogFeature>("/api/catalog-features", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-  update: async (
-    id: number,
-    data: {
-      name?: string;
-      feature_type_id?: number;
-      cost?: number | null;
-    },
-  ): Promise<CatalogFeature> => {
-    return fetchApi<CatalogFeature>(`/api/catalog-features/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-  delete: async (id: number): Promise<void> => {
-    return fetchApi<void>(`/api/catalog-features/${id}`, { method: "DELETE" });
   },
 };
 
