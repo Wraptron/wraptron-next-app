@@ -6,6 +6,16 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+function appUrlFromPayload(raw) {
+  const fallback = "/workspace/dashboard";
+  try {
+    const parsed = new URL(raw || fallback, self.location.origin);
+    return `${self.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return new URL(fallback, self.location.origin).href;
+  }
+}
+
 self.addEventListener("push", (event) => {
   let data = {
     title: "Wraptron",
@@ -32,7 +42,7 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      data: { url: data.url || "/workspace/dashboard" },
+      data: { url: appUrlFromPayload(data.url) },
       tag: data.tag || "wraptron",
       requireInteraction: true,
     }),
@@ -41,8 +51,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/workspace/dashboard";
-  const absoluteUrl = new URL(targetUrl, self.location.origin).href;
+  const absoluteUrl = appUrlFromPayload(
+    event.notification.data?.url || "/workspace/dashboard",
+  );
 
   event.waitUntil(
     self.clients
