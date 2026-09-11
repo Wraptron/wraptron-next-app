@@ -1923,6 +1923,31 @@ export const attendanceApi = {
   },
 };
 
+export const pushApi = {
+  getVapidPublicKey: async (): Promise<{
+    enabled: boolean;
+    publicKey: string | null;
+  }> => {
+    return fetchApi("/api/push/vapid-public-key");
+  },
+  subscribe: async (data: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    user_agent?: string;
+  }): Promise<{ success: boolean }> => {
+    return fetchApi("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  unsubscribe: async (endpoint: string): Promise<{ success: boolean }> => {
+    return fetchApi("/api/push/unsubscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint }),
+    });
+  },
+};
+
 export interface AttendanceSettings {
   organization_id: number;
   enable_checkin_reminder: boolean;

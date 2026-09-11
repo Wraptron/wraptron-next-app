@@ -23,6 +23,7 @@ import { SettingsProductCategories } from "@/components/settings-product-categor
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
 import { SettingsUserManagement } from "@/components/settings-user-management";
 import { SettingsZohoIntegrations } from "@/components/settings-zoho-integrations";
+import { SettingsNotifications } from "@/components/settings-notifications";
 import { SortableSettingsTable } from "@/components/sortable-settings-table";
 import {
   Card,
@@ -737,7 +738,7 @@ export default function Settings() {
   const showOrganisation = activeSettingsSection === "organisation";
   const showIntegrations = activeSettingsSection === "integrations";
   const showApps = activeSettingsSection === "apps";
-  const showEmptySection = activeSettingsSection === "notifications";
+  const showNotifications = activeSettingsSection === "notifications";
 
   return (
     <PageShell fill className="bg-background text-foreground">
@@ -1333,16 +1334,7 @@ export default function Settings() {
         <SettingsUserManagement />
       )}
 
-      {showEmptySection && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription className="mt-2">
-              No configurable details are available in this section yet.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+      {showNotifications && <SettingsNotifications />}
 
       {/* Add Connection Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
