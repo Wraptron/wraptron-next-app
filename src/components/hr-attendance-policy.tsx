@@ -144,7 +144,7 @@ export function HrAttendancePolicy() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Attendance Reminder Policy</h1>
           <p className="text-sm text-muted-foreground">
-            Configure automated check-in and check-out email notification schedules for your team.
+            Configure automated check-in and check-out reminders. Phone alerts work if staff install Wraptron from the browser and allow notifications. Email is still sent as a backup.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -181,10 +181,10 @@ export function HrAttendancePolicy() {
             <div className="space-y-1">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
-                Automated Email Reminders
+                Automated Reminders
               </CardTitle>
               <CardDescription>
-                Set up automated emails to remind employees if they miss morning check-in or evening check-out.
+                Phone push, in-app banner, and email use the same schedule. Staff should install Wraptron and allow notifications so reminders can reach the lock screen when the app is closed.
               </CardDescription>
             </div>
           </div>
@@ -206,7 +206,7 @@ export function HrAttendancePolicy() {
                       Morning Check-In Reminder
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Sends an automated reminder email if an employee has not checked in by this scheduled time.
+                      Reminds employees who have not checked in by this time — by phone push (if enabled), in-app banner, and email.
                     </p>
                   </div>
                   <Switch
@@ -244,7 +244,7 @@ export function HrAttendancePolicy() {
                       Evening Check-Out Reminder
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Sends an automated reminder email if an employee is still marked logged in after scheduled workday hours.
+                      Reminds employees who are still logged in after this time — by phone push (if enabled), in-app banner, and email.
                     </p>
                   </div>
                   <Switch

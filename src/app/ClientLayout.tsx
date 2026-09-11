@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import Header from "@/components/header";
 import SideNav from "@/components/sidenav";
 import ProtectedRoute from "@/components/protected-route";
@@ -13,7 +13,17 @@ import { SheetPushProvider } from "@/contexts/sheet-push-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogIdentify } from "@/components/posthog/posthog-identify";
 import { PostHogPageView } from "@/components/posthog/posthog-pageview";
+import { AttendanceReminderBanner } from "@/components/attendance-reminder-banner";
+import { PwaPushSetup } from "@/components/pwa-push-setup";
+import { registerPushServiceWorker } from "@/lib/web-push-client";
 import { cn } from "@/lib/utils";
+
+function ServiceWorkerRegistrar() {
+  useEffect(() => {
+    void registerPushServiceWorker();
+  }, []);
+  return null;
+}
 
 function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -70,6 +80,8 @@ function MainContent({ children }: { children: React.ReactNode }) {
       >
         <div className="flex-shrink-0">
           <Header />
+          <PwaPushSetup />
+          <AttendanceReminderBanner />
         </div>
         <div
           id="main-content-portal"
@@ -87,6 +99,7 @@ export default function ClientLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ServiceWorkerRegistrar />
       <AuthProvider>
         <PostHogIdentify />
         <Suspense fallback={null}>
