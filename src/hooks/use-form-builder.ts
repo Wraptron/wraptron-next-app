@@ -360,7 +360,7 @@ function getDefaultLabel(type: FieldType): string {
     "input-string": "Text Input",
     "input-number": "Number Input",
     "input-decimal": "Decimal Input",
-    "long-text": "Long Text",
+    "long-text": "Text area",
     email: "Email",
     phone: "Phone",
     radio: "Radio",

@@ -6,6 +6,7 @@ import {
   Box,
   Briefcase,
   CreditCard,
+  // FormInput, // Formfield app hidden
   Globe,
   Plus,
   Settings,
@@ -98,6 +99,15 @@ const BUILTIN_APPS: BuiltinApp[] = [
     href: "/whois",
     color: "bg-orange-500",
   },
+  // Formfield app hidden — restore by uncommenting
+  // {
+  //   id: "formfield",
+  //   name: "Formfield",
+  //   description: "Build forms with custom fields",
+  //   icon: FormInput,
+  //   href: "/formfield",
+  //   color: "bg-rose-500",
+  // },
   {
     id: "settings",
     name: "Settings",

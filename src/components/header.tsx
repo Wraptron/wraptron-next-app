@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+// import { usePathname } from "next/navigation"; // Formfield app hidden
 import { useAuth } from "@/contexts/auth-context";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { usePageTitle } from "@/contexts/page-title-context";
@@ -38,6 +39,8 @@ export default function TopNavbar() {
   const { isOwner, isSuperAdmin, permissions } = useOrganization();
   const { title, subtitle } = usePageTitle();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  // const pathname = usePathname();
+  // const isFormfield = pathname?.startsWith("/formfield") ?? false; // Formfield app hidden
   const [appsMenuOpen, setAppsMenuOpen] = useState(false);
 
   const navAccess = React.useMemo(
@@ -80,28 +83,40 @@ export default function TopNavbar() {
       <div className="flex items-center justify-between w-full">
         {/* Left side - Expand sidebar: top-left on mobile (always), when collapsed on desktop */}
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
-          {/* Visible on mobile only - always at top left */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 shrink-0 md:hidden"
-            onClick={toggleSidebar}
-            aria-label="Expand sidebar"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {/* Visible on desktop only when sidebar is collapsed */}
-          {isCollapsed && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 shrink-0 hidden md:inline-flex"
-              onClick={toggleSidebar}
-              aria-label="Expand sidebar"
+          {/* Formfield app hidden — restore branded home link with isFormfield
+          {isFormfield ? (
+            <Link
+              href="/"
+              className="shrink-0 text-xl font-semibold text-foreground transition-colors hover:text-primary"
+              aria-label="Wraptron home"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
+              Wraptron
+            </Link>
+          ) : (
+          */}
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 shrink-0 md:hidden"
+                onClick={toggleSidebar}
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {isCollapsed && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 shrink-0 hidden md:inline-flex"
+                  onClick={toggleSidebar}
+                  aria-label="Expand sidebar"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+            </>
+          {/* )} */}
           {title && (
             <div className="flex items-center space-x-3">
               <h1 className="text-xl font-semibold text-foreground">{title}</h1>

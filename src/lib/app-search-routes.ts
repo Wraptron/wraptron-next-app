@@ -205,7 +205,7 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
   {
     href: "/workspace",
     label: "Workspace",
-    keywords: "skills attendance",
+    keywords: "skills attendance calendar leave",
     section: "Workspace",
   },
   {
@@ -243,7 +243,25 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     keywords: "attendance reminders check-in check-out policy notification hr",
     section: "Human resources",
   },
+  {
+    href: "/hr/calendar",
+    label: "Calendar & holidays",
+    keywords: "holiday weekend policy working days public holiday",
+    section: "Human resources",
+  },
+  {
+    href: "/hr/metrics",
+    label: "Performance matrix",
+    keywords: "metrics report working days",
+    section: "Human resources",
+  },
   { href: "/workspace/attendance", label: "Attendance", section: "Workspace" },
+  {
+    href: "/workspace/calendar",
+    label: "Calendar & leave",
+    keywords: "leave apply calendar holiday time off pto approval",
+    section: "Workspace",
+  },
   {
     href: "/workspace/attendance/timesheet",
     label: "Attendance — Timesheet",
@@ -278,6 +296,13 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     keywords: "whois lookup registrar domains dns",
     section: "Main",
   },
+  // Formfield app hidden — restore by uncommenting
+  // {
+  //   href: "/formfield",
+  //   label: "Formfield",
+  //   keywords: "forms builder fields custom formfield",
+  //   section: "Main",
+  // },
   {
     href: "/settings",
     label: "Settings",

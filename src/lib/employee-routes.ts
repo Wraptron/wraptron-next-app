@@ -13,4 +13,7 @@ export const HR_METRICS_PATH = "/hr/metrics";
 /** Calendar setup, public holidays, and weekend policies. */
 export const HR_CALENDAR_PATH = "/hr/calendar";
 
+/** Workspace calendar for viewing the month and leave requests. */
+export const WORKSPACE_CALENDAR_PATH = "/workspace/calendar";
+
 
