@@ -17,14 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -47,11 +46,13 @@ import {
   projectsApi,
   integrationsApi,
   taskStatusesApi,
+  employeesApi,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_ORDER,
   type Project,
   type Task,
   type TaskStatus,
+  type Employee,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -90,6 +91,10 @@ import {
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
 import { cn } from "@/lib/utils";
+import {
+  TASK_TABLE_COLUMN_LABELS,
+  formatTaskTableDate,
+} from "@/lib/task-table-columns";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   ArrowLeft,
@@ -860,6 +865,8 @@ export default function ProjectPage() {
             <TaskViewSwitcher
               tasks={project.tasks || []}
               projectId={projectId!}
+              projectKey={project.key}
+              projectManagerEmployeeId={project.project_manager_employee_id}
               onTaskUpdate={(taskUpdate) => {
                 if (taskUpdate) {
                   setProject((current) => {
@@ -927,10 +934,14 @@ type TaskViewMode = "list" | "board" | "card" | "calendar";
 function TaskViewSwitcher({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
   onTaskUpdate,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
   onTaskUpdate: (taskUpdate?: Task) => void;
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
@@ -956,8 +967,8 @@ function TaskViewSwitcher({
 
   const [inlineAddRequestId, setInlineAddRequestId] = useState(0);
 
-  const refreshTasks = () => {
-    onTaskUpdate();
+  const refreshTasks = (taskUpdate?: Task) => {
+    onTaskUpdate(taskUpdate);
   };
 
   const startInlineAdd = () => {
@@ -974,7 +985,7 @@ function TaskViewSwitcher({
           className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Task
+          New task
         </Button>
         <div className="flex items-center border rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
           <Button
@@ -1016,6 +1027,8 @@ function TaskViewSwitcher({
         <TaskListView
           tasks={tasks}
           projectId={projectId}
+          projectKey={projectKey}
+          projectManagerEmployeeId={projectManagerEmployeeId}
           onUpdate={refreshTasks}
           inlineAddRequestId={inlineAddRequestId}
         />
@@ -1041,7 +1054,6 @@ function TaskViewSwitcher({
           onUpdate={refreshTasks}
         />
       )}
-
     </div>
   );
 }
@@ -1478,14 +1490,46 @@ function TaskBoard({
 }
 
 // Task List View Component
+const PROJECT_TASK_STATUS_OPTIONS = [
+  { value: "pending", label: "Backlog" },
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "review", label: "Review" },
+  { value: "completed", label: "Done" },
+  { value: "blocked", label: "Blocked" },
+] as const;
+
+const PROJECT_TASK_PRIORITY_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+] as const;
+
+function formatEmployeeName(employee?: Employee | null): string {
+  if (!employee) return "—";
+  return `${employee.first_name} ${employee.last_name}`.trim() || "—";
+}
+
+function taskStatusLabel(status?: string): string {
+  if (!status) return "—";
+  const match = PROJECT_TASK_STATUS_OPTIONS.find((o) => o.value === status);
+  if (match) return match.label;
+  return status.replace(/_/g, " ");
+}
+
 function TaskListView({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
   onUpdate,
   inlineAddRequestId = 0,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
   onUpdate: (taskUpdate?: Task) => void;
   inlineAddRequestId?: number;
 }) {
@@ -1494,39 +1538,59 @@ function TaskListView({
     {},
   );
 
-  // Column Definitions
   const [columns, setColumns] = useState([
-    { id: "status", label: "Status", width: "w-[150px]" },
-    { id: "title", label: "Title" },
-    { id: "priority", label: "Priority" },
-    { id: "complexity", label: "Complexity" },
-    { id: "start_date", label: "Start Date" },
-    { id: "end_date", label: "End Date" },
-    { id: "created_at", label: "Created At", align: "right" },
+    { id: "key", label: TASK_TABLE_COLUMN_LABELS.key, width: "w-[110px]" },
+    { id: "title", label: TASK_TABLE_COLUMN_LABELS.title },
+    { id: "status", label: TASK_TABLE_COLUMN_LABELS.status, width: "w-[140px]" },
+    { id: "assignee", label: TASK_TABLE_COLUMN_LABELS.assignee, width: "w-[160px]" },
+    { id: "approver", label: TASK_TABLE_COLUMN_LABELS.approver, width: "w-[160px]" },
+    { id: "end_date", label: TASK_TABLE_COLUMN_LABELS.deadline, width: "w-[140px]" },
+    { id: "priority", label: TASK_TABLE_COLUMN_LABELS.priority, width: "w-[120px]" },
   ]);
 
-  // Selection State
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Drag and Drop State
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-
-  // Sorting State
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
-
-  // Filter State
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [showFilters, setShowFilters] = useState(false);
   const [inlineAddActive, setInlineAddActive] = useState(false);
   const [inlineTitle, setInlineTitle] = useState("");
+  const [inlineAssignee, setInlineAssignee] = useState("unassigned");
+  const [inlineApprover, setInlineApprover] = useState("unassigned");
   const [inlineDeadline, setInlineDeadline] = useState("");
   const [inlinePriority, setInlinePriority] = useState("medium");
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await employeesApi.getAll({
+          employment_status: "active",
+          limit: 500,
+        });
+        if (!cancelled) setEmployees(res.data);
+      } catch {
+        if (!cancelled) setEmployees([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const employeesById = useMemo(
+    () => new Map(employees.map((e) => [e.id, e])),
+    [employees],
+  );
 
   const mergedTasks = useMemo(() => {
     const persistedIds = new Set(tasks.map((task) => task.id));
@@ -1540,12 +1604,21 @@ function TaskListView({
 
   useEffect(() => {
     if (inlineAddRequestId > 0) {
+      if (projectManagerEmployeeId != null) {
+        setInlineApprover(String(projectManagerEmployeeId));
+      }
       setInlineAddActive(true);
     }
-  }, [inlineAddRequestId]);
+  }, [inlineAddRequestId, projectManagerEmployeeId]);
 
   const resetInlineAdd = () => {
     setInlineTitle("");
+    setInlineAssignee("unassigned");
+    setInlineApprover(
+      projectManagerEmployeeId != null
+        ? String(projectManagerEmployeeId)
+        : "unassigned",
+    );
     setInlineDeadline("");
     setInlinePriority("medium");
     setInlineAddActive(false);
@@ -1578,6 +1651,10 @@ function TaskListView({
     if (!title) return;
 
     const deadline = inlineDeadline || undefined;
+    const assignedEmployeeId =
+      inlineAssignee !== "unassigned" ? parseInt(inlineAssignee, 10) : null;
+    const approverEmployeeId =
+      inlineApprover !== "unassigned" ? parseInt(inlineApprover, 10) : null;
     const tempId = -Date.now();
     const now = new Date().toISOString();
     const optimisticTask: Task = {
@@ -1585,6 +1662,8 @@ function TaskListView({
       project_id: projectId,
       title,
       status: "backlog",
+      assigned_employee_id: assignedEmployeeId,
+      approver_employee_id: approverEmployeeId,
       priority: inlinePriority,
       end_date: deadline,
       created_at: now,
@@ -1592,6 +1671,12 @@ function TaskListView({
     };
 
     setInlineTitle("");
+    setInlineAssignee("unassigned");
+    setInlineApprover(
+      projectManagerEmployeeId != null
+        ? String(projectManagerEmployeeId)
+        : "unassigned",
+    );
     setInlineDeadline("");
     setInlinePriority("medium");
     startTransition(() => {
@@ -1602,6 +1687,8 @@ function TaskListView({
       const created = await projectsApi.createTask(projectId, {
         title,
         priority: inlinePriority,
+        assigned_employee_id: assignedEmployeeId,
+        approver_employee_id: approverEmployeeId,
         end_date: deadline,
       });
       setPendingTasks((prev) => prev.filter((task) => task.id !== tempId));
@@ -1642,7 +1729,6 @@ function TaskListView({
     }
   };
 
-  // Toggle individual selection
   const toggleSelect = (taskId: number) => {
     const newSelected = new Set(selectedTasks);
     if (newSelected.has(taskId)) {
@@ -1653,7 +1739,6 @@ function TaskListView({
     setSelectedTasks(newSelected);
   };
 
-  // Sort Handler
   const handleSort = (columnId: string) => {
     let direction: "asc" | "desc" = "asc";
     if (
@@ -1666,12 +1751,10 @@ function TaskListView({
     setSortConfig({ key: columnId, direction });
   };
 
-  // Filter Handler
   const handleFilterChange = (columnId: string, value: string) => {
     setFilters((prev) => ({ ...prev, [columnId]: value }));
   };
 
-  // Drag Handlers
   const handleDragStart = (e: React.DragEvent, columnId: string) => {
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
@@ -1701,6 +1784,62 @@ function TaskListView({
     setDraggedColumn(null);
   };
 
+  const getTaskKey = (task: Task) => {
+    if (projectKey && task.number != null) return `${projectKey}-${task.number}`;
+    if (task.number != null) return String(task.number);
+    return "—";
+  };
+
+  const getSortValue = (task: Task, key: string) => {
+    switch (key) {
+      case "key":
+        return getTaskKey(task);
+      case "assignee":
+        return formatEmployeeName(
+          task.assigned_employee_id != null
+            ? employeesById.get(task.assigned_employee_id)
+            : null,
+        );
+      case "approver":
+        return formatEmployeeName(
+          task.approver_employee_id != null
+            ? employeesById.get(task.approver_employee_id)
+            : null,
+        );
+      case "end_date":
+        return task.end_date ?? "";
+      case "status":
+        return task.status;
+      default:
+        return task[key as keyof Task];
+    }
+  };
+
+  const getFilterValue = (task: Task, columnId: string) => {
+    if (columnId === "key") return getTaskKey(task);
+    if (columnId === "assignee") {
+      return formatEmployeeName(
+        task.assigned_employee_id != null
+          ? employeesById.get(task.assigned_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "approver") {
+      return formatEmployeeName(
+        task.approver_employee_id != null
+          ? employeesById.get(task.approver_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "end_date") {
+      return task.end_date
+        ? new Date(task.end_date).toLocaleDateString()
+        : "";
+    }
+    if (columnId === "status") return taskStatusLabel(task.status);
+    return String(task[columnId as keyof Task] || "");
+  };
+
   // Processed Tasks (Filtered & Sorted)
   const processedTasks = useMemo(
     () =>
@@ -1709,22 +1848,9 @@ function TaskListView({
           return columns.every((col) => {
             const filterValue = filters[col.id];
             if (!filterValue) return true;
-
-            let taskValue = "";
-            if (
-              col.id === "created_at" ||
-              col.id === "start_date" ||
-              col.id === "end_date"
-            ) {
-              const dateVal = task[col.id as keyof Task];
-              taskValue = dateVal
-                ? new Date(String(dateVal)).toLocaleDateString()
-                : "";
-            } else {
-              taskValue = String(task[col.id as keyof Task] || "");
-            }
-
-            return taskValue.toLowerCase().includes(filterValue.toLowerCase());
+            return getFilterValue(task, col.id)
+              .toLowerCase()
+              .includes(filterValue.toLowerCase());
           });
         })
         .sort((a, b) => {
@@ -1735,39 +1861,26 @@ function TaskListView({
             );
           }
           const { key, direction } = sortConfig;
-
-          const valA = a[key as keyof Task];
-          const valB = b[key as keyof Task];
+          const valA = getSortValue(a, key);
+          const valB = getSortValue(b, key);
 
           if (valA === valB) return 0;
-          if (valA === undefined || valA === null) return 1;
-          if (valB === undefined || valB === null) return -1;
+          if (valA === undefined || valA === null || valA === "") return 1;
+          if (valB === undefined || valB === null || valB === "") return -1;
 
           const compareRes = valA < valB ? -1 : 1;
           return direction === "asc" ? compareRes : -compareRes;
         }),
-    [mergedTasks, columns, filters, sortConfig],
+    [mergedTasks, columns, filters, sortConfig, employeesById],
   );
 
   const renderCellContent = (task: Task, columnId: string) => {
     switch (columnId) {
-      case "status":
+      case "key":
         return (
-          <div className="flex items-center gap-2">
-            {getStatusIconHelper(task.status)}
-            <Badge
-              variant={
-                task.status === "completed" || task.status === "done"
-                  ? "default"
-                  : task.status === "in_progress"
-                    ? "secondary"
-                    : "outline"
-              }
-              className="text-xs"
-            >
-              {task.status}
-            </Badge>
-          </div>
+          <span className="font-mono text-xs text-muted-foreground">
+            {getTaskKey(task)}
+          </span>
         );
       case "title":
         return (
@@ -1779,6 +1892,30 @@ function TaskListView({
               </div>
             )}
           </div>
+        );
+      case "status":
+        return (
+          <span className="capitalize text-sm">
+            {taskStatusLabel(task.status)}
+          </span>
+        );
+      case "assignee":
+        return task.assigned_employee_id != null ? (
+          formatEmployeeName(employeesById.get(task.assigned_employee_id))
+        ) : (
+          <span className="text-muted-foreground">Unassigned</span>
+        );
+      case "approver":
+        return task.approver_employee_id != null ? (
+          formatEmployeeName(employeesById.get(task.approver_employee_id))
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      case "end_date":
+        return (
+          <span className="text-sm text-muted-foreground">
+            {formatTaskTableDate(task.end_date)}
+          </span>
         );
       case "priority":
         return (
@@ -1806,26 +1943,6 @@ function TaskListView({
             {task.complexity}
           </span>
         ) : null;
-      case "start_date":
-        return (
-          <span className="text-sm text-muted-foreground">
-            {task.start_date
-              ? new Date(task.start_date).toLocaleDateString()
-              : "-"}
-          </span>
-        );
-      case "end_date":
-        return (
-          <span className="text-sm text-muted-foreground">
-            {task.end_date ? new Date(task.end_date).toLocaleDateString() : "-"}
-          </span>
-        );
-      case "created_at":
-        return (
-          <div className="text-right text-sm text-muted-foreground">
-            {new Date(task.created_at).toLocaleDateString()}
-          </div>
-        );
       default:
         return null;
     }
@@ -1864,7 +1981,6 @@ function TaskListView({
         {columns.map((column) => (
           <TableCell
             key={`add-${column.id}`}
-            className={column.align === "right" ? "text-right" : undefined}
           >
             {column.id === "title" ? (
               <TaskListInlineTitleInput
@@ -1878,6 +1994,46 @@ function TaskListView({
               <span className="text-xs capitalize text-muted-foreground">
                 backlog
               </span>
+            ) : column.id === "assignee" ? (
+              <Select
+                value={inlineAssignee}
+                onValueChange={setInlineAssignee}
+              >
+                <SelectTrigger
+                  className={cn(inlineTaskFieldClassName, "w-[140px]")}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {formatEmployeeName(employee)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : column.id === "approver" ? (
+              <Select
+                value={inlineApprover}
+                onValueChange={setInlineApprover}
+              >
+                <SelectTrigger
+                  className={cn(inlineTaskFieldClassName, "w-[140px]")}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {formatEmployeeName(employee)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : column.id === "end_date" ? (
               <Input
                 type="date"
@@ -1963,7 +2119,6 @@ function TaskListView({
         <Table>
           <TableHeader>
             <TableRow>
-              {/* Checkbox Column */}
               <TableHead className="w-[40px]">
                 <Checkbox
                   checked={headerChecked}
@@ -1973,13 +2128,11 @@ function TaskListView({
                   aria-label="Select all tasks"
                 />
               </TableHead>
-              {/* Dynamic Columns */}
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
                   className={`
                     ${column.width || ""} 
-                    ${column.align === "right" ? "text-right" : ""}
                     cursor-pointer hover:bg-muted/50 transition-colors select-none group
                   `}
                   draggable
@@ -1988,12 +2141,10 @@ function TaskListView({
                   onDrop={(e) => handleDrop(e, column.id)}
                   onClick={() => handleSort(column.id)}
                 >
-                  <div
-                    className={`flex items-center gap-1 ${column.align === "right" ? "justify-end" : ""}`}
-                  >
+                  <div className="flex items-center gap-1">
                     <GripVertical
                       className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
-                      onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
                     />
                     {column.label}
@@ -2010,7 +2161,6 @@ function TaskListView({
                 </TableHead>
               ))}
             </TableRow>
-            {/* Filter Row */}
             {showFilters && (
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-[40px]"></TableHead>
@@ -2032,7 +2182,18 @@ function TaskListView({
           </TableHeader>
           <TableBody>
             {renderInlineAddRow()}
-            {processedTasks.length === 0 ? null : (
+            {processedTasks.length === 0 ? (
+              !inlineAddActive ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + 1}
+                    className="h-24 text-center"
+                  >
+                    No tasks yet.
+                  </TableCell>
+                </TableRow>
+              ) : null
+            ) : (
               processedTasks.map((task) => (
                 <TableRow
                   key={task.id}

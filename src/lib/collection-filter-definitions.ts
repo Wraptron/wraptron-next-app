@@ -1,4 +1,5 @@
 import type { CollectionFacetOption } from "@/components/collection-filters";
+import { TASK_TABLE_COLUMN_LABELS } from "@/lib/task-table-columns";
 
 export type CollectionFilterResource =
   | "deals"
@@ -216,7 +217,7 @@ export const COLLECTION_FILTER_DEFINITIONS: Record<
     num("duration_minutes", "Duration (min)"),
   ],
   tasks: [
-    def("status", "Status", {
+    def("status", TASK_TABLE_COLUMN_LABELS.status, {
       pinned: true,
       options: [
         { value: "pending", label: "Todo" },
@@ -225,9 +226,11 @@ export const COLLECTION_FILTER_DEFINITIONS: Record<
         { value: "blocked", label: "Blocked" },
       ],
     }),
-    def("project_id", "Project", { pinned: true }),
-    def("assigned_employee_id", "Assignee", { pinned: true }),
-    def("priority", "Priority", {
+    def("project_id", TASK_TABLE_COLUMN_LABELS.project, { pinned: true }),
+    def("assigned_employee_id", TASK_TABLE_COLUMN_LABELS.assignee, {
+      pinned: true,
+    }),
+    def("priority", TASK_TABLE_COLUMN_LABELS.priority, {
       pinned: true,
       options: [
         { value: "low", label: "Low" },
@@ -244,7 +247,7 @@ export const COLLECTION_FILTER_DEFINITIONS: Record<
         { value: "non_billable", label: "Non billable" },
       ],
     }),
-    date("end_date", "Deadline"),
+    date("end_date", TASK_TABLE_COLUMN_LABELS.deadline),
   ],
 };
 

@@ -85,7 +85,12 @@ export function DealFormSheet({
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
   const [createContactLoading, setCreateContactLoading] = useState(false);
   const [createCompanyLoading, setCreateCompanyLoading] = useState(false);
-  const [newContact, setNewContact] = useState({ first_name: "", last_name: "", email: "" });
+  const [newContact, setNewContact] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    mobile: "",
+  });
   const [newCompany, setNewCompany] = useState({ name: "", company_name: "" });
   const setSheetOpen = useSheetPush()?.setSheetOpen;
   const { stageNames, defaultStageName, loading: stagesLoading } =
@@ -253,6 +258,7 @@ export function DealFormSheet({
         first_name: first,
         last_name: newContact.last_name.trim() || undefined,
         email: newContact.email.trim() || undefined,
+        mobile: newContact.mobile.trim() || undefined,
       };
       const created = await contactsApi.create(payload);
       setContacts((prev) => [created, ...prev]);
@@ -263,7 +269,7 @@ export function DealFormSheet({
           : [...prev.contact_ids, created.id],
       }));
       setContactOpen(false);
-      setNewContact({ first_name: "", last_name: "", email: "" });
+      setNewContact({ first_name: "", last_name: "", email: "", mobile: "" });
       setCreateContactOpen(false);
     } catch (err) {
       console.error("Failed to create contact:", err);
@@ -566,6 +572,16 @@ export function DealFormSheet({
                       value={newContact.email}
                       onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))}
                       placeholder="email@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-contact-mobile">Mobile number</Label>
+                    <Input
+                      id="new-contact-mobile"
+                      type="tel"
+                      value={newContact.mobile}
+                      onChange={(e) => setNewContact((p) => ({ ...p, mobile: e.target.value }))}
+                      placeholder="Mobile number"
                     />
                   </div>
                 </div>

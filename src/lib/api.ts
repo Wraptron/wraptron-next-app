@@ -573,6 +573,8 @@ export interface Task {
   title: string;
   description?: string;
   status: string;
+  /** Per-project task number used in keys like ACME-12. */
+  number?: number;
   start_date?: string;
   end_date?: string;
   priority?: string;
@@ -595,8 +597,12 @@ export interface CreateTaskInput {
   description?: string;
   assigned_employee_id?: number | null;
   approver_employee_id?: number | null;
+  approver_id?: number | null;
+  approver?: number | null;
   status?: string;
   end_date?: string;
+  deadline?: string;
+  due_date?: string;
   priority?: string;
   notes?: string;
   billable?: string;
@@ -2889,8 +2895,8 @@ export interface BoardTask {
   branch_name: string | null;
   assigned_employee_id: number | null;
   assignee_name: string | null;
-  approver_employee_id: number | null;
-  approver_name: string | null;
+  approver_employee_id?: number | null;
+  approver_name?: string | null;
   pr_count: number;
   latest_pr_state: "open" | "merged" | "closed" | null;
   created_at: string;
@@ -2980,8 +2986,10 @@ export const tasksApi = {
     description?: string;
     assigned_employee_id?: number | null;
     approver_employee_id?: number | null;
-    priority?: string;
     end_date?: string | null;
+    deadline?: string;
+    due_date?: string;
+    priority?: string;
   }): Promise<BoardTask> => {
     return fetchApi<BoardTask>("/api/tasks", {
       method: "POST",
@@ -2998,6 +3006,8 @@ export const tasksApi = {
       assigned_employee_id?: number | null;
       approver_employee_id?: number | null;
       end_date?: string | null;
+      deadline?: string | null;
+      due_date?: string | null;
       priority?: string;
     },
   ): Promise<BoardTask> => {

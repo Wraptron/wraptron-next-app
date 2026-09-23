@@ -126,24 +126,26 @@ export function TaskFormSheet({
       }
     };
 
-    const loadDefaultAssignee = async () => {
+    const loadDefaults = async () => {
       if (defaultAssigneeEmployeeId != null) {
         setFormData((prev) => ({
           ...prev,
           assigned_employee_id: String(defaultAssigneeEmployeeId),
         }));
-        return;
       }
+
+      const applyProjectManagerAsApprover = (managerId?: number | null) => {
+        if (managerId == null) return;
+        setFormData((prev) => ({
+          ...prev,
+          approver_employee_id: String(managerId),
+        }));
+      };
 
       if (projectId != null) {
         try {
           const project = await projectsApi.getById(projectId);
-          if (project.project_manager_employee_id != null) {
-            setFormData((prev) => ({
-              ...prev,
-              assigned_employee_id: String(project.project_manager_employee_id),
-            }));
-          }
+          applyProjectManagerAsApprover(project.project_manager_employee_id);
         } catch (err) {
           console.error("Failed to load project manager:", err);
         }
@@ -151,18 +153,15 @@ export function TaskFormSheet({
       }
 
       if (selectedProjectId) {
-        const project = projects.find((p) => p.id === parseInt(selectedProjectId, 10));
-        if (project?.project_manager_employee_id != null) {
-          setFormData((prev) => ({
-            ...prev,
-            assigned_employee_id: String(project.project_manager_employee_id),
-          }));
-        }
+        const project = projects.find(
+          (p) => p.id === parseInt(selectedProjectId, 10),
+        );
+        applyProjectManagerAsApprover(project?.project_manager_employee_id);
       }
     };
 
     loadEmployees();
-    loadDefaultAssignee();
+    loadDefaults();
   }, [open, projectId, selectedProjectId, projects, defaultAssigneeEmployeeId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,7 +226,7 @@ export function TaskFormSheet({
         <SheetHeader>
           <SheetTitle>New Task</SheetTitle>
           <SheetDescription>
-            Add a task with title, deadline, billable type, priority, estimate, and notes.
+            Add a task with title, assignee, approver, deadline, billable type, priority, estimate, and notes.
           </SheetDescription>
         </SheetHeader>
 
@@ -278,9 +277,10 @@ export function TaskFormSheet({
                       assigned_employee_id:
                         defaultAssigneeEmployeeId != null
                           ? String(defaultAssigneeEmployeeId)
-                          : project?.project_manager_employee_id
-                            ? String(project.project_manager_employee_id)
-                            : "unassigned",
+                          : prev.assigned_employee_id || "unassigned",
+                      approver_employee_id: project?.project_manager_employee_id
+                        ? String(project.project_manager_employee_id)
+                        : "unassigned",
                     }));
                   }}
                   required={!projectId}

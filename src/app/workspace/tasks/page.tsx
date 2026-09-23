@@ -20,6 +20,10 @@ import {
 import { Loader2, RefreshCw, CheckSquare, Plus } from "lucide-react";
 import { projectsApi, employeesApi, type Task, type Project } from "@/lib/api";
 import { TaskFormSheet } from "@/components/task-form-sheet";
+import {
+  TASK_TABLE_COLUMN_LABELS,
+  formatTaskTableDate,
+} from "@/lib/task-table-columns";
 
 type TaskWithProject = Task & { project_name: string };
 
@@ -39,14 +43,6 @@ function getStatusColor(status?: string): string {
   return statusColors[key] ?? "bg-muted text-muted-foreground";
 }
 
-function formatDate(dateString?: string): string {
-  if (!dateString) return "—";
-  try {
-    return new Date(dateString).toLocaleDateString();
-  } catch {
-    return "—";
-  }
-}
 
 export default function WorkspaceTasksPage() {
   const router = useRouter();
@@ -191,10 +187,13 @@ export default function WorkspaceTasksPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[320px]">Task</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Deadline</TableHead>
+                  <TableHead className="w-[320px]">
+                    {TASK_TABLE_COLUMN_LABELS.title}
+                  </TableHead>
+                  <TableHead>{TASK_TABLE_COLUMN_LABELS.status}</TableHead>
+                  <TableHead>{TASK_TABLE_COLUMN_LABELS.project}</TableHead>
+                  <TableHead>{TASK_TABLE_COLUMN_LABELS.priority}</TableHead>
+                  <TableHead>{TASK_TABLE_COLUMN_LABELS.deadline}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -215,6 +214,11 @@ export default function WorkspaceTasksPage() {
                       )}
                     </TableCell>
                     <TableCell>
+                      <Badge className={getStatusColor(task.status)}>
+                        {task.status || "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <Link
                         href={`/projects/${task.project_id}`}
                         className="text-primary hover:underline"
@@ -223,12 +227,10 @@ export default function WorkspaceTasksPage() {
                         {task.project_name}
                       </Link>
                     </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(task.status)}>
-                        {task.status || "—"}
-                      </Badge>
+                    <TableCell className="capitalize">
+                      {task.priority || "—"}
                     </TableCell>
-                    <TableCell>{formatDate(task.end_date)}</TableCell>
+                    <TableCell>{formatTaskTableDate(task.end_date)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

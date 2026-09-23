@@ -173,6 +173,33 @@ function buildDealTableColumns(
 const sentenceCase = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
 
+function DealMetaRow({
+  label,
+  children,
+  title,
+  valueClassName,
+}: {
+  label: string;
+  children: React.ReactNode;
+  title?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-baseline justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "min-w-0 truncate text-right [&>a]:block [&>a]:truncate",
+          valueClassName,
+        )}
+        title={title}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
 const DealCard = ({
   deal,
   formatCurrency,
@@ -185,55 +212,100 @@ const DealCard = ({
   onEdit?: () => void;
   onDelete?: () => void;
   onCardClick?: () => void;
-}) => (
-  <div className="group relative block">
+}) => {
+  const title =
+    deal.title || deal.client_name || deal.client_company_name || "Deal";
+  const customerLabel = [deal.client_company_name, deal.client_name]
+    .filter(Boolean)
+    .join(" · ");
+  const valueLabel = formatDealValue(deal, formatCurrency);
+
+  return (
     <Card
-      className="cursor-pointer transition-shadow hover:shadow-md"
+      className="h-full min-w-0 cursor-pointer gap-4 overflow-hidden py-4 transition-shadow hover:shadow-md"
       onClick={onCardClick}
     >
-      <CardHeader>
-        <div className="flex justify-between items-start">
+      <CardHeader className="min-w-0 gap-3 px-4">
+        <div className="flex min-w-0 items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-lg">
-              {deal.title ||
-                deal.client_name ||
-                deal.client_company_name ||
-                "Deal"}
+            <CardTitle
+              className="line-clamp-2 break-words text-base leading-snug"
+              title={title}
+            >
+              {title}
             </CardTitle>
-            {deal.company_id &&
-              (deal.client_company_name || deal.client_name) && (
-                <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                  Customer:{" "}
-                  {[deal.client_company_name, deal.client_name]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              )}
+            {deal.company_id && customerLabel && (
+              <p
+                className="mt-1 truncate text-sm text-muted-foreground"
+                title={`Customer: ${customerLabel}`}
+              >
+                Customer: {customerLabel}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 gap-0.5">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
-        <div className="flex gap-2 mt-2">
-          <Badge className={dealStageBadgeClass(deal.stage)}>
+        <div className="flex min-w-0 flex-wrap gap-1.5">
+          <Badge
+            className={cn(
+              dealStageBadgeClass(deal.stage),
+              "max-w-full whitespace-normal break-words text-left leading-tight",
+            )}
+          >
             {deal.stage || "No stage"}
           </Badge>
-          <Badge className={dealStatusBadgeClass(deal.status)}>
+          <Badge
+            className={cn(
+              dealStatusBadgeClass(deal.status),
+              "max-w-full",
+            )}
+          >
             {deal.status || "No status"}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Value:</span>
-            <span className="font-medium tabular-nums">
-              {formatDealValue(deal, formatCurrency)}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Contact:</span>
-            <span>{deal.contact_name || "N/A"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Phone:</span>
+      <CardContent className="min-w-0 px-4">
+        <div className="min-w-0 space-y-2 text-sm">
+          <DealMetaRow
+            label="Value:"
+            title={valueLabel}
+            valueClassName="font-medium tabular-nums"
+          >
+            {valueLabel}
+          </DealMetaRow>
+          <DealMetaRow label="Contact:" title={deal.contact_name || "N/A"}>
+            {deal.contact_name || "N/A"}
+          </DealMetaRow>
+          <DealMetaRow label="Phone:" title={deal.contact_phone || "N/A"}>
             {deal.contact_phone ? (
               <a
                 href={telHref(deal.contact_phone)}
@@ -243,48 +315,17 @@ const DealCard = ({
                 {deal.contact_phone}
               </a>
             ) : (
-              <span>N/A</span>
+              "N/A"
             )}
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Probability:</span>
-            <span>{deal.probability}%</span>
-          </div>
+          </DealMetaRow>
+          <DealMetaRow label="Probability:">
+            {deal.probability ?? 0}%
+          </DealMetaRow>
         </div>
       </CardContent>
     </Card>
-    <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-      {onEdit && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEdit();
-          }}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      )}
-      {onDelete && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-destructive"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      )}
-    </div>
-  </div>
-);
+  );
+};
 
 const DealKanbanCard = ({
   deal,
@@ -298,87 +339,104 @@ const DealKanbanCard = ({
   onEdit?: () => void;
   onDelete?: () => void;
   onCardClick?: () => void;
-}) => (
-  <Card
-    className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing"
-    onClick={onCardClick}
-  >
-    <CardContent className="p-3">
-      <div className="flex justify-between items-start mb-2">
-        <div className="min-w-0 flex-1">
-          <h4 className="font-semibold text-sm line-clamp-2">
-            {deal.title ||
-              deal.client_name ||
-              deal.client_company_name ||
-              "Deal"}
-          </h4>
-          {deal.company_id &&
-            (deal.client_company_name || deal.client_name) && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                Customer:{" "}
-                {[deal.client_company_name, deal.client_name]
-                  .filter(Boolean)
-                  .join(" · ")}
+}) => {
+  const title =
+    deal.title || deal.client_name || deal.client_company_name || "Deal";
+  const customerLabel = [deal.client_company_name, deal.client_name]
+    .filter(Boolean)
+    .join(" · ");
+  const valueLabel = formatDealValue(deal, formatCurrency);
+
+  return (
+    <Card
+      className="min-w-0 cursor-grab gap-0 overflow-hidden border border-border bg-card py-0 shadow-none active:cursor-grabbing"
+      onClick={onCardClick}
+    >
+      <CardContent className="min-w-0 p-3">
+        <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="line-clamp-2 break-words text-sm font-semibold" title={title}>
+              {title}
+            </h4>
+            {deal.company_id && customerLabel && (
+              <p
+                className="mt-0.5 truncate text-xs text-muted-foreground"
+                title={`Customer: ${customerLabel}`}
+              >
+                Customer: {customerLabel}
               </p>
             )}
-        </div>
-        <div className="flex gap-1 ml-2 shrink-0">
-          {onEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="h-6 w-6 p-0"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="h-6 w-6 p-0"
-            >
-              <Trash2 className="h-3 w-3 text-destructive" />
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-2">
-        <Badge className={cn(dealStatusBadgeClass(deal.status), "text-[10px] px-1 py-0")}>
-          {deal.status}
-        </Badge>
-        <span className="text-xs font-medium tabular-nums">
-          {formatDealValue(deal, formatCurrency)}
-        </span>
-      </div>
-      <div className="text-xs text-muted-foreground">
-        <div className="truncate">{deal.contact_name || "No contact"}</div>
-        {deal.contact_phone && (
-          <div className="truncate mt-0.5">
-            <a
-              href={telHref(deal.contact_phone)}
-              className="hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {deal.contact_phone}
-            </a>
           </div>
-        )}
-        <div className="mt-1">{deal.probability}% probability</div>
-      </div>
-    </CardContent>
-  </Card>
-);
+          <div className="ml-1 flex shrink-0 gap-1">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <Trash2 className="h-3 w-3 text-destructive" />
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          {deal.status && (
+            <Badge
+              className={cn(
+                dealStatusBadgeClass(deal.status),
+                "max-w-full px-1 py-0 text-[10px]",
+              )}
+            >
+              {deal.status}
+            </Badge>
+          )}
+          <span
+            className="min-w-0 truncate text-xs font-medium tabular-nums"
+            title={valueLabel}
+          >
+            {valueLabel}
+          </span>
+        </div>
+        <div className="min-w-0 text-xs text-muted-foreground">
+          <div className="truncate" title={deal.contact_name || "No contact"}>
+            {deal.contact_name || "No contact"}
+          </div>
+          {deal.contact_phone && (
+            <div className="mt-0.5 truncate" title={deal.contact_phone}>
+              <a
+                href={telHref(deal.contact_phone)}
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {deal.contact_phone}
+              </a>
+            </div>
+          )}
+          <div className="mt-1">{deal.probability ?? 0}% probability</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DealsPage() {
   const router = useRouter();
@@ -671,7 +729,7 @@ export default function DealsPage() {
     }
 
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 [&>*]:min-w-0">
         {deals.map((deal) => (
           <DealCard
             key={deal.id}
