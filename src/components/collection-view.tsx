@@ -399,7 +399,7 @@ export function CollectionView({
                   className={cn(
                     column.headerClassName,
                     sortable &&
-                      "group cursor-pointer select-none transition-colors hover:bg-muted/50",
+                    "group cursor-pointer select-none transition-colors hover:bg-muted/50",
                   )}
                   onClick={sortable ? () => handleSort(column) : undefined}
                   aria-sort={
@@ -452,29 +452,29 @@ export function CollectionView({
               >
                 {hasActiveFilters
                   ? (filteredEmptyMessage ?? (
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {filteredEmptyTitle}
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {filteredEmptyTitle}
+                      </p>
+                      {filteredEmptyDescription && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {filteredEmptyDescription}
                         </p>
-                        {filteredEmptyDescription && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {filteredEmptyDescription}
-                          </p>
-                        )}
-                      </div>
-                    ))
+                      )}
+                    </div>
+                  ))
                   : (emptyMessage ?? (
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {emptyTitle}
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {emptyTitle}
+                      </p>
+                      {emptyDescription && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {emptyDescription}
                         </p>
-                        {emptyDescription && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {emptyDescription}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  ))}
               </TableCell>
             </TableRow>
           ) : (
@@ -512,7 +512,7 @@ export function CollectionView({
                       key={item.id}
                       className={cn(
                         (onRowClick || getRowHref) &&
-                          "cursor-pointer hover:bg-muted/50",
+                        "cursor-pointer hover:bg-muted/50",
                         isSelected && "bg-accent",
                       )}
                       onClick={

@@ -149,7 +149,7 @@ function SortableKanbanCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("min-w-0", !disabled && "touch-none")}
+      className={cn("min-w-0", disabled ? undefined : "touch-none")}
       {...attributes}
       {...(disabled ? {} : listeners)}
     >

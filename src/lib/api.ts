@@ -1440,18 +1440,18 @@ export interface Employee {
   personal_email?: string;
   github_username?: string;
   employment_type?:
-    | "full_time"
-    | "part_time"
-    | "contract"
-    | "intern"
-    | "temporary";
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "intern"
+  | "temporary";
   employment_status?:
-    | "candidate"
-    | "offered"
-    | "pre_onboarding"
-    | "active"
-    | "notice_period"
-    | "exited";
+  | "candidate"
+  | "offered"
+  | "pre_onboarding"
+  | "active"
+  | "notice_period"
+  | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -1500,18 +1500,18 @@ export interface CreateEmployeeInput {
   personal_email?: string;
   github_username?: string;
   employment_type?:
-    | "full_time"
-    | "part_time"
-    | "contract"
-    | "intern"
-    | "temporary";
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "intern"
+  | "temporary";
   employment_status?:
-    | "candidate"
-    | "offered"
-    | "pre_onboarding"
-    | "active"
-    | "notice_period"
-    | "exited";
+  | "candidate"
+  | "offered"
+  | "pre_onboarding"
+  | "active"
+  | "notice_period"
+  | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -2472,7 +2472,7 @@ export interface SalesDashboardFunnelStage {
   total_value: number;
 }
 
-export interface SalesDashboardActivity extends SalesActivity {}
+export interface SalesDashboardActivity extends SalesActivity { }
 
 export interface SalesDashboardRevenueTrendPoint {
   bucket: string;
@@ -2884,7 +2884,6 @@ export interface BoardTask {
   project_id: number;
   title: string;
   status: string;
-  end_date?: string | null;
   category: WorkflowCategory | null;
   priority: string | null;
   number: number;
@@ -2895,8 +2894,9 @@ export interface BoardTask {
   branch_name: string | null;
   assigned_employee_id: number | null;
   assignee_name: string | null;
-  approver_employee_id?: number | null;
-  approver_name?: string | null;
+  approver_employee_id: number | null;
+  approver_name: string | null;
+  end_date?: string | null;
   pr_count: number;
   latest_pr_state: "open" | "merged" | "closed" | null;
   created_at: string;
@@ -2986,10 +2986,10 @@ export const tasksApi = {
     description?: string;
     assigned_employee_id?: number | null;
     approver_employee_id?: number | null;
-    end_date?: string | null;
     deadline?: string;
     due_date?: string;
     priority?: string;
+    end_date?: string | null;
   }): Promise<BoardTask> => {
     return fetchApi<BoardTask>("/api/tasks", {
       method: "POST",

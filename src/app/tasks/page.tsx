@@ -81,8 +81,8 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestClosed,
-  Loader2,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 /** Client-side mirror of the server's category transition rules (UX only —
@@ -209,19 +209,19 @@ function TaskBoardCard({
       onKeyDown={
         interactive === "click"
           ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onClick?.();
-              }
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClick?.();
             }
+          }
           : undefined
       }
       className={cn(
         "rounded-lg border border-border bg-card p-3 shadow-none",
         interactive === "drag" &&
-          "cursor-grab active:cursor-grabbing",
+        "cursor-grab active:cursor-grabbing",
         interactive === "click" &&
-          "cursor-pointer transition-colors hover:bg-muted/40",
+        "cursor-pointer transition-colors hover:bg-muted/40",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -333,7 +333,6 @@ export default function TasksBoardPage() {
   const [inlineTitle, setInlineTitle] = useState("");
   const [inlineProject, setInlineProject] = useState("");
   const [inlineAssignee, setInlineAssignee] = useState("unassigned");
-  const [inlineApprover, setInlineApprover] = useState("unassigned");
   const [inlineDeadline, setInlineDeadline] = useState("");
   const [inlinePriority, setInlinePriority] = useState("medium");
   const createInFlightRef = useRef(false);
@@ -410,7 +409,7 @@ export default function TasksBoardPage() {
       [...statuses].sort(
         (a, b) =>
           WORKFLOW_CATEGORY_ORDER[a.category] -
-            WORKFLOW_CATEGORY_ORDER[b.category] ||
+          WORKFLOW_CATEGORY_ORDER[b.category] ||
           a.sort_order - b.sort_order ||
           a.id - b.id,
       ),
@@ -640,7 +639,7 @@ export default function TasksBoardPage() {
         assignedEmployeeId == null
           ? null
           : employeeOptions.find((option) => option.id === assignedEmployeeId)
-              ?.label ?? null;
+            ?.label ?? null;
       await patchTask(
         task,
         { assigned_employee_id: assignedEmployeeId, assignee_name: nextAssigneeName },
@@ -660,7 +659,7 @@ export default function TasksBoardPage() {
         approverEmployeeId == null
           ? null
           : employeeOptions.find((option) => option.id === approverEmployeeId)
-              ?.label ?? null;
+            ?.label ?? null;
       await patchTask(
         task,
         { approver_employee_id: approverEmployeeId, approver_name: nextApproverName },
@@ -826,7 +825,7 @@ export default function TasksBoardPage() {
       },
       {
         id: "approver",
-        header: TASK_TABLE_COLUMN_LABELS.approver,
+        header: "Approver",
         sortValue: (item) =>
           tasksById.get(Number(item.id))?.approver_name ?? "",
         className: "w-[230px]",
@@ -864,7 +863,7 @@ export default function TasksBoardPage() {
       },
       {
         id: "deadline",
-        header: TASK_TABLE_COLUMN_LABELS.deadline,
+        header: "Deadline",
         className: "w-[190px]",
         sortValue: (item) => tasksById.get(Number(item.id))?.end_date ?? "",
         cell: (item) => {
@@ -928,20 +927,20 @@ export default function TasksBoardPage() {
         sortValue: (item) => tasksById.get(Number(item.id))?.pr_count ?? 0,
         cell: (item) => {
           const task = tasksById.get(Number(item.id));
-          if (!task || !task.latest_pr_state) {
+          if (!task || task.pr_count === 0 || !task.latest_pr_state) {
             return <span className="text-muted-foreground">—</span>;
           }
-          const meta = PR_STATE_META[task.latest_pr_state];
-          if (!meta) return <span className="text-muted-foreground">—</span>;
+          const prMeta = PR_STATE_META[task.latest_pr_state];
           return (
-            <Badge
-              variant="outline"
-              className={cn("gap-1 text-xs font-mono", meta.className)}
-              title={`${task.pr_count} PR${task.pr_count === 1 ? "" : "s"} (${task.latest_pr_state})`}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                prMeta?.className,
+              )}
             >
-              {meta.icon}
-              {task.pr_count}
-            </Badge>
+              {prMeta?.icon}
+              {task.pr_count > 1 ? task.pr_count : task.latest_pr_state}
+            </span>
           );
         },
       },
@@ -975,7 +974,6 @@ export default function TasksBoardPage() {
     setInlineTitle("");
     setInlineProject(defaultInlineProjectId);
     setInlineAssignee("unassigned");
-    setInlineApprover("unassigned");
     setInlineDeadline("");
     setInlinePriority("medium");
     setInlineAddActive(false);
@@ -995,18 +993,11 @@ export default function TasksBoardPage() {
     const parsedProjectId = parseInt(projectId, 10);
     const assignedEmployeeId =
       inlineAssignee !== "unassigned" ? parseInt(inlineAssignee, 10) : null;
-    const approverEmployeeId =
-      inlineApprover !== "unassigned" ? parseInt(inlineApprover, 10) : null;
     const assigneeName =
       assignedEmployeeId == null
         ? null
         : employeeOptions.find((option) => option.id === assignedEmployeeId)
-            ?.label ?? null;
-    const approverName =
-      approverEmployeeId == null
-        ? null
-        : employeeOptions.find((option) => option.id === approverEmployeeId)
-            ?.label ?? null;
+          ?.label ?? null;
     const project = projects.find((entry) => entry.id === parsedProjectId);
     const defaultStatus = orderedStatuses[0]?.name ?? "backlog";
     const statusMeta = statusByName.get(defaultStatus.toLowerCase());
@@ -1028,8 +1019,8 @@ export default function TasksBoardPage() {
       branch_name: null,
       assigned_employee_id: assignedEmployeeId,
       assignee_name: assigneeName,
-      approver_employee_id: approverEmployeeId,
-      approver_name: approverName,
+      approver_employee_id: null,
+      approver_name: null,
       pr_count: 0,
       latest_pr_state: null,
       created_at: now,
@@ -1038,7 +1029,6 @@ export default function TasksBoardPage() {
 
     setInlineTitle("");
     setInlineAssignee("unassigned");
-    setInlineApprover("unassigned");
     setInlineDeadline("");
     setInlinePriority("medium");
     startTransition(() => {
@@ -1052,7 +1042,6 @@ export default function TasksBoardPage() {
         title,
         priority: inlinePriority,
         assigned_employee_id: assignedEmployeeId,
-        approver_employee_id: approverEmployeeId,
         end_date: inlineDeadline || null,
       });
       startTransition(() => {
@@ -1072,7 +1061,6 @@ export default function TasksBoardPage() {
     defaultInlineProjectId,
     employeeOptions,
     inlineAssignee,
-    inlineApprover,
     inlineDeadline,
     inlinePriority,
     inlineProject,
@@ -1129,13 +1117,7 @@ export default function TasksBoardPage() {
           <TableCell>
             <Select
               value={inlineProject || defaultInlineProjectId}
-              onValueChange={(val) => {
-                setInlineProject(val);
-                const proj = projects.find((p) => String(p.id) === val);
-                if (proj?.project_manager_employee_id) {
-                  setInlineApprover(String(proj.project_manager_employee_id));
-                }
-              }}
+              onValueChange={setInlineProject}
               disabled={projects.length === 0}
             >
               <SelectTrigger
@@ -1157,27 +1139,6 @@ export default function TasksBoardPage() {
             <Select
               value={inlineAssignee}
               onValueChange={setInlineAssignee}
-            >
-              <SelectTrigger
-                className={cn(inlineTaskFieldClassName, "w-[170px]")}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <SelectValue placeholder="Unassigned" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={String(employee.id)}>
-                    {employee.first_name} {employee.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </TableCell>
-          <TableCell className="w-[230px]">
-            <Select
-              value={inlineApprover}
-              onValueChange={setInlineApprover}
             >
               <SelectTrigger
                 className={cn(inlineTaskFieldClassName, "w-[170px]")}
@@ -1237,7 +1198,6 @@ export default function TasksBoardPage() {
       handleInlineCreateTask,
       inlineAddActive,
       inlineAssignee,
-      inlineApprover,
       inlineDeadline,
       inlinePriority,
       inlineProject,
@@ -1479,7 +1439,6 @@ export default function TasksBoardPage() {
       >
         {renderTasks(viewMode)}
       </div>
-
       <Dialog
         open={bulkDeleteDialogOpen}
         onOpenChange={setBulkDeleteDialogOpen}
