@@ -13,11 +13,11 @@ import {
   Coffee,
   Info,
   Loader2,
+  Plane,
   Plus,
   Save,
   Sun,
   Trash2,
-  Users,
 } from "lucide-react";
 import {
   Card,
@@ -54,12 +54,17 @@ import {
 } from "@/components/ui/table";
 import {
   holidaysApi,
+  leavesApi,
+  type LeaveRequest,
   type OrganizationHoliday,
   type WeekendPolicy,
+  type WorkPolicy,
   type WorkingDaysBreakdown,
 } from "@/lib/api";
 import { HR_METRICS_PATH } from "@/lib/employee-routes";
+import { useAuth } from "@/contexts/auth-context";
 import { useOrganization } from "@/contexts/organization-context";
+import { HrLeaveSection } from "@/components/hr-leave-section";
 
 const MONTHS = [
   { value: 1, label: "January" },
@@ -78,10 +83,49 @@ const MONTHS = [
 
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function HrCalendarSetup() {
+function isoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function isoToday(): string {
+  const today = new Date();
+  return isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+}
+
+function normalizeIsoDate(value: string | undefined | null): string {
+  if (!value) return "";
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? String(value).slice(0, 10);
+}
+
+function isWeekendByPolicy(dayOfWeek: number, policy: WeekendPolicy): boolean {
+  if (policy === "none") return false;
+  if (policy === "sun_only_off") return dayOfWeek === 0;
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
+function leaveCoversDate(leave: LeaveRequest, isoDateValue: string): boolean {
+  const start = normalizeIsoDate(leave.start_date);
+  const end = normalizeIsoDate(leave.end_date);
+  return start <= isoDateValue && end >= isoDateValue;
+}
+
+export type HrCalendarSetupVariant = "hr" | "workspace";
+
+export function HrCalendarSetup({
+  variant = "hr",
+}: {
+  variant?: HrCalendarSetupVariant;
+}) {
   const { activeOrg } = useOrganization();
-  const [selectedMonth, setSelectedMonth] = useState<number>(7);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const showLeave = variant === "workspace";
+  const showPolicySetup = variant === "hr";
+  const showLeaveSection = showLeave || showPolicySetup;
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
 
   const [weekendPolicy, setWeekendPolicy] =
     useState<WeekendPolicy>("sat_sun_off");
@@ -104,32 +148,81 @@ export function HrCalendarSetup() {
   const [addingHoliday, setAddingHoliday] = useState<boolean>(false);
   const [holidayError, setHolidayError] = useState<string | null>(null);
 
-  const yearOptions = [2024, 2025, 2026, 2027, 2028];
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [leavesLoading, setLeavesLoading] = useState<boolean>(false);
+  const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
+  const [applyStartDate, setApplyStartDate] = useState(isoToday());
+  const [applyEndDate, setApplyEndDate] = useState(isoToday());
+
+  const yearOptions = useMemo(() => {
+    const current = now.getFullYear();
+    return [current - 1, current, current + 1, current + 2, current + 3];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadPolicyAndData = useCallback(async () => {
     setLoading(true);
+    if (showLeaveSection) setLeavesLoading(true);
     setError(null);
-    try {
-      const [policyRes, breakdownRes, holidaysRes] = await Promise.all([
-        holidaysApi.getPolicy(),
-        holidaysApi.getWorkingDays({
-          month: selectedMonth,
-          year: selectedYear,
-        }),
-        holidaysApi.getAll({ year: selectedYear }),
-      ]);
+    const results = await Promise.allSettled([
+      holidaysApi.getPolicy(),
+      holidaysApi.getWorkingDays({
+        month: selectedMonth,
+        year: selectedYear,
+      }),
+      showPolicySetup
+        ? holidaysApi.getAll({ year: selectedYear })
+        : Promise.resolve({ holidays: [] as OrganizationHoliday[] }),
+      ...(showLeaveSection ? [leavesApi.list({ year: selectedYear })] : []),
+    ]);
 
-      setWeekendPolicy(policyRes.weekend_policy || "sat_sun_off");
-      setWorkingHoursPerDay(Number(policyRes.working_hours_per_day || 8.0));
-      setBreakdown(breakdownRes);
-      setAllHolidays(holidaysRes.holidays || []);
-    } catch (err) {
-      console.error("Failed to load holiday data:", err);
-      setError("Failed to load calendar setup and working days calculation.");
-    } finally {
-      setLoading(false);
+    const [policyRes, breakdownRes, holidaysRes, leavesRes] = results;
+    const failed: string[] = [];
+
+    if (policyRes.status === "fulfilled") {
+      const value = policyRes.value as WorkPolicy;
+      if (value?.weekend_policy) {
+        setWeekendPolicy(value.weekend_policy);
+        setWorkingHoursPerDay(Number(value.working_hours_per_day || 8.0));
+      } else {
+        failed.push("weekend policy");
+      }
+    } else {
+      failed.push("weekend policy");
     }
-  }, [selectedMonth, selectedYear]);
+    if (breakdownRes.status === "fulfilled") {
+      const value = breakdownRes.value as WorkingDaysBreakdown;
+      if (Array.isArray(value?.day_breakdown)) {
+        setBreakdown(value);
+      } else {
+        failed.push("working days");
+      }
+    } else {
+      failed.push("working days");
+    }
+    if (holidaysRes.status === "fulfilled") {
+      const value = holidaysRes.value as { holidays?: OrganizationHoliday[] };
+      setAllHolidays(value.holidays || []);
+    } else {
+      failed.push("holidays");
+    }
+    if (showLeaveSection) {
+      if (leavesRes?.status === "fulfilled") {
+        const value = leavesRes.value as { leaves?: LeaveRequest[] };
+        setLeaves(value.leaves || []);
+      } else {
+        failed.push("leave requests");
+      }
+    } else {
+      setLeaves([]);
+    }
+
+    if (failed.length > 0) {
+      setError(`Could not load ${failed.join(", ")}.`);
+    }
+    setLoading(false);
+    setLeavesLoading(false);
+  }, [selectedMonth, selectedYear, showLeaveSection, showPolicySetup]);
 
   useEffect(() => {
     void loadPolicyAndData();
@@ -193,6 +286,13 @@ export function HrCalendarSetup() {
     setIsAddHolidayOpen(true);
   };
 
+  const handleOpenApplyLeave = (defaultDate?: string) => {
+    const date = defaultDate || isoToday();
+    setApplyStartDate(date);
+    setApplyEndDate(date);
+    setIsApplyLeaveOpen(true);
+  };
+
   const handleAddHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHolidayName.trim() || !newHolidayDate) {
@@ -244,40 +344,63 @@ type DayCalendarCell = {
   holidayName?: string;
   isWorkingDay: boolean;
   isToday: boolean;
+  leaves: LeaveRequest[];
 };
 
-type CalendarCell = BlankCalendarCell | DayCalendarCell;
+  type CalendarCell = BlankCalendarCell | DayCalendarCell;
 
-  // Build full month calendar cells with leading blanks for day of week alignment
+  // Always build the month locally so date numbers show even if working-days API is slow/empty.
   const calendarCells = useMemo<CalendarCell[]>(() => {
-    if (!breakdown?.day_breakdown) return [];
-    const firstDayOfWeek =
-      breakdown.day_breakdown.length > 0
-        ? breakdown.day_breakdown[0].day_of_week
-        : 0;
+    const totalDays = new Date(selectedYear, selectedMonth, 0).getDate();
+    const firstDayOfWeek = new Date(selectedYear, selectedMonth - 1, 1).getDay();
+    const todayStr = isoToday();
+    const byDate = new Map(
+      (breakdown?.day_breakdown ?? []).map((item) => [
+        normalizeIsoDate(item.date),
+        item,
+      ]),
+    );
+    const visibleLeaves = leaves.filter(
+      (leave) =>
+        leave.status === "pending" ||
+        leave.status === "approved" ||
+        leave.status === "rejected",
+    );
 
-    const blanks: BlankCalendarCell[] = Array.from({ length: firstDayOfWeek }).map((_, i) => ({
-      isBlank: true,
+    const blanks: BlankCalendarCell[] = Array.from({
+      length: firstDayOfWeek,
+    }).map((_, i) => ({
+      isBlank: true as const,
       key: `blank-${i}`,
     }));
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-    const days: DayCalendarCell[] = breakdown.day_breakdown.map((d) => ({
-      isBlank: false,
-      key: d.date,
-      date: d.date,
-      dayNum: parseInt(d.date.slice(8), 10),
-      isWeekend: d.is_weekend,
-      isHoliday: d.is_holiday,
-      holidayName: d.holiday_name,
-      isWorkingDay: d.is_working_day,
-      isToday: d.date === todayStr,
-    }));
+    const days: DayCalendarCell[] = Array.from({ length: totalDays }, (_, i) => {
+      const dayNum = i + 1;
+      const date = isoDate(selectedYear, selectedMonth, dayNum);
+      const fromApi = byDate.get(date);
+      const dayOfWeek = new Date(selectedYear, selectedMonth - 1, dayNum).getDay();
+      const isWeekend =
+        fromApi?.is_weekend ?? isWeekendByPolicy(dayOfWeek, weekendPolicy);
+      const isHoliday = fromApi?.is_holiday ?? false;
+      return {
+        isBlank: false as const,
+        key: date,
+        date,
+        dayNum,
+        isWeekend,
+        isHoliday,
+        holidayName: fromApi?.holiday_name,
+        isWorkingDay: fromApi?.is_working_day ?? (!isWeekend && !isHoliday),
+        isToday: date === todayStr,
+        leaves: visibleLeaves.filter((leave) => leaveCoversDate(leave, date)),
+      };
+    });
 
     return [...blanks, ...days];
-  }, [breakdown?.day_breakdown]);
+  }, [breakdown?.day_breakdown, leaves, selectedMonth, selectedYear, weekendPolicy]);
+
+  const monthShort =
+    MONTHS.find((m) => m.value === selectedMonth)?.label.slice(0, 3) ?? "";
 
   return (
     <div className="w-full space-y-6 px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10">
@@ -286,7 +409,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Calendar & Holiday Setup
+              {showLeave ? "Calendar & leave" : "Calendar & holidays"}
             </h1>
             {activeOrg?.name ? (
               <Badge variant="secondary" className="text-xs">
@@ -295,19 +418,21 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
             ) : null}
           </div>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Configure Saturday & Sunday weekend policies and public holidays.
-            The total working days calculated here automatically powers the
-            Performance Matrix report.
+            {showLeave
+              ? "Apply for leave here. HR reviews requests from Calendar & holidays. Approved leave appears in the list below."
+              : "Configure weekend policy and public holidays. Review and approve leave requests in the section at the bottom."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {showPolicySetup ? (
+            <>
           <Button
             asChild
             variant="outline"
             size="sm"
             className="gap-1.5 shadow-sm"
           >
-            <Link href="/workspace/attendance/hr">
+            <Link href="/hr/attendance">
               <Clock className="h-4 w-4" />
               Attendance Reminders
             </Link>
@@ -323,14 +448,28 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
+            </>
+          ) : null}
+          {showLeave ? (
           <Button
             size="sm"
-            onClick={() => handleOpenAddHoliday()}
+            onClick={() => handleOpenApplyLeave()}
             className="gap-1.5 shadow-sm"
           >
-            <Plus className="h-4 w-4" />
-            Add Holiday
+            <Plane className="h-4 w-4" />
+            Apply leave
           </Button>
+          ) : null}
+          {showPolicySetup ? (
+            <Button
+              size="sm"
+              onClick={() => handleOpenAddHoliday()}
+              className="gap-1.5 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Add Holiday
+            </Button>
+          ) : null}
         </div>
       </header>
 
@@ -341,6 +480,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
       ) : null}
 
       {/* Top Grid: Weekend Policy & Working Days Breakdown */}
+      {showPolicySetup ? (
       <div className="grid gap-6 md:grid-cols-2">
         {/* 1. Weekend Policy Card */}
         <Card className="border-border/80 shadow-sm flex flex-col justify-between">
@@ -369,6 +509,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   value="sat_sun_off"
                   checked={weekendPolicy === "sat_sun_off"}
                   onChange={() => setWeekendPolicy("sat_sun_off")}
+                  disabled={!isAdmin}
                   className="mt-1 accent-primary"
                 />
                 <div className="space-y-0.5">
@@ -396,6 +537,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   value="sun_only_off"
                   checked={weekendPolicy === "sun_only_off"}
                   onChange={() => setWeekendPolicy("sun_only_off")}
+                  disabled={!isAdmin}
                   className="mt-1 accent-primary"
                 />
                 <div className="space-y-0.5">
@@ -423,6 +565,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   value="alt_sat_sun_off"
                   checked={weekendPolicy === "alt_sat_sun_off"}
                   onChange={() => setWeekendPolicy("alt_sat_sun_off")}
+                  disabled={!isAdmin}
                   className="mt-1 accent-primary"
                 />
                 <div className="space-y-0.5">
@@ -452,6 +595,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   onChange={(e) =>
                     setWorkingHoursPerDay(parseFloat(e.target.value) || 8.0)
                   }
+                  disabled={!isAdmin}
                   className="h-8 w-20 font-mono text-xs"
                 />
               </div>
@@ -463,6 +607,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                     Saved!
                   </span>
                 ) : null}
+                {isAdmin ? (
                 <Button
                   size="sm"
                   onClick={handleSavePolicy}
@@ -476,6 +621,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   )}
                   Save Policy
                 </Button>
+                ) : null}
               </div>
             </div>
           </CardContent>
@@ -605,6 +751,7 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
           </CardContent>
         </Card>
       </div>
+      ) : null}
 
       {/* Visual Month Calendar View */}
       <Card className="border-border/80 shadow-sm overflow-hidden">
@@ -702,6 +849,23 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                 <span className="h-2 w-2 rounded-full bg-amber-500" />
                 Holiday ({breakdown?.holiday_days ?? 0})
               </span>
+              {showLeaveSection ? (
+                <>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Approved
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-400 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-violet-500" />
+                    Pending
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    Rejected
+                  </span>
+                </>
+              ) : null}
+              {showPolicySetup ? (
               <Button
                 type="button"
                 size="sm"
@@ -712,11 +876,27 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                 <Plus className="h-3.5 w-3.5" />
                 Add Holiday
               </Button>
+              ) : null}
+              {showLeave ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleOpenApplyLeave()}
+                className="h-8 gap-1.5 text-xs font-semibold shadow-2xs ml-auto lg:ml-0"
+              >
+                <Plane className="h-3.5 w-3.5" />
+                Apply leave
+              </Button>
+              ) : null}
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground pt-1 border-t border-border/40">
-            <p>Click any working day cell to quickly register a public or company holiday for that date.</p>
+            <p>
+              {showLeave
+                ? "Click any working day to apply leave for that date. Leave requests are listed below."
+                : "Click any working day cell to quickly register a public or company holiday for that date."}
+            </p>
             <span className="font-mono text-[11px] text-foreground font-medium">
               Net {breakdown?.total_working_days ?? 0} working days in {MONTHS.find((m) => m.value === selectedMonth)?.label} {selectedYear}
             </span>
@@ -724,11 +904,11 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           {loading ? (
-            <div className="flex h-48 items-center justify-center text-muted-foreground gap-2">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              Loading calendar view…
+            <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Updating calendar…
             </div>
-          ) : (
+          ) : null}
             <div className="grid grid-cols-7 gap-2">
               {/* Day Headers */}
               {WEEKDAY_NAMES.map((d, i) => (
@@ -766,8 +946,8 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm font-mono text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                          {cell.dayNum}
+                        <span className="font-bold text-sm font-mono text-amber-700 dark:text-amber-400 flex items-center gap-1" title={cell.date}>
+                          {cell.dayNum} {monthShort}
                           {cell.isToday ? (
                             <span className="text-[9px] font-sans px-1 py-0.2 rounded bg-primary text-primary-foreground font-semibold">
                               Today
@@ -799,8 +979,8 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm font-mono text-muted-foreground flex items-center gap-1">
-                          {cell.dayNum}
+                        <span className="font-medium text-sm font-mono text-muted-foreground flex items-center gap-1" title={cell.date}>
+                          {cell.dayNum} {monthShort}
                           {cell.isToday ? (
                             <span className="text-[9px] font-sans px-1 py-0.2 rounded bg-primary text-primary-foreground font-semibold">
                               Today
@@ -816,40 +996,137 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   );
                 }
 
-                return (
-                  <button
-                    type="button"
-                    key={cell.key}
-                    onClick={() => handleOpenAddHoliday(cell.date)}
-                    className={`min-h-[76px] p-2.5 rounded-lg bg-background border hover:border-primary hover:bg-primary/5 transition-all text-left flex flex-col justify-between group shadow-2xs ${
-                      cell.isToday
-                        ? "border-primary ring-2 ring-primary/30"
-                        : "border-border"
-                    }`}
-                  >
+                const dayLeaves = showLeaveSection ? cell.leaves : [];
+                const approvedLeave = dayLeaves.find((leave) => leave.status === "approved");
+                const pendingLeave = dayLeaves.find((leave) => leave.status === "pending");
+                const rejectedLeave = dayLeaves.find((leave) => leave.status === "rejected");
+                const leaveOnDay = approvedLeave || pendingLeave || rejectedLeave;
+                const leaveStatus = leaveOnDay?.status;
+                const leaveLabel = leaveOnDay
+                  ? dayLeaves.length > 1
+                    ? `${dayLeaves.length} on leave`
+                    : leaveStatus === "pending"
+                      ? "Leave pending"
+                      : leaveStatus === "rejected"
+                        ? "Leave rejected"
+                        : leaveOnDay.employee_name
+                  : null;
+
+                const leaveToneClass =
+                  leaveStatus === "approved"
+                    ? "bg-emerald-500/20 border-emerald-500/50"
+                    : leaveStatus === "pending"
+                      ? "bg-violet-500/20 border-violet-500/50"
+                      : leaveStatus === "rejected"
+                        ? "bg-red-500/20 border-red-500/50"
+                        : "";
+
+                const leaveIconClass =
+                  leaveStatus === "approved"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : leaveStatus === "pending"
+                      ? "text-violet-600 dark:text-violet-400"
+                      : "text-red-600 dark:text-red-400";
+
+                const leaveTextClass =
+                  leaveStatus === "approved"
+                    ? "text-emerald-700 dark:text-emerald-300 font-medium"
+                    : leaveStatus === "pending"
+                      ? "text-violet-700 dark:text-violet-300 font-medium"
+                      : leaveStatus === "rejected"
+                        ? "text-red-700 dark:text-red-300 font-medium"
+                        : "text-muted-foreground group-hover:text-primary transition-colors";
+
+                const dayClassName = `min-h-[76px] p-2.5 rounded-lg border text-left flex flex-col justify-between group shadow-2xs ${
+                  leaveOnDay ? leaveToneClass : "bg-background border-border"
+                } ${
+                  cell.isToday
+                    ? "border-primary ring-2 ring-primary/30"
+                    : ""
+                } ${
+                  (showLeave || showPolicySetup) && !leaveOnDay
+                    ? "hover:border-primary hover:bg-primary/5 transition-all"
+                    : ""
+                }`;
+
+                const dayInner = (
+                  <>
                     <div className="flex items-center justify-between w-full">
-                      <span className="font-bold text-sm font-mono text-foreground group-hover:text-primary flex items-center gap-1">
-                        {cell.dayNum}
+                      <span className="font-bold text-sm font-mono text-foreground group-hover:text-primary flex items-center gap-1" title={cell.date}>
+                        {cell.dayNum} {monthShort}
                         {cell.isToday ? (
                           <span className="text-[9px] font-sans px-1 py-0.2 rounded bg-primary text-primary-foreground font-semibold">
                             Today
                           </span>
                         ) : null}
                       </span>
-                      <Briefcase className="h-3 w-3 text-muted-foreground group-hover:text-primary opacity-40 group-hover:opacity-100" />
+                      {leaveOnDay ? (
+                        <Plane className={`h-3 w-3 ${leaveIconClass}`} />
+                      ) : (
+                        <Briefcase className="h-3 w-3 text-muted-foreground group-hover:text-primary opacity-40 group-hover:opacity-100" />
+                      )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
-                      Working Day
+                    <span
+                      className={`text-[10px] truncate ${leaveTextClass}`}
+                      title={leaveLabel ?? "Working Day"}
+                    >
+                      {leaveLabel ?? "Working Day"}
                     </span>
-                  </button>
+                  </>
+                );
+
+                if (showPolicySetup) {
+                  return (
+                    <button
+                      type="button"
+                      key={cell.key}
+                      onClick={() => handleOpenAddHoliday(cell.date)}
+                      className={dayClassName}
+                    >
+                      {dayInner}
+                    </button>
+                  );
+                }
+
+                if (showLeave) {
+                  return (
+                    <button
+                      type="button"
+                      key={cell.key}
+                      onClick={() => handleOpenApplyLeave(cell.date)}
+                      className={dayClassName}
+                    >
+                      {dayInner}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div key={cell.key} className={dayClassName}>
+                    {dayInner}
+                  </div>
                 );
               })}
             </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Organization Holidays Table for Year */}
+      {showLeave ? (
+      <HrLeaveSection
+        mode="workspace"
+        year={selectedYear}
+        leaves={leaves}
+        loading={leavesLoading}
+        isAdmin={isAdmin}
+        applyOpen={isApplyLeaveOpen}
+        defaultStartDate={applyStartDate}
+        defaultEndDate={applyEndDate}
+        onApplyOpenChange={setIsApplyLeaveOpen}
+        onChanged={loadPolicyAndData}
+      />
+      ) : null}
+
+      {showPolicySetup ? (
       <Card className="border-border/80 shadow-sm overflow-hidden">
         <CardHeader className="border-b border-border/60 bg-muted/20 px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -862,14 +1139,16 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                 {activeOrg?.name || "your organization"}.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              onClick={() => handleOpenAddHoliday()}
-              className="gap-1.5 shadow-sm h-8 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Holiday
-            </Button>
+            {showPolicySetup ? (
+              <Button
+                size="sm"
+                onClick={() => handleOpenAddHoliday()}
+                className="gap-1.5 shadow-sm h-8 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Holiday
+              </Button>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -900,9 +1179,11 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                   <TableHead className="font-semibold text-foreground">
                     Description
                   </TableHead>
-                  <TableHead className="text-right font-semibold text-foreground">
-                    Actions
-                  </TableHead>
+                  {showPolicySetup && isAdmin ? (
+                    <TableHead className="text-right font-semibold text-foreground">
+                      Actions
+                    </TableHead>
+                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -928,16 +1209,18 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
                       <TableCell className="text-muted-foreground text-xs">
                         {h.description || "—"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteHoliday(h.id)}
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
+                      {showPolicySetup && isAdmin ? (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteHoliday(h.id)}
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   );
                 })}
@@ -946,6 +1229,18 @@ type CalendarCell = BlankCalendarCell | DayCalendarCell;
           )}
         </CardContent>
       </Card>
+      ) : null}
+
+      {showPolicySetup ? (
+      <HrLeaveSection
+        mode="hr"
+        year={selectedYear}
+        leaves={leaves}
+        loading={leavesLoading}
+        isAdmin={isAdmin}
+        onChanged={loadPolicyAndData}
+      />
+      ) : null}
 
       {/* Add Holiday Dialog Modal */}
       <Dialog open={isAddHolidayOpen} onOpenChange={setIsAddHolidayOpen}>

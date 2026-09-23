@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = [
   "/invite",
   "/forgot-password",
   "/reset-password",
+  // "/formfield/f", // Formfield app hidden
 ];
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {

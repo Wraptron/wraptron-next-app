@@ -243,6 +243,12 @@ const WORKSPACE_MENU_ITEMS: MenuItem[] = [
     href: "/workspace/attendance",
   },
   {
+    id: "workspace-calendar",
+    label: "Calendar",
+    icon: Calendar,
+    href: "/workspace/calendar",
+  },
+  {
     id: "workspace-tasks",
     label: "Tasks",
     icon: CheckSquare,

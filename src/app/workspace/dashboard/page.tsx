@@ -517,6 +517,9 @@ export default function WorkspaceDashboardPage() {
               <Link href="/workspace/attendance">Attendance history</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
+              <Link href="/workspace/calendar">Calendar & leave</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
               <Link href="/workspace/tasks">Tasks</Link>
             </Button>
           </CardContent>
