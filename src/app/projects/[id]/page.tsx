@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,8 +33,10 @@ import {
 import {
   projectsApi,
   integrationsApi,
+  employeesApi,
   type Project,
   type Task,
+  type Employee,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -60,6 +60,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { GitHubIntegration } from "@/components/github-integration";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
+import {
+  TASK_TABLE_COLUMN_LABELS,
+  formatTaskTableDate,
+} from "@/lib/task-table-columns";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   ArrowLeft,
@@ -812,6 +816,8 @@ export default function ProjectPage() {
             <TaskViewSwitcher
               tasks={project.tasks || []}
               projectId={projectId!}
+              projectKey={project.key}
+              projectManagerEmployeeId={project.project_manager_employee_id}
               onTaskUpdate={() => {
                 // Refresh project data
                 if (projectId) {
@@ -863,10 +869,14 @@ type TaskViewMode = "list" | "board" | "card" | "calendar";
 function TaskViewSwitcher({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
   onTaskUpdate,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
   onTaskUpdate: () => void;
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
@@ -890,22 +900,27 @@ function TaskViewSwitcher({
     }
   }, [viewMode]);
 
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [addingTask, setAddingTask] = useState(false);
 
   const refreshTasks = () => {
     onTaskUpdate();
+  };
+
+  const handleAddTask = () => {
+    setViewMode("list");
+    setAddingTask(true);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Button
-          onClick={() => setAddTaskOpen(true)}
+          onClick={handleAddTask}
           size="sm"
           className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Task
+          New task
         </Button>
         <div className="flex items-center border rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
           <Button
@@ -947,6 +962,10 @@ function TaskViewSwitcher({
         <TaskListView
           tasks={tasks}
           projectId={projectId}
+          projectKey={projectKey}
+          projectManagerEmployeeId={projectManagerEmployeeId}
+          addingTask={addingTask}
+          onAddingTaskChange={setAddingTask}
           onUpdate={refreshTasks}
         />
       )}
@@ -971,13 +990,6 @@ function TaskViewSwitcher({
           onUpdate={refreshTasks}
         />
       )}
-
-      <AddTaskDialog
-        open={addTaskOpen}
-        onOpenChange={setAddTaskOpen}
-        projectId={projectId}
-        onSuccess={refreshTasks}
-      />
     </div>
   );
 }
@@ -1226,45 +1238,153 @@ function TaskBoard({
 }
 
 // Task List View Component
+const PROJECT_TASK_STATUS_OPTIONS = [
+  { value: "pending", label: "Backlog" },
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "review", label: "Review" },
+  { value: "completed", label: "Done" },
+  { value: "blocked", label: "Blocked" },
+] as const;
+
+const PROJECT_TASK_PRIORITY_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+] as const;
+
+function formatEmployeeName(employee?: Employee | null): string {
+  if (!employee) return "—";
+  return `${employee.first_name} ${employee.last_name}`.trim() || "—";
+}
+
+function taskStatusLabel(status?: string): string {
+  if (!status) return "—";
+  const match = PROJECT_TASK_STATUS_OPTIONS.find((o) => o.value === status);
+  if (match) return match.label;
+  return status.replace(/_/g, " ");
+}
+
 function TaskListView({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
+  addingTask,
+  onAddingTaskChange,
   onUpdate,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
+  addingTask: boolean;
+  onAddingTaskChange: (adding: boolean) => void;
   onUpdate: () => void;
 }) {
   const router = useRouter();
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Column Definitions
   const [columns, setColumns] = useState([
-    { id: "status", label: "Status", width: "w-[150px]" },
-    { id: "title", label: "Title" },
-    { id: "priority", label: "Priority" },
-    { id: "complexity", label: "Complexity" },
-    { id: "start_date", label: "Start Date" },
-    { id: "end_date", label: "End Date" },
-    { id: "created_at", label: "Created At", align: "right" },
+    { id: "key", label: TASK_TABLE_COLUMN_LABELS.key, width: "w-[110px]" },
+    { id: "title", label: TASK_TABLE_COLUMN_LABELS.title },
+    { id: "status", label: TASK_TABLE_COLUMN_LABELS.status, width: "w-[140px]" },
+    { id: "assignee", label: TASK_TABLE_COLUMN_LABELS.assignee, width: "w-[160px]" },
+    { id: "approver", label: TASK_TABLE_COLUMN_LABELS.approver, width: "w-[160px]" },
+    { id: "end_date", label: TASK_TABLE_COLUMN_LABELS.deadline, width: "w-[140px]" },
+    { id: "priority", label: TASK_TABLE_COLUMN_LABELS.priority, width: "w-[120px]" },
   ]);
 
-  // Selection State
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
-
-  // Drag and Drop State
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-
-  // Sorting State
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
-
-  // Filter State
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [showFilters, setShowFilters] = useState(false);
 
-  // Toggle all selection
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newStatus, setNewStatus] = useState("pending");
+  const [newAssignee, setNewAssignee] = useState("unassigned");
+  const [newApprover, setNewApprover] = useState("unassigned");
+  const [newDeadline, setNewDeadline] = useState("");
+  const [newPriority, setNewPriority] = useState("medium");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await employeesApi.getAll({
+          employment_status: "active",
+          limit: 500,
+        });
+        if (!cancelled) setEmployees(res.data);
+      } catch {
+        if (!cancelled) setEmployees([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!addingTask) return;
+    if (projectManagerEmployeeId != null) {
+      setNewApprover(String(projectManagerEmployeeId));
+    }
+    const t = window.setTimeout(() => titleInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [addingTask, projectManagerEmployeeId]);
+
+  const employeesById = new Map(employees.map((e) => [e.id, e]));
+
+  const resetCreateRow = () => {
+    setNewTitle("");
+    setNewStatus("pending");
+    setNewAssignee("unassigned");
+    setNewApprover(
+      projectManagerEmployeeId != null
+        ? String(projectManagerEmployeeId)
+        : "unassigned",
+    );
+    setNewDeadline("");
+    setNewPriority("medium");
+  };
+
+  const cancelCreateRow = () => {
+    resetCreateRow();
+    onAddingTaskChange(false);
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTitle.trim() || creating) return;
+    setCreating(true);
+    try {
+      await projectsApi.createTask(projectId, {
+        title: newTitle.trim(),
+        status: newStatus,
+        assigned_employee_id:
+          newAssignee === "unassigned" ? null : parseInt(newAssignee, 10),
+        approver_employee_id:
+          newApprover === "unassigned" ? null : parseInt(newApprover, 10),
+        end_date: newDeadline || undefined,
+        priority: newPriority,
+      });
+      resetCreateRow();
+      onUpdate();
+      window.setTimeout(() => titleInputRef.current?.focus(), 0);
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const toggleSelectAll = () => {
     if (processedTasks.length === 0) return;
     if (selectedTasks.size === processedTasks.length) {
@@ -1274,7 +1394,6 @@ function TaskListView({
     }
   };
 
-  // Toggle individual selection
   const toggleSelect = (taskId: number) => {
     const newSelected = new Set(selectedTasks);
     if (newSelected.has(taskId)) {
@@ -1285,7 +1404,6 @@ function TaskListView({
     setSelectedTasks(newSelected);
   };
 
-  // Sort Handler
   const handleSort = (columnId: string) => {
     let direction: "asc" | "desc" = "asc";
     if (
@@ -1298,12 +1416,10 @@ function TaskListView({
     setSortConfig({ key: columnId, direction });
   };
 
-  // Filter Handler
   const handleFilterChange = (columnId: string, value: string) => {
     setFilters((prev) => ({ ...prev, [columnId]: value }));
   };
 
-  // Drag Handlers
   const handleDragStart = (e: React.DragEvent, columnId: string) => {
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
@@ -1333,41 +1449,77 @@ function TaskListView({
     setDraggedColumn(null);
   };
 
-  // Processed Tasks (Filtered & Sorted)
+  const getTaskKey = (task: Task) => {
+    if (projectKey && task.number != null) return `${projectKey}-${task.number}`;
+    if (task.number != null) return String(task.number);
+    return "—";
+  };
+
+  const getSortValue = (task: Task, key: string) => {
+    switch (key) {
+      case "key":
+        return getTaskKey(task);
+      case "assignee":
+        return formatEmployeeName(
+          task.assigned_employee_id != null
+            ? employeesById.get(task.assigned_employee_id)
+            : null,
+        );
+      case "approver":
+        return formatEmployeeName(
+          task.approver_employee_id != null
+            ? employeesById.get(task.approver_employee_id)
+            : null,
+        );
+      default:
+        return task[key as keyof Task];
+    }
+  };
+
+  const getFilterValue = (task: Task, columnId: string) => {
+    if (columnId === "key") return getTaskKey(task);
+    if (columnId === "assignee") {
+      return formatEmployeeName(
+        task.assigned_employee_id != null
+          ? employeesById.get(task.assigned_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "approver") {
+      return formatEmployeeName(
+        task.approver_employee_id != null
+          ? employeesById.get(task.approver_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "end_date") {
+      return task.end_date
+        ? new Date(task.end_date).toLocaleDateString()
+        : "";
+    }
+    if (columnId === "status") return taskStatusLabel(task.status);
+    return String(task[columnId as keyof Task] || "");
+  };
+
   const processedTasks = [...tasks]
     .filter((task) => {
       return columns.every((col) => {
         const filterValue = filters[col.id];
         if (!filterValue) return true;
-
-        let taskValue = "";
-        // Handle specific type conversions for filtering
-        if (
-          col.id === "created_at" ||
-          col.id === "start_date" ||
-          col.id === "end_date"
-        ) {
-          const dateVal = task[col.id as keyof Task];
-          taskValue = dateVal
-            ? new Date(String(dateVal)).toLocaleDateString()
-            : "";
-        } else {
-          taskValue = String(task[col.id as keyof Task] || "");
-        }
-
-        return taskValue.toLowerCase().includes(filterValue.toLowerCase());
+        return getFilterValue(task, col.id)
+          .toLowerCase()
+          .includes(filterValue.toLowerCase());
       });
     })
     .sort((a, b) => {
       if (!sortConfig) return 0;
       const { key, direction } = sortConfig;
-
-      const valA = a[key as keyof Task];
-      const valB = b[key as keyof Task];
+      const valA = getSortValue(a, key);
+      const valB = getSortValue(b, key);
 
       if (valA === valB) return 0;
-      if (valA === undefined || valA === null) return 1;
-      if (valB === undefined || valB === null) return -1;
+      if (valA === undefined || valA === null || valA === "") return 1;
+      if (valB === undefined || valB === null || valB === "") return -1;
 
       const compareRes = valA < valB ? -1 : 1;
       return direction === "asc" ? compareRes : -compareRes;
@@ -1375,23 +1527,11 @@ function TaskListView({
 
   const renderCellContent = (task: Task, columnId: string) => {
     switch (columnId) {
-      case "status":
+      case "key":
         return (
-          <div className="flex items-center gap-2">
-            {getStatusIconHelper(task.status)}
-            <Badge
-              variant={
-                task.status === "completed" || task.status === "done"
-                  ? "default"
-                  : task.status === "in_progress"
-                    ? "secondary"
-                    : "outline"
-              }
-              className="text-xs"
-            >
-              {task.status}
-            </Badge>
-          </div>
+          <span className="font-mono text-xs text-muted-foreground">
+            {getTaskKey(task)}
+          </span>
         );
       case "title":
         return (
@@ -1404,44 +1544,157 @@ function TaskListView({
             )}
           </div>
         );
-      case "priority":
-        return task.priority ? (
-          <Badge variant="outline" className="text-xs capitalize">
-            {task.priority}
-          </Badge>
-        ) : null;
-      case "complexity":
-        return task.complexity ? (
-          <span className="text-sm text-muted-foreground capitalize">
-            {task.complexity}
-          </span>
-        ) : null;
-      case "start_date":
+      case "status":
         return (
-          <span className="text-sm text-muted-foreground">
-            {task.start_date
-              ? new Date(task.start_date).toLocaleDateString()
-              : "-"}
+          <span className="capitalize text-sm">
+            {taskStatusLabel(task.status)}
           </span>
+        );
+      case "assignee":
+        return task.assigned_employee_id != null ? (
+          formatEmployeeName(employeesById.get(task.assigned_employee_id))
+        ) : (
+          <span className="text-muted-foreground">Unassigned</span>
+        );
+      case "approver":
+        return task.approver_employee_id != null ? (
+          formatEmployeeName(employeesById.get(task.approver_employee_id))
+        ) : (
+          <span className="text-muted-foreground">—</span>
         );
       case "end_date":
         return (
           <span className="text-sm text-muted-foreground">
-            {task.end_date ? new Date(task.end_date).toLocaleDateString() : "-"}
+            {formatTaskTableDate(task.end_date)}
           </span>
         );
-      case "created_at":
-        return (
-          <div className="text-right text-sm text-muted-foreground">
-            {new Date(task.created_at).toLocaleDateString()}
-          </div>
+      case "priority":
+        return task.priority ? (
+          <span className="capitalize text-sm">{task.priority}</span>
+        ) : (
+          "—"
         );
       default:
         return null;
     }
   };
 
-  if (tasks.length === 0) {
+  const renderCreateCell = (columnId: string) => {
+    switch (columnId) {
+      case "key":
+        return <span className="text-muted-foreground">—</span>;
+      case "title":
+        return (
+          <Input
+            ref={titleInputRef}
+            id="project-inline-task-title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Task title..."
+            className="h-8"
+            disabled={creating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleCreateTask();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                cancelCreateRow();
+              }
+            }}
+          />
+        );
+      case "status":
+        return (
+          <Select value={newStatus} onValueChange={setNewStatus} disabled={creating}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROJECT_TASK_STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case "assignee":
+        return (
+          <Select
+            value={newAssignee}
+            onValueChange={setNewAssignee}
+            disabled={creating}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {employees.map((employee) => (
+                <SelectItem key={employee.id} value={String(employee.id)}>
+                  {formatEmployeeName(employee)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case "approver":
+        return (
+          <Select
+            value={newApprover}
+            onValueChange={setNewApprover}
+            disabled={creating}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Unassigned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {employees.map((employee) => (
+                <SelectItem key={employee.id} value={String(employee.id)}>
+                  {formatEmployeeName(employee)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case "end_date":
+        return (
+          <Input
+            type="date"
+            value={newDeadline}
+            onChange={(e) => setNewDeadline(e.target.value)}
+            className="h-8"
+            disabled={creating}
+          />
+        );
+      case "priority":
+        return (
+          <Select
+            value={newPriority}
+            onValueChange={setNewPriority}
+            disabled={creating}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROJECT_TASK_PRIORITY_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (tasks.length === 0 && !addingTask) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -1471,7 +1724,6 @@ function TaskListView({
         <Table>
           <TableHeader>
             <TableRow>
-              {/* Checkbox Column */}
               <TableHead className="w-[40px]">
                 <input
                   type="checkbox"
@@ -1483,13 +1735,11 @@ function TaskListView({
                   className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                 />
               </TableHead>
-              {/* Dynamic Columns */}
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
                   className={`
                     ${column.width || ""} 
-                    ${column.align === "right" ? "text-right" : ""}
                     cursor-pointer hover:bg-muted/50 transition-colors select-none group
                   `}
                   draggable
@@ -1498,12 +1748,10 @@ function TaskListView({
                   onDrop={(e) => handleDrop(e, column.id)}
                   onClick={() => handleSort(column.id)}
                 >
-                  <div
-                    className={`flex items-center gap-1 ${column.align === "right" ? "justify-end" : ""}`}
-                  >
+                  <div className="flex items-center gap-1">
                     <GripVertical
                       className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
-                      onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
                     />
                     {column.label}
@@ -1520,7 +1768,6 @@ function TaskListView({
                 </TableHead>
               ))}
             </TableRow>
-            {/* Filter Row */}
             {showFilters && (
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-[40px]"></TableHead>
@@ -1541,15 +1788,36 @@ function TaskListView({
             )}
           </TableHeader>
           <TableBody>
-            {processedTasks.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length + 1}
-                  className="h-24 text-center"
-                >
-                  No results found.
+            {addingTask && (
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {creating ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <span className="block h-4 w-4" />
+                  )}
                 </TableCell>
+                {columns.map((column) => (
+                  <TableCell
+                    key={`create-${column.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {renderCreateCell(column.id)}
+                  </TableCell>
+                ))}
               </TableRow>
+            )}
+            {processedTasks.length === 0 ? (
+              !addingTask ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + 1}
+                    className="h-24 text-center"
+                  >
+                    No results found.
+                  </TableCell>
+                </TableRow>
+              ) : null
             ) : (
               processedTasks.map((task) => (
                 <TableRow
@@ -1558,7 +1826,6 @@ function TaskListView({
                     selectedTasks.has(task.id) ? "bg-primary/10" : ""
                   }`}
                 >
-                  {/* Checkbox Cell */}
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -1567,7 +1834,6 @@ function TaskListView({
                       className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                     />
                   </TableCell>
-                  {/* Dynamic Cells */}
                   {columns.map((column) => (
                     <TableCell
                       key={column.id}
@@ -2018,108 +2284,6 @@ function PagesTreeView({ pagesViews }: { pagesViews: string[] }) {
         )}
       </div>
     </div>
-  );
-}
-
-function AddTaskDialog({
-  open,
-  onOpenChange,
-  projectId,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId: number;
-  onSuccess: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("pending");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    setLoading(true);
-    try {
-      await projectsApi.createTask(projectId, {
-        title,
-        description,
-        status,
-      });
-
-      onSuccess();
-      onOpenChange(false);
-      setTitle("");
-      setDescription("");
-      setStatus("pending");
-    } catch (error) {
-      console.error("Failed to create task:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Title</Label>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-desc">Description</Label>
-            <Textarea
-              id="task-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Task description"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-status">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Add Task"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

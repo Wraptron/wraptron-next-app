@@ -193,8 +193,8 @@ function buildContactTableColumns(
       id: "quick_actions",
       header: (
         <span className="inline-flex justify-end gap-1 text-muted-foreground">
-          <Phone className="size-3.5 opacity-70" aria-hidden />
-          <Mail className="size-3.5 opacity-70" aria-hidden />
+          <Phone className="size-[10.5px] opacity-70" aria-hidden />
+          <Mail className="size-[10.5px] opacity-70" aria-hidden />
         </span>
       ),
       headerClassName: "w-[108px] text-right",
@@ -261,13 +261,17 @@ function ContactQuickActions({
   const name = contactDisplayName(contact);
   const sizeCls =
     size === "card"
-      ? "h-12 w-12 shadow-sm hover:shadow-md active:scale-[0.97] [&_svg]:size-6"
+      ? "size-9 shadow-sm hover:shadow-md active:scale-[0.97] [&_svg]:size-[18px]"
       : size === "table"
-        ? "h-11 w-11 shadow-sm hover:shadow [&_svg]:size-5"
-        : "h-10 w-10 shadow-sm hover:shadow [&_svg]:size-[18px]";
+        ? "size-[33px] shadow-sm hover:shadow [&_svg]:size-[15px]"
+        : "size-[30px] shadow-sm hover:shadow [&_svg]:size-[13.5px]";
   const iconStroke = 2;
   const iconClass =
-    size === "card" ? "size-6" : size === "table" ? "size-5" : "size-[18px]";
+    size === "card"
+      ? "size-[18px]"
+      : size === "table"
+        ? "size-[15px]"
+        : "size-[13.5px]";
 
   const stop = (e: React.SyntheticEvent) => {
     e.stopPropagation();
@@ -283,28 +287,65 @@ function ContactQuickActions({
     >
       {tel ? (
         <Button
-          className={cn("shrink-0 rounded-full p-0 transition-all", sizeCls)}
+          size="icon"
+          className={cn(
+            "shrink-0 rounded-full p-0 px-0 has-[>svg]:px-0 inline-flex items-center justify-center",
+            sizeCls,
+          )}
           asChild
         >
-          <a href={telHref(tel)} aria-label={`Call ${name}`} title="Call">
+          <a
+            href={telHref(tel)}
+            aria-label={`Call ${name}`}
+            title="Call"
+            className="inline-flex items-center justify-center"
+          >
             <Phone className={iconClass} strokeWidth={iconStroke} />
           </a>
         </Button>
       ) : null}
       {mail ? (
         <Button
+          size="icon"
           variant="outline"
           className={cn(
-            "shrink-0 rounded-full border-2 p-0 transition-all",
+            "shrink-0 rounded-full border-2 p-0 px-0 has-[>svg]:px-0 inline-flex items-center justify-center",
             sizeCls,
           )}
           asChild
         >
-          <a href={`mailto:${mail}`} aria-label={`Email ${name}`} title="Email">
+          <a
+            href={`mailto:${mail}`}
+            aria-label={`Email ${name}`}
+            title="Email"
+            className="inline-flex items-center justify-center"
+          >
             <Mail className={iconClass} strokeWidth={iconStroke} />
           </a>
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+function ContactMetaRow({
+  label,
+  children,
+  title,
+}: {
+  label: string;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-baseline justify-between gap-3">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span
+        className="min-w-0 truncate text-right [&>a]:block [&>a]:truncate"
+        title={title}
+      >
+        {children}
+      </span>
     </div>
   );
 }
@@ -319,83 +360,116 @@ const ContactCard = ({
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}) => (
-  <Card
-    className="hover:shadow-md transition-shadow cursor-pointer"
-    onClick={onClick}
-  >
-    <CardHeader>
-      <div className="flex justify-between items-start">
-        <div>
-          <CardTitle className="text-lg">
-            {contact.prefix && `${contact.prefix} `}
-            {contact.first_name} {contact.last_name || ""}
-          </CardTitle>
-          {contact.title && (
-            <p className="text-sm text-muted-foreground mt-1">{contact.title}</p>
-          )}
+}) => {
+  const name = contactDisplayName(contact);
+  const jobTitle = (contact.job_title || contact.title)?.trim();
+  const company = contactCompanyLine(contact);
+  const email = contact.email?.trim();
+  const phone = contact.phone?.trim() || contact.mobile?.trim();
+
+  return (
+    <Card
+      className="h-full min-w-0 cursor-pointer gap-4 overflow-hidden py-4 transition-shadow hover:shadow-md"
+      onClick={onClick}
+    >
+      <CardHeader className="min-w-0 gap-3 px-4">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <CardTitle
+              className="line-clamp-2 break-words text-base leading-snug"
+              title={name}
+            >
+              {name}
+            </CardTitle>
+            {jobTitle && (
+              <p
+                className="mt-1 truncate text-sm text-muted-foreground"
+                title={jobTitle}
+              >
+                {jobTitle}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              title="Edit"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            title="Edit"
+        <div className="flex min-w-0 flex-wrap gap-1.5">
+          <Badge
+            className={cn(
+              statusBadgeClass(contact.status),
+              "max-w-full whitespace-normal break-words text-left leading-tight",
+            )}
           >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
-          </Button>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-2 text-sm">
-        {contact.email && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Email:</span>
-            <span>{contact.email}</span>
-          </div>
-        )}
-        {contact.phone && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Phone:</span>
-            <span>{contact.phone}</span>
-          </div>
-        )}
-        {contact.company && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Company:</span>
-            <span>{contact.company}</span>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Status:</span>
-          <Badge className={statusBadgeClass(contact.status)}>
             {contact.status || "N/A"}
           </Badge>
         </div>
-      </div>
-      {(contactDialNumber(contact) || contact.email?.trim()) && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <ContactQuickActions contact={contact} size="card" />
+      </CardHeader>
+      <CardContent className="flex min-w-0 flex-1 flex-col px-4">
+        <div className="min-w-0 space-y-2 text-sm">
+          {email && (
+            <ContactMetaRow label="Email:" title={email}>
+              <a
+                href={`mailto:${email}`}
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {email}
+              </a>
+            </ContactMetaRow>
+          )}
+          {phone && (
+            <ContactMetaRow label="Phone:" title={phone}>
+              <a
+                href={telHref(phone)}
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {phone}
+              </a>
+            </ContactMetaRow>
+          )}
+          {company && (
+            <ContactMetaRow label="Company:" title={company}>
+              {company}
+            </ContactMetaRow>
+          )}
         </div>
-      )}
-    </CardContent>
-  </Card>
-);
+        {(contactDialNumber(contact) || email) && (
+          <div
+            className="mt-auto border-t border-border pt-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ContactQuickActions contact={contact} size="card" />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function ContactsPage() {
   const router = useRouter();
@@ -532,15 +606,21 @@ export default function ContactsPage() {
     (item: CollectionItem) => {
       const contact = contactById.get(Number(item.id));
       if (!contact) return null;
+      const name = contactDisplayName(contact);
+      const company = contactCompanyLine(contact);
+      const phone = contact.phone?.trim() || contact.mobile?.trim();
       return (
-        <Card className="cursor-grab border border-border bg-card shadow-none active:cursor-grabbing">
-          <CardContent className="p-3">
-            <div className="mb-2 flex items-start justify-between">
-              <h4 className="text-sm font-semibold">
-                {contactDisplayName(contact)}
+        <Card className="min-w-0 cursor-grab gap-0 overflow-hidden border border-border bg-card py-0 shadow-none active:cursor-grabbing">
+          <CardContent className="min-w-0 p-3">
+            <div className="mb-2 flex min-w-0 items-start justify-between gap-2">
+              <h4
+                className="min-w-0 flex-1 line-clamp-2 break-words text-sm font-semibold"
+                title={name}
+              >
+                {name}
               </h4>
               <div
-                className="ml-2 flex shrink-0 gap-1"
+                className="flex shrink-0 gap-1"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Button
@@ -561,12 +641,21 @@ export default function ContactsPage() {
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {contact.email || "No email"}
-            </p>
-            {contact.phone && (
-              <p className="text-xs text-muted-foreground">{contact.phone}</p>
-            )}
+            <div className="min-w-0 space-y-0.5 text-xs text-muted-foreground">
+              <p className="truncate" title={contact.email || "No email"}>
+                {contact.email || "No email"}
+              </p>
+              {phone && (
+                <p className="truncate" title={phone}>
+                  {phone}
+                </p>
+              )}
+              {company && (
+                <p className="truncate" title={company}>
+                  {company}
+                </p>
+              )}
+            </div>
             {(contactDialNumber(contact) || contact.email?.trim()) && (
               <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                 <ContactQuickActions contact={contact} size="kanban" />
@@ -624,7 +713,7 @@ export default function ContactsPage() {
     }
 
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
         {contacts.map((contact) => (
           <ContactCard
             key={contact.id}

@@ -99,7 +99,13 @@ function SortableKanbanCard({
   const card = renderCard ? renderCard(item) : <DefaultKanbanCard item={item} />;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="min-w-0"
+      {...attributes}
+      {...listeners}
+    >
       {href ? (
         <Link href={href} className="block text-inherit no-underline">
           {card}

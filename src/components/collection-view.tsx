@@ -144,6 +144,8 @@ interface CollectionViewProps {
   /** Column id rendered as primary cell (font-medium + optional link) */
   primaryColumnId?: string;
   getRowHref?: (item: CollectionItem) => string | undefined;
+  /** Optional row rendered at the top of the table body (e.g. inline create). */
+  leadingRow?: React.ReactNode;
 }
 
 function buildDefaultColumns(
@@ -225,6 +227,7 @@ export function CollectionView({
   onSelectedIdsChange,
   primaryColumnId,
   getRowHref,
+  leadingRow,
 }: CollectionViewProps) {
   const columns = columnsProp ?? buildDefaultColumns(items, columnLabels);
   const resolvedPrimaryColumnId = primaryColumnId ?? columns[0]?.id;
@@ -394,6 +397,7 @@ export function CollectionView({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {leadingRow}
           {loading ? (
             <TableRow>
               <TableCell
@@ -403,7 +407,7 @@ export function CollectionView({
                 {loadingMessage}
               </TableCell>
             </TableRow>
-          ) : items.length === 0 ? (
+          ) : items.length === 0 && !leadingRow ? (
             <TableRow>
               <TableCell
                 colSpan={colSpan}
