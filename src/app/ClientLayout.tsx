@@ -76,14 +76,11 @@ function MainContent({ children }: { children: React.ReactNode }) {
           !shouldHideSidebar && (isCollapsed ? "md:ml-16" : "md:ml-64"),
         )}
       >
-        <div className="flex-shrink-0">
-          <Header />
-          <PwaPushSetup />
-          <AttendanceReminderBanner />
-        </div>
         {!shouldHideHeader ? (
           <div className="shrink-0">
             <Header />
+            <PwaPushSetup />
+            <AttendanceReminderBanner />
           </div>
         ) : null}
         <div
