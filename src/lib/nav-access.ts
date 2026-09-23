@@ -27,6 +27,7 @@ export const MENU_PERMISSION: Record<string, string | null> = {
   "human-resources": "hr.read",
   "domain-logger": null,
   domain: null,
+  // formfield: null, // Formfield app hidden
   settings: "settings.read",
 };
 

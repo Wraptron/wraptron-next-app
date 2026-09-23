@@ -15,6 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
+import { FormField } from "@/types/form-builder";
+import { MIN_FIELD_HEIGHT, MIN_FIELD_WIDTH } from "./field-resize-handles";
 
 export function PropertiesPanel() {
   const { fields, selectedFieldId, updateField } = useFormBuilder();
@@ -23,13 +25,13 @@ export function PropertiesPanel() {
 
   if (!selectedField) {
     return (
-      <div className="w-80 border-l bg-background h-full p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
+      <div className="flex h-full min-h-0 w-72 shrink-0 flex-col items-center justify-center overflow-hidden border-l bg-background p-6 text-center text-muted-foreground">
         <p>Select a field to edit its properties</p>
       </div>
     );
   }
 
-  const handleUpdate = (updates: any) => {
+  const handleUpdate = (updates: Partial<FormField>) => {
     updateField(selectedField.id, updates);
   };
 
@@ -38,18 +40,22 @@ export function PropertiesPanel() {
   const isNumberType = selectedField.type === "rating"; // Simplified
 
   return (
-    <div className="w-80 border-l bg-background h-full flex flex-col">
+    <div className="flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden border-l bg-background">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-1">
              <h2 className="font-semibold text-foreground">Properties</h2>
              <Badge variant="secondary" className="text-xs font-normal">
-                {selectedField.type.replace("-", " ")}
+                {selectedField.type === "short-text"
+                  ? "Input"
+                  : selectedField.type === "long-text"
+                    ? "Text area"
+                    : selectedField.type.replace("-", " ")}
              </Badge>
         </div>
         <div className="text-xs text-muted-foreground font-mono">{selectedField.id}</div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-6">
         {/* General Section - Always Visible */}
         <div className="space-y-4">
             <div className="space-y-1.5">
@@ -90,6 +96,62 @@ export function PropertiesPanel() {
                     onCheckedChange={(checked) => handleUpdate({ required: checked })}
                 />
             </div>
+        </div>
+
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between">
+            <Label>Size</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => handleUpdate({ width: undefined, height: undefined })}
+            >
+              Reset
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="field-width" className="text-xs text-muted-foreground">
+                Width (px)
+              </Label>
+              <Input
+                id="field-width"
+                type="number"
+                min={MIN_FIELD_WIDTH}
+                placeholder="Auto"
+                value={selectedField.width ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleUpdate({
+                    width: value === "" ? undefined : Number(value),
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="field-height" className="text-xs text-muted-foreground">
+                Height (px)
+              </Label>
+              <Input
+                id="field-height"
+                type="number"
+                min={MIN_FIELD_HEIGHT}
+                placeholder="Auto"
+                value={selectedField.height ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleUpdate({
+                    height: value === "" ? undefined : Number(value),
+                  });
+                }}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Drag any handle to resize this field. Other fields keep their own size and wrap beside it when there is room.
+          </p>
         </div>
 
         {/* Options for Choices */}

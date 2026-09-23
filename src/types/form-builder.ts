@@ -32,6 +32,10 @@ export interface FormField {
   hidden?: boolean;
   readOnly?: boolean;
   fieldId?: string; // API key
+  /** Custom width in pixels. Omit for full canvas width. */
+  width?: number;
+  /** Custom height in pixels. Omit for content height. */
+  height?: number;
   validation?: {
     min?: number;
     max?: number;

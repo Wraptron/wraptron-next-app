@@ -36,7 +36,7 @@ const FIELD_DEFINITIONS: FieldDefinition[] = [
   { type: "input-string", label: "Input", icon: Type, category: "basic" },
   { type: "input-number", label: "Number", icon: Hash, category: "basic" },
   { type: "input-decimal", label: "Decimal", icon: Hash, category: "basic" },
-  { type: "long-text", label: "Long Text", icon: FileText, category: "basic" },
+  { type: "long-text", label: "Text area", icon: FileText, category: "basic" },
   { type: "email", label: "Email", icon: Mail, category: "basic" },
   { type: "phone", label: "Phone", icon: Phone, category: "basic" },
   // Choices

@@ -69,6 +69,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     first_name: "",
     last_name: "",
     email: "",
+    mobile: "",
   });
 
   const stagesSorted = useMemo(() => {
@@ -197,6 +198,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         first_name: first,
         last_name: newContact.last_name.trim() || undefined,
         email: newContact.email.trim() || undefined,
+        mobile: newContact.mobile.trim() || undefined,
       };
       const created = await contactsApi.create(payload);
       setContacts((prev) => [created, ...prev]);
@@ -206,7 +208,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           contacts_associated: [...(prev.contacts_associated || []), created.id],
         }));
       }
-      setNewContact({ first_name: "", last_name: "", email: "" });
+      setNewContact({ first_name: "", last_name: "", email: "", mobile: "" });
       setCreateContactOpen(false);
     } catch (error) {
       console.error("Error creating contact:", error);
@@ -449,6 +451,16 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
                 value={newContact.email}
                 onChange={(e) => setNewContact((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-contact-mobile">Mobile number</Label>
+              <Input
+                id="new-contact-mobile"
+                type="tel"
+                value={newContact.mobile}
+                onChange={(e) => setNewContact((prev) => ({ ...prev, mobile: e.target.value }))}
+                placeholder="Mobile number"
               />
             </div>
           </div>

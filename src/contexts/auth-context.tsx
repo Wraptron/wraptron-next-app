@@ -89,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
+      if (response.organization?.id != null) {
+        setActiveOrgId(Number(response.organization.id));
+      }
       setAuthToken(response.token);
       setUser(response.user);
       router.push(

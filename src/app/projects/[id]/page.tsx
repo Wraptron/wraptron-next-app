@@ -17,14 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,12 +45,14 @@ import {
 import {
   projectsApi,
   integrationsApi,
+  employeesApi,
   taskStatusesApi,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_ORDER,
   type Project,
   type Task,
   type TaskStatus,
+  type Employee,
   type GitHubCommit,
   type Integration,
 } from "@/lib/api";
@@ -90,6 +91,10 @@ import {
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
 import { cn } from "@/lib/utils";
+import {
+  TASK_TABLE_COLUMN_LABELS,
+  formatTaskTableDate,
+} from "@/lib/task-table-columns";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   ArrowLeft,
@@ -425,7 +430,7 @@ const ProjectCharterDialog: React.FC<ProjectCharterDialogProps> = ({
                   Business Goals
                 </h3>
                 {project.business_objectives &&
-                project.business_objectives.length > 0 ? (
+                  project.business_objectives.length > 0 ? (
                   <ul className="list-disc list-inside text-sm text-muted-foreground mt-1">
                     {project.business_objectives.map((obj, i) => (
                       <li key={i}>{obj}</li>
@@ -860,6 +865,8 @@ export default function ProjectPage() {
             <TaskViewSwitcher
               tasks={project.tasks || []}
               projectId={projectId!}
+              projectKey={project.key}
+              projectManagerEmployeeId={project.project_manager_employee_id}
               onTaskUpdate={(taskUpdate) => {
                 if (taskUpdate) {
                   setProject((current) => {
@@ -927,10 +934,14 @@ type TaskViewMode = "list" | "board" | "card" | "calendar";
 function TaskViewSwitcher({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
   onTaskUpdate,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
   onTaskUpdate: (taskUpdate?: Task) => void;
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
@@ -974,7 +985,7 @@ function TaskViewSwitcher({
           className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Task
+          New task
         </Button>
         <div className="flex items-center border rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
           <Button
@@ -1016,6 +1027,8 @@ function TaskViewSwitcher({
         <TaskListView
           tasks={tasks}
           projectId={projectId}
+          projectKey={projectKey}
+          projectManagerEmployeeId={projectManagerEmployeeId}
           onUpdate={refreshTasks}
           inlineAddRequestId={inlineAddRequestId}
         />
@@ -1041,7 +1054,6 @@ function TaskViewSwitcher({
           onUpdate={refreshTasks}
         />
       )}
-
     </div>
   );
 }
@@ -1208,9 +1220,8 @@ function TaskKanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm ${
-        isOver ? "border-primary/50 bg-primary/5" : ""
-      }`}
+      className={`flex h-full w-72 shrink-0 flex-col overflow-y-auto rounded-none border border-border bg-card md:w-80 xl:min-w-[18rem] xl:flex-1 xl:max-w-sm ${isOver ? "border-primary/50 bg-primary/5" : ""
+        }`}
     >
       <div className="shrink-0 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium text-foreground">{label}</h3>
@@ -1281,7 +1292,7 @@ function TaskBoard({
         .sort(
           (a, b) =>
             WORKFLOW_CATEGORY_ORDER[a.category] -
-              WORKFLOW_CATEGORY_ORDER[b.category] ||
+            WORKFLOW_CATEGORY_ORDER[b.category] ||
             a.sort_order - b.sort_order ||
             a.id - b.id,
         )
@@ -1461,9 +1472,8 @@ function TaskBoard({
                   label={col.label}
                   tasks={columnTasks}
                   projectId={projectId}
-                  statusSubtext={`${columnTasks.length} task${
-                    columnTasks.length !== 1 ? "s" : ""
-                  }`}
+                  statusSubtext={`${columnTasks.length} task${columnTasks.length !== 1 ? "s" : ""
+                    }`}
                 />
               );
             })}
@@ -1478,14 +1488,46 @@ function TaskBoard({
 }
 
 // Task List View Component
+const PROJECT_TASK_STATUS_OPTIONS = [
+  { value: "pending", label: "Backlog" },
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "review", label: "Review" },
+  { value: "completed", label: "Done" },
+  { value: "blocked", label: "Blocked" },
+] as const;
+
+const PROJECT_TASK_PRIORITY_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+] as const;
+
+function formatEmployeeName(employee?: Employee | null): string {
+  if (!employee) return "—";
+  return `${employee.first_name} ${employee.last_name}`.trim() || "—";
+}
+
+function taskStatusLabel(status?: string): string {
+  if (!status) return "—";
+  const match = PROJECT_TASK_STATUS_OPTIONS.find((o) => o.value === status);
+  if (match) return match.label;
+  return status.replace(/_/g, " ");
+}
+
 function TaskListView({
   tasks,
   projectId,
+  projectKey,
+  projectManagerEmployeeId,
   onUpdate,
   inlineAddRequestId = 0,
 }: {
   tasks: Task[];
   projectId: number;
+  projectKey?: string;
+  projectManagerEmployeeId?: number | null;
   onUpdate: (taskUpdate?: Task) => void;
   inlineAddRequestId?: number;
 }) {
@@ -1494,39 +1536,43 @@ function TaskListView({
     {},
   );
 
-  // Column Definitions
-  const [columns, setColumns] = useState([
-    { id: "status", label: "Status", width: "w-[150px]" },
-    { id: "title", label: "Title" },
-    { id: "priority", label: "Priority" },
-    { id: "complexity", label: "Complexity" },
-    { id: "start_date", label: "Start Date" },
-    { id: "end_date", label: "End Date" },
-    { id: "created_at", label: "Created At", align: "right" },
+  const [columns, setColumns] = useState<
+    { id: string; label: string; width?: string; align?: "left" | "right" }[]
+  >([
+    { id: "key", label: TASK_TABLE_COLUMN_LABELS.key, width: "w-[110px]" },
+    { id: "title", label: TASK_TABLE_COLUMN_LABELS.title },
+    { id: "status", label: TASK_TABLE_COLUMN_LABELS.status, width: "w-[140px]" },
+    { id: "assignee", label: TASK_TABLE_COLUMN_LABELS.assignee, width: "w-[160px]" },
+    { id: "approver", label: TASK_TABLE_COLUMN_LABELS.approver, width: "w-[160px]" },
+    { id: "end_date", label: TASK_TABLE_COLUMN_LABELS.deadline, width: "w-[140px]" },
+    { id: "priority", label: TASK_TABLE_COLUMN_LABELS.priority, width: "w-[120px]" },
   ]);
 
-  // Selection State
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Drag and Drop State
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-
-  // Sorting State
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
-
-  // Filter State
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [showFilters, setShowFilters] = useState(false);
   const [inlineAddActive, setInlineAddActive] = useState(false);
   const [inlineTitle, setInlineTitle] = useState("");
+  const [inlineAssignee, setInlineAssignee] = useState("unassigned");
+  const [inlineApprover, setInlineApprover] = useState("unassigned");
   const [inlineDeadline, setInlineDeadline] = useState("");
   const [inlinePriority, setInlinePriority] = useState("medium");
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    if (projectManagerEmployeeId != null && inlineApprover === "unassigned") {
+      setInlineApprover(String(projectManagerEmployeeId));
+    }
+  }, [projectManagerEmployeeId]);
 
   const mergedTasks = useMemo(() => {
     const persistedIds = new Set(tasks.map((task) => task.id));
@@ -1546,6 +1592,12 @@ function TaskListView({
 
   const resetInlineAdd = () => {
     setInlineTitle("");
+    setInlineAssignee("unassigned");
+    setInlineApprover(
+      projectManagerEmployeeId != null
+        ? String(projectManagerEmployeeId)
+        : "unassigned",
+    );
     setInlineDeadline("");
     setInlinePriority("medium");
     setInlineAddActive(false);
@@ -1573,11 +1625,59 @@ function TaskListView({
     }
   };
 
+  const handleInlineAssigneeChange = async (task: Task, value: string) => {
+    const assignedId = value === "unassigned" ? null : parseInt(value, 10);
+    if (task.assigned_employee_id === assignedId || task.id < 0) return;
+
+    setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      const updated = await projectsApi.updateTask(projectId, task.id, {
+        assigned_employee_id: assignedId,
+      });
+      onUpdate(updated);
+    } catch (err) {
+      console.error("Failed to update task assignee:", err);
+      alert("Failed to update assignee. Please try again.");
+    } finally {
+      setUpdatingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
+  };
+
+  const handleInlineApproverChange = async (task: Task, value: string) => {
+    const approverId = value === "unassigned" ? null : parseInt(value, 10);
+    if (task.approver_employee_id === approverId || task.id < 0) return;
+
+    setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      const updated = await projectsApi.updateTask(projectId, task.id, {
+        approver_employee_id: approverId,
+      });
+      onUpdate(updated);
+    } catch (err) {
+      console.error("Failed to update task approver:", err);
+      alert("Failed to update approver. Please try again.");
+    } finally {
+      setUpdatingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
+  };
+
   const handleInlineCreateTask = async () => {
     const title = inlineTitle.trim();
     if (!title) return;
 
     const deadline = inlineDeadline || undefined;
+    const assignedEmployeeId =
+      inlineAssignee !== "unassigned" ? parseInt(inlineAssignee, 10) : null;
+    const approverEmployeeId =
+      inlineApprover !== "unassigned" ? parseInt(inlineApprover, 10) : null;
     const tempId = -Date.now();
     const now = new Date().toISOString();
     const optimisticTask: Task = {
@@ -1586,12 +1686,20 @@ function TaskListView({
       title,
       status: "backlog",
       priority: inlinePriority,
+      assigned_employee_id: assignedEmployeeId,
+      approver_employee_id: approverEmployeeId,
       end_date: deadline,
       created_at: now,
       updated_at: now,
     };
 
     setInlineTitle("");
+    setInlineAssignee("unassigned");
+    setInlineApprover(
+      projectManagerEmployeeId != null
+        ? String(projectManagerEmployeeId)
+        : "unassigned",
+    );
     setInlineDeadline("");
     setInlinePriority("medium");
     startTransition(() => {
@@ -1602,6 +1710,8 @@ function TaskListView({
       const created = await projectsApi.createTask(projectId, {
         title,
         priority: inlinePriority,
+        assigned_employee_id: assignedEmployeeId,
+        approver_employee_id: approverEmployeeId,
         end_date: deadline,
       });
       setPendingTasks((prev) => prev.filter((task) => task.id !== tempId));
@@ -1633,6 +1743,91 @@ function TaskListView({
     }
   };
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await employeesApi.getAll({
+          employment_status: "active",
+          limit: 500,
+        });
+        if (!cancelled) setEmployees(res.data);
+      } catch {
+        if (!cancelled) setEmployees([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const employeesById = useMemo(
+    () => new Map(employees.map((e) => [e.id, e])),
+    [employees],
+  );
+
+  const getTaskKey = (task: Task) => {
+    if (projectKey && task.number != null) return `${projectKey}-${task.number}`;
+    if (task.number != null) return String(task.number);
+    return "—";
+  };
+
+  const formatEmployeeName = (emp?: Employee | null) => {
+    if (!emp) return "—";
+    return [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.email || "—";
+  };
+
+  const taskStatusLabel = (status: string) => {
+    return status.replace(/_/g, " ");
+  };
+
+  const getSortValue = (task: Task, key: string) => {
+    switch (key) {
+      case "key":
+        return getTaskKey(task);
+      case "assignee":
+        return formatEmployeeName(
+          task.assigned_employee_id != null
+            ? employeesById.get(task.assigned_employee_id)
+            : null,
+        );
+      case "approver":
+        return formatEmployeeName(
+          task.approver_employee_id != null
+            ? employeesById.get(task.approver_employee_id)
+            : null,
+        );
+      default:
+        return task[key as keyof Task];
+    }
+  };
+
+  const getFilterValue = (task: Task, columnId: string) => {
+    if (columnId === "key") return getTaskKey(task);
+    if (columnId === "assignee") {
+      return formatEmployeeName(
+        task.assigned_employee_id != null
+          ? employeesById.get(task.assigned_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "approver") {
+      return formatEmployeeName(
+        task.approver_employee_id != null
+          ? employeesById.get(task.approver_employee_id)
+          : null,
+      );
+    }
+    if (columnId === "end_date") {
+      return task.end_date
+        ? new Date(task.end_date).toLocaleDateString()
+        : "";
+    }
+    if (columnId === "status") return taskStatusLabel(task.status);
+    return String(task[columnId as keyof Task] || "");
+  };
   const toggleSelectAll = () => {
     if (processedTasks.length === 0) return;
     if (selectedTasks.size === processedTasks.length) {
@@ -1642,7 +1837,6 @@ function TaskListView({
     }
   };
 
-  // Toggle individual selection
   const toggleSelect = (taskId: number) => {
     const newSelected = new Set(selectedTasks);
     if (newSelected.has(taskId)) {
@@ -1653,7 +1847,6 @@ function TaskListView({
     setSelectedTasks(newSelected);
   };
 
-  // Sort Handler
   const handleSort = (columnId: string) => {
     let direction: "asc" | "desc" = "asc";
     if (
@@ -1666,12 +1859,10 @@ function TaskListView({
     setSortConfig({ key: columnId, direction });
   };
 
-  // Filter Handler
   const handleFilterChange = (columnId: string, value: string) => {
     setFilters((prev) => ({ ...prev, [columnId]: value }));
   };
 
-  // Drag Handlers
   const handleDragStart = (e: React.DragEvent, columnId: string) => {
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
@@ -1709,22 +1900,9 @@ function TaskListView({
           return columns.every((col) => {
             const filterValue = filters[col.id];
             if (!filterValue) return true;
-
-            let taskValue = "";
-            if (
-              col.id === "created_at" ||
-              col.id === "start_date" ||
-              col.id === "end_date"
-            ) {
-              const dateVal = task[col.id as keyof Task];
-              taskValue = dateVal
-                ? new Date(String(dateVal)).toLocaleDateString()
-                : "";
-            } else {
-              taskValue = String(task[col.id as keyof Task] || "");
-            }
-
-            return taskValue.toLowerCase().includes(filterValue.toLowerCase());
+            return getFilterValue(task, col.id)
+              .toLowerCase()
+              .includes(filterValue.toLowerCase());
           });
         })
         .sort((a, b) => {
@@ -1735,39 +1913,26 @@ function TaskListView({
             );
           }
           const { key, direction } = sortConfig;
-
-          const valA = a[key as keyof Task];
-          const valB = b[key as keyof Task];
+          const valA = getSortValue(a, key);
+          const valB = getSortValue(b, key);
 
           if (valA === valB) return 0;
-          if (valA === undefined || valA === null) return 1;
-          if (valB === undefined || valB === null) return -1;
+          if (valA === undefined || valA === null || valA === "") return 1;
+          if (valB === undefined || valB === null || valB === "") return -1;
 
           const compareRes = valA < valB ? -1 : 1;
           return direction === "asc" ? compareRes : -compareRes;
         }),
-    [mergedTasks, columns, filters, sortConfig],
+    [mergedTasks, columns, filters, sortConfig, employeesById, projectKey],
   );
 
   const renderCellContent = (task: Task, columnId: string) => {
     switch (columnId) {
-      case "status":
+      case "key":
         return (
-          <div className="flex items-center gap-2">
-            {getStatusIconHelper(task.status)}
-            <Badge
-              variant={
-                task.status === "completed" || task.status === "done"
-                  ? "default"
-                  : task.status === "in_progress"
-                    ? "secondary"
-                    : "outline"
-              }
-              className="text-xs"
-            >
-              {task.status}
-            </Badge>
-          </div>
+          <span className="font-mono text-xs text-muted-foreground">
+            {getTaskKey(task)}
+          </span>
         );
       case "title":
         return (
@@ -1779,6 +1944,68 @@ function TaskListView({
               </div>
             )}
           </div>
+        );
+      case "status":
+        return (
+          <span className="capitalize text-sm">
+            {taskStatusLabel(task.status)}
+          </span>
+        );
+      case "assignee":
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <select
+              value={
+                task.assigned_employee_id != null
+                  ? String(task.assigned_employee_id)
+                  : "unassigned"
+              }
+              onChange={(event) =>
+                void handleInlineAssigneeChange(task, event.target.value)
+              }
+              disabled={!!updatingTaskIds[task.id] || task.id < 0}
+              className={cn(listInlineSelectClassName, "w-[150px]")}
+              aria-label={`Assignee for ${task.title}`}
+            >
+              <option value="unassigned">Unassigned</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={String(employee.id)}>
+                  {formatEmployeeName(employee)}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      case "approver":
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <select
+              value={
+                task.approver_employee_id != null
+                  ? String(task.approver_employee_id)
+                  : "unassigned"
+              }
+              onChange={(event) =>
+                void handleInlineApproverChange(task, event.target.value)
+              }
+              disabled={!!updatingTaskIds[task.id] || task.id < 0}
+              className={cn(listInlineSelectClassName, "w-[150px]")}
+              aria-label={`Approver for ${task.title}`}
+            >
+              <option value="unassigned">Unassigned</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={String(employee.id)}>
+                  {formatEmployeeName(employee)}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      case "end_date":
+        return (
+          <span className="text-sm text-muted-foreground">
+            {formatTaskTableDate(task.end_date)}
+          </span>
         );
       case "priority":
         return (
@@ -1798,32 +2025,6 @@ function TaskListView({
                 </option>
               ))}
             </select>
-          </div>
-        );
-      case "complexity":
-        return task.complexity ? (
-          <span className="text-sm text-muted-foreground capitalize">
-            {task.complexity}
-          </span>
-        ) : null;
-      case "start_date":
-        return (
-          <span className="text-sm text-muted-foreground">
-            {task.start_date
-              ? new Date(task.start_date).toLocaleDateString()
-              : "-"}
-          </span>
-        );
-      case "end_date":
-        return (
-          <span className="text-sm text-muted-foreground">
-            {task.end_date ? new Date(task.end_date).toLocaleDateString() : "-"}
-          </span>
-        );
-      case "created_at":
-        return (
-          <div className="text-right text-sm text-muted-foreground">
-            {new Date(task.created_at).toLocaleDateString()}
           </div>
         );
       default:
@@ -1851,7 +2052,6 @@ function TaskListView({
     if (!inlineAddActive) {
       return null;
     }
-
     return (
       <TaskListInlineAddRow
         active={inlineAddActive}
@@ -1878,6 +2078,48 @@ function TaskListView({
               <span className="text-xs capitalize text-muted-foreground">
                 backlog
               </span>
+            ) : column.id === "assignee" ? (
+              <Select
+                value={inlineAssignee}
+                onValueChange={setInlineAssignee}
+              >
+                <SelectTrigger
+                  className={cn(inlineTaskFieldClassName, "w-[150px]")}
+                  onClick={(event) => event.stopPropagation()}
+                  aria-label="New task assignee"
+                >
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {formatEmployeeName(employee)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : column.id === "approver" ? (
+              <Select
+                value={inlineApprover}
+                onValueChange={setInlineApprover}
+              >
+                <SelectTrigger
+                  className={cn(inlineTaskFieldClassName, "w-[150px]")}
+                  onClick={(event) => event.stopPropagation()}
+                  aria-label="New task approver"
+                >
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={String(employee.id)}>
+                      {formatEmployeeName(employee)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : column.id === "end_date" ? (
               <Input
                 type="date"
@@ -1945,163 +2187,167 @@ function TaskListView({
       )}
 
       <Card>
-      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-        <div className="text-sm font-medium text-muted-foreground">
-          {processedTasks.length} task{processedTasks.length !== 1 && "s"}
-        </div>
-        <Button
-          variant={showFilters ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="h-8"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-        </Button>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {/* Checkbox Column */}
-              <TableHead className="w-[40px]">
-                <Checkbox
-                  checked={headerChecked}
-                  onCheckedChange={toggleSelectAll}
-                  onClick={(e) => e.stopPropagation()}
-                  disabled={processedTasks.length === 0}
-                  aria-label="Select all tasks"
-                />
-              </TableHead>
-              {/* Dynamic Columns */}
-              {columns.map((column) => (
-                <TableHead
-                  key={column.id}
-                  className={`
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+          <div className="text-sm font-medium text-muted-foreground">
+            {processedTasks.length} task{processedTasks.length !== 1 && "s"}
+          </div>
+          <Button
+            variant={showFilters ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-8"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={headerChecked}
+                    onCheckedChange={toggleSelectAll}
+                    onClick={(e) => e.stopPropagation()}
+                    disabled={processedTasks.length === 0}
+                    aria-label="Select all tasks"
+                  />
+                </TableHead>
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.id}
+                    className={`
                     ${column.width || ""} 
-                    ${column.align === "right" ? "text-right" : ""}
                     cursor-pointer hover:bg-muted/50 transition-colors select-none group
                   `}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, column.id)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, column.id)}
-                  onClick={() => handleSort(column.id)}
-                >
-                  <div
-                    className={`flex items-center gap-1 ${column.align === "right" ? "justify-end" : ""}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, column.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, column.id)}
+                    onClick={() => handleSort(column.id)}
                   >
-                    <GripVertical
-                      className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
-                      onMouseDown={(e) => e.stopPropagation()} // Prevent sort on drag handle click? Actually drag starts on mouse down, click is mouse up.
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    {column.label}
-                    {sortConfig?.key === column.id ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
+                    <div className="flex items-center gap-1">
+                      <GripVertical
+                        className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {column.label}
+                      {sortConfig?.key === column.id ? (
+                        sortConfig.direction === "asc" ? (
+                          <ArrowUp className="h-3 w-3" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3" />
+                        )
                       ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-30" />
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-            {/* Filter Row */}
-            {showFilters && (
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-[40px]"></TableHead>
-                {columns.map((column) => (
-                  <TableHead key={`${column.id}-filter`} className="p-2">
-                    <Input
-                      placeholder={`Filter...`}
-                      value={filters[column.id] || ""}
-                      onChange={(e) =>
-                        handleFilterChange(column.id, e.target.value)
-                      }
-                      className="h-7 text-xs"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-30" />
+                      )}
+                    </div>
                   </TableHead>
                 ))}
               </TableRow>
-            )}
-          </TableHeader>
-          <TableBody>
-            {renderInlineAddRow()}
-            {processedTasks.length === 0 ? null : (
-              processedTasks.map((task) => (
-                <TableRow
-                  key={task.id}
-                  className={cn(
-                    "hover:bg-muted/50",
-                    selectedTasks.has(task.id) && "bg-accent",
-                  )}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedTasks.has(task.id)}
-                      onCheckedChange={() => toggleSelect(task.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`Select ${task.title}`}
-                    />
-                  </TableCell>
+              {showFilters && (
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-[40px]"></TableHead>
                   {columns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      className="cursor-pointer"
-                      onClick={() =>
-                        router.push(`/projects/${projectId}/tasks/${task.id}`)
-                      }
-                    >
-                      {renderCellContent(task, column.id)}
-                    </TableCell>
+                    <TableHead key={`${column.id}-filter`} className="p-2">
+                      <Input
+                        placeholder={`Filter...`}
+                        value={filters[column.id] || ""}
+                        onChange={(e) =>
+                          handleFilterChange(column.id, e.target.value)
+                        }
+                        className="h-7 text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              )}
+            </TableHeader>
+            <TableBody>
+              {renderInlineAddRow()}
+              {processedTasks.length === 0 && !inlineAddActive ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + 1}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No results found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+      processedTasks.map((task) => (
+        <TableRow
+          key={task.id}
+          className={cn(
+            "hover:bg-muted/50",
+            selectedTasks.has(task.id) && "bg-accent",
+          )}
+        >
+          <TableCell onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={selectedTasks.has(task.id)}
+              onCheckedChange={() => toggleSelect(task.id)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Select ${task.title}`}
+            />
+          </TableCell>
+          {columns.map((column) => (
+            <TableCell
+              key={column.id}
+              className="cursor-pointer"
+              onClick={() =>
+                router.push(`/projects/${projectId}/tasks/${task.id}`)
+              }
+            >
+              {renderCellContent(task, column.id)}
+            </TableCell>
+          ))}
+        </TableRow>
+      ))
+    )
+  }
+          </TableBody >
+        </Table >
+      </CardContent >
+    </Card >
 
-      <Dialog
-        open={bulkDeleteDialogOpen}
-        onOpenChange={setBulkDeleteDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Selected Tasks</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <strong className="text-foreground">{selectedTasks.size}</strong>{" "}
-              selected task{selectedTasks.size === 1 ? "" : "s"}? This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBulkDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmBulkDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting
-                ? "Deleting…"
-                : `Delete ${selectedTasks.size} Task${selectedTasks.size === 1 ? "" : "s"}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <Dialog
+      open={bulkDeleteDialogOpen}
+      onOpenChange={setBulkDeleteDialogOpen}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Selected Tasks</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete{" "}
+            <strong className="text-foreground">{selectedTasks.size}</strong>{" "}
+            selected task{selectedTasks.size === 1 ? "" : "s"}? This action
+            cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setBulkDeleteDialogOpen(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmBulkDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting
+              ? "Deleting…"
+              : `Delete ${selectedTasks.size} Task${selectedTasks.size === 1 ? "" : "s"}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
@@ -2998,11 +3244,10 @@ function GitHubIntegrationDialog({
 
           {testResult && (
             <div
-              className={`p-3 rounded-lg text-sm ${
-                testResult.success
+              className={`p-3 rounded-lg text-sm ${testResult.success
                   ? "bg-green-50 text-green-800 border border-green-200"
                   : "bg-red-50 text-red-800 border border-red-200"
-              }`}
+                }`}
             >
               {testResult.message}
             </div>

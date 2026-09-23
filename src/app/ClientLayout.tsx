@@ -40,6 +40,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/forgot-password") ?? false;
   const isResetPasswordPage =
     pathname?.startsWith("/reset-password") ?? false;
+  // Formfield app hidden — restore by uncommenting
+  // const isFormfieldBuilder = pathname === "/formfield";
+  // const isPublishedFormPage = pathname?.startsWith("/formfield/f") ?? false;
   const shouldHideSidebar =
     isHomePage ||
     isLoginPage ||
@@ -48,6 +51,8 @@ function MainContent({ children }: { children: React.ReactNode }) {
     isInvitePage ||
     isForgotPasswordPage ||
     isResetPasswordPage;
+    // || isFormfieldBuilder
+    // || isPublishedFormPage;
   const shouldHideHeader =
     isHomePage ||
     isLoginPage ||
@@ -56,36 +61,35 @@ function MainContent({ children }: { children: React.ReactNode }) {
     isInvitePage ||
     isForgotPasswordPage ||
     isResetPasswordPage;
-
-  if (shouldHideSidebar) {
-    return (
-      <main className="h-screen w-screen overflow-auto bg-background text-foreground">
-        <div className="flex flex-row h-full w-full">
-          <div className="flex flex-col w-full h-full min-h-0">{children}</div>
-        </div>
-      </main>
-    );
-  }
+    // || isPublishedFormPage;
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-background text-foreground">
-      <Suspense fallback={null}>
-        <SideNav />
-      </Suspense>
+      {!shouldHideSidebar ? (
+        <Suspense fallback={null}>
+          <SideNav />
+        </Suspense>
+      ) : null}
       <div
         className={cn(
-          "flex flex-col h-full transition-all duration-300 ease-in-out ml-0",
-          isCollapsed ? "md:ml-16" : "md:ml-64",
+          "flex h-full flex-col transition-all duration-300 ease-in-out ml-0",
+          !shouldHideSidebar && (isCollapsed ? "md:ml-16" : "md:ml-64"),
         )}
       >
-        <div className="flex-shrink-0">
-          <Header />
-          <PwaPushSetup />
-          <AttendanceReminderBanner />
-        </div>
+        {!shouldHideHeader ? (
+          <div className="shrink-0">
+            <Header />
+            <PwaPushSetup />
+            <AttendanceReminderBanner />
+          </div>
+        ) : null}
         <div
           id="main-content-portal"
-          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background pb-4 text-foreground"
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col bg-background text-foreground",
+            "overflow-y-auto pb-4",
+            // isFormfieldBuilder ? "overflow-hidden" : "overflow-y-auto pb-4", // Formfield app hidden
+          )}
         >
           {children}
         </div>

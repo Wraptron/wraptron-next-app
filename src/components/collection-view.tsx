@@ -156,6 +156,8 @@ interface CollectionViewProps {
     columnCount: number;
     selectionEnabled: boolean;
   }) => React.ReactNode;
+  /** Optional row rendered at the top of the table body (e.g. inline create). */
+  leadingRow?: React.ReactNode;
 }
 
 function buildDefaultColumns(
@@ -239,6 +241,7 @@ export function CollectionView({
   getRowHref,
   renderHeaderRow,
   renderFooterRow,
+  leadingRow,
 }: CollectionViewProps) {
   const columns = columnsProp ?? buildDefaultColumns(items, columnLabels);
   const resolvedPrimaryColumnId = primaryColumnId ?? columns[0]?.id;
@@ -396,7 +399,7 @@ export function CollectionView({
                   className={cn(
                     column.headerClassName,
                     sortable &&
-                      "group cursor-pointer select-none transition-colors hover:bg-muted/50",
+                    "group cursor-pointer select-none transition-colors hover:bg-muted/50",
                   )}
                   onClick={sortable ? () => handleSort(column) : undefined}
                   aria-sort={
@@ -431,6 +434,7 @@ export function CollectionView({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {leadingRow}
           {loading ? (
             <TableRow>
               <TableCell
@@ -440,7 +444,7 @@ export function CollectionView({
                 {loadingMessage}
               </TableCell>
             </TableRow>
-          ) : items.length === 0 && !renderHeaderRow && !renderFooterRow ? (
+          ) : items.length === 0 && !renderHeaderRow && !renderFooterRow && !leadingRow ? (
             <TableRow>
               <TableCell
                 colSpan={colSpan}
@@ -448,29 +452,29 @@ export function CollectionView({
               >
                 {hasActiveFilters
                   ? (filteredEmptyMessage ?? (
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {filteredEmptyTitle}
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {filteredEmptyTitle}
+                      </p>
+                      {filteredEmptyDescription && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {filteredEmptyDescription}
                         </p>
-                        {filteredEmptyDescription && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {filteredEmptyDescription}
-                          </p>
-                        )}
-                      </div>
-                    ))
+                      )}
+                    </div>
+                  ))
                   : (emptyMessage ?? (
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {emptyTitle}
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {emptyTitle}
+                      </p>
+                      {emptyDescription && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {emptyDescription}
                         </p>
-                        {emptyDescription && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {emptyDescription}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  ))}
               </TableCell>
             </TableRow>
           ) : (
@@ -508,7 +512,7 @@ export function CollectionView({
                       key={item.id}
                       className={cn(
                         (onRowClick || getRowHref) &&
-                          "cursor-pointer hover:bg-muted/50",
+                        "cursor-pointer hover:bg-muted/50",
                         isSelected && "bg-accent",
                       )}
                       onClick={

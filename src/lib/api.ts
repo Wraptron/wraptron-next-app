@@ -148,6 +148,7 @@ async function fetchApi<T>(
         !window.location.pathname.startsWith("/invite") &&
         !window.location.pathname.startsWith("/forgot-password") &&
         !window.location.pathname.startsWith("/reset-password")
+        // && !window.location.pathname.startsWith("/formfield/f") // Formfield app hidden
       ) {
         window.location.href = "/login";
       }
@@ -572,6 +573,8 @@ export interface Task {
   title: string;
   description?: string;
   status: string;
+  /** Per-project task number used in keys like ACME-12. */
+  number?: number;
   start_date?: string;
   end_date?: string;
   priority?: string;
@@ -594,8 +597,12 @@ export interface CreateTaskInput {
   description?: string;
   assigned_employee_id?: number | null;
   approver_employee_id?: number | null;
+  approver_id?: number | null;
+  approver?: number | null;
   status?: string;
   end_date?: string;
+  deadline?: string;
+  due_date?: string;
   priority?: string;
   notes?: string;
   billable?: string;
@@ -1433,18 +1440,18 @@ export interface Employee {
   personal_email?: string;
   github_username?: string;
   employment_type?:
-    | "full_time"
-    | "part_time"
-    | "contract"
-    | "intern"
-    | "temporary";
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "intern"
+  | "temporary";
   employment_status?:
-    | "candidate"
-    | "offered"
-    | "pre_onboarding"
-    | "active"
-    | "notice_period"
-    | "exited";
+  | "candidate"
+  | "offered"
+  | "pre_onboarding"
+  | "active"
+  | "notice_period"
+  | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -1493,18 +1500,18 @@ export interface CreateEmployeeInput {
   personal_email?: string;
   github_username?: string;
   employment_type?:
-    | "full_time"
-    | "part_time"
-    | "contract"
-    | "intern"
-    | "temporary";
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "intern"
+  | "temporary";
   employment_status?:
-    | "candidate"
-    | "offered"
-    | "pre_onboarding"
-    | "active"
-    | "notice_period"
-    | "exited";
+  | "candidate"
+  | "offered"
+  | "pre_onboarding"
+  | "active"
+  | "notice_period"
+  | "exited";
   skill_set?: Record<string, unknown>;
   join_date?: string;
   exit_date?: string;
@@ -1790,6 +1797,84 @@ export const holidaysApi = {
     return fetchApi<WorkingDaysBreakdown>(
       `/api/holidays/working-days?month=${params.month}&year=${params.year}`,
     );
+  },
+};
+
+// ============================================================================
+// Leave Requests
+// ============================================================================
+
+export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type LeaveType =
+  | "casual"
+  | "sick"
+  | "earned"
+  | "unpaid"
+  | "compensatory";
+
+export interface LeaveRequest {
+  id: number;
+  organization_id: number;
+  user_id: number;
+  employee_id: number | null;
+  employee_name: string;
+  employee_email: string | null;
+  leave_type: LeaveType | string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  reason: string | null;
+  status: LeaveStatus;
+  reviewed_by: number | null;
+  reviewer_name: string | null;
+  reviewed_at: string | null;
+  review_comment: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const leavesApi = {
+  list: async (params?: {
+    year?: number;
+    month?: number;
+    status?: LeaveStatus;
+  }): Promise<{ leaves: LeaveRequest[]; is_admin: boolean }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.year != null) searchParams.append("year", params.year.toString());
+    if (params?.month != null) searchParams.append("month", params.month.toString());
+    if (params?.status) searchParams.append("status", params.status);
+    const query = searchParams.toString();
+    return fetchApi<{ leaves: LeaveRequest[]; is_admin: boolean }>(
+      `/api/leaves${query ? `?${query}` : ""}`,
+    );
+  },
+
+  apply: async (data: {
+    leave_type: LeaveType;
+    start_date: string;
+    end_date: string;
+    reason?: string;
+  }): Promise<{ leave: LeaveRequest }> => {
+    return fetchApi<{ leave: LeaveRequest }>("/api/leaves", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  cancel: async (id: number): Promise<{ leave: LeaveRequest }> => {
+    return fetchApi<{ leave: LeaveRequest }>(`/api/leaves/${id}/cancel`, {
+      method: "POST",
+    });
+  },
+
+  review: async (
+    id: number,
+    data: { status: "approved" | "rejected"; comment?: string },
+  ): Promise<{ leave: LeaveRequest }> => {
+    return fetchApi<{ leave: LeaveRequest }>(`/api/leaves/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
 
@@ -2387,7 +2472,7 @@ export interface SalesDashboardFunnelStage {
   total_value: number;
 }
 
-export interface SalesDashboardActivity extends SalesActivity {}
+export interface SalesDashboardActivity extends SalesActivity { }
 
 export interface SalesDashboardRevenueTrendPoint {
   bucket: string;
@@ -2799,7 +2884,6 @@ export interface BoardTask {
   project_id: number;
   title: string;
   status: string;
-  end_date?: string | null;
   category: WorkflowCategory | null;
   priority: string | null;
   number: number;
@@ -2812,6 +2896,7 @@ export interface BoardTask {
   assignee_name: string | null;
   approver_employee_id: number | null;
   approver_name: string | null;
+  end_date?: string | null;
   pr_count: number;
   latest_pr_state: "open" | "merged" | "closed" | null;
   created_at: string;
@@ -2901,6 +2986,8 @@ export const tasksApi = {
     description?: string;
     assigned_employee_id?: number | null;
     approver_employee_id?: number | null;
+    deadline?: string;
+    due_date?: string;
     priority?: string;
     end_date?: string | null;
   }): Promise<BoardTask> => {
@@ -2919,6 +3006,8 @@ export const tasksApi = {
       assigned_employee_id?: number | null;
       approver_employee_id?: number | null;
       end_date?: string | null;
+      deadline?: string | null;
+      due_date?: string | null;
       priority?: string;
     },
   ): Promise<BoardTask> => {
@@ -3139,6 +3228,84 @@ export const domainsApi = {
     await fetchApi<{ ok: boolean; id: string }>(`/api/domains/${id}`, {
       method: "DELETE",
     });
+  },
+};
+
+export type FormRecord = {
+  id: number;
+  public_id: string;
+  title: string;
+  fields: unknown[];
+  published: boolean;
+  organization_id: number | null;
+  user_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const formsApi = {
+  list: async (params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: FormRecord[]; total: number; limit: number; offset: number }> => {
+    const search = new URLSearchParams();
+    if (params?.limit != null) search.set("limit", String(params.limit));
+    if (params?.offset != null) search.set("offset", String(params.offset));
+    const qs = search.toString();
+    return fetchApi<{
+      data: FormRecord[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(`/api/forms${qs ? `?${qs}` : ""}`);
+  },
+  get: async (id: number): Promise<FormRecord> => {
+    return fetchApi<FormRecord>(`/api/forms/${id}`);
+  },
+  create: async (data: {
+    title: string;
+    fields: unknown[];
+    published?: boolean;
+  }): Promise<FormRecord> => {
+    return fetchApi<FormRecord>("/api/forms", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (
+    id: number,
+    data: { title: string; fields: unknown[] },
+  ): Promise<FormRecord> => {
+    return fetchApi<FormRecord>(`/api/forms/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  publish: async (
+    id: number,
+    data: { title: string; fields: unknown[] },
+  ): Promise<FormRecord> => {
+    return fetchApi<FormRecord>(`/api/forms/${id}/publish`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  getPublic: async (publicId: string): Promise<FormRecord> => {
+    return fetchApi<FormRecord>(
+      `/api/public/forms/${encodeURIComponent(publicId)}`,
+    );
+  },
+  submitPublic: async (
+    publicId: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ id: number; created_at: string }> => {
+    return fetchApi<{ id: number; created_at: string }>(
+      `/api/public/forms/${encodeURIComponent(publicId)}/submissions`,
+      {
+        method: "POST",
+        body: JSON.stringify({ payload }),
+      },
+    );
   },
 };
 
