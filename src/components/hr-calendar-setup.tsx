@@ -117,9 +117,9 @@ export function HrCalendarSetup({
 }: {
   variant?: HrCalendarSetupVariant;
 }) {
-  const { activeOrg } = useOrganization();
+  const { activeOrg, isOwner, isSuperAdmin } = useOrganization();
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === "admin";
+  const isAdmin = isOwner || isSuperAdmin || user?.role?.toLowerCase() === "admin";
   const showLeave = variant === "workspace";
   const showPolicySetup = variant === "hr";
   const showLeaveSection = showLeave || showPolicySetup;
@@ -1003,13 +1003,11 @@ type DayCalendarCell = {
                 const leaveOnDay = approvedLeave || pendingLeave || rejectedLeave;
                 const leaveStatus = leaveOnDay?.status;
                 const leaveLabel = leaveOnDay
-                  ? dayLeaves.length > 1
-                    ? `${dayLeaves.length} on leave`
-                    : leaveStatus === "pending"
-                      ? "Leave pending"
-                      : leaveStatus === "rejected"
-                        ? "Leave rejected"
-                        : leaveOnDay.employee_name
+                  ? leaveStatus === "pending"
+                    ? "Leave pending"
+                    : leaveStatus === "rejected"
+                      ? "Leave rejected"
+                      : "On leave"
                   : null;
 
                 const leaveToneClass =
