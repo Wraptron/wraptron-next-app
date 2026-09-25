@@ -126,17 +126,12 @@ export function HrLeaveSection({
 
   const visibleLeaves = useMemo(() => {
     if (mode === "workspace") {
-      // Employees see their own requests (pending + approved + rejected).
-      // Approved leave from the team is also useful for admins browsing workspace.
+      // Employees see only their own requests.
+      // Admins see all requests across the organization.
       if (isAdmin) {
-        return leaves.filter(
-          (leave) =>
-            leave.status === "approved" ||
-            leave.status === "pending" ||
-            leave.user_id === user?.id,
-        );
+        return leaves;
       }
-      return leaves;
+      return leaves.filter((leave) => leave.user_id === user?.id);
     }
     return leaves;
   }, [leaves, mode, isAdmin, user?.id]);
