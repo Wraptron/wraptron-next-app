@@ -451,12 +451,13 @@ export default function SideNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { permissions, isOwner, isSuperAdmin, roleType } = useOrganization();
+  const { permissions, isOwner, isSuperAdmin, roleType, roleName } =
+    useOrganization();
   const isAdminUser =
     isOwner ||
     isSuperAdmin ||
     roleType === "owner" ||
-    roleType === "admin" ||
+    roleName?.toLowerCase() === "admin" ||
     user?.role?.toLowerCase() === "admin" ||
     user?.global_role?.toLowerCase() === "super_admin";
   const navAccess = useMemo(
