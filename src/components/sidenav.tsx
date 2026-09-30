@@ -303,6 +303,12 @@ const HUMAN_RESOURCE_MENU_ITEMS: MenuItem[] = [
     href: "/hr/calendar",
   },
   {
+    id: "leave-reports",
+    label: "Leave reports",
+    icon: FileText,
+    href: "/hr/leave-reports",
+  },
+  {
     id: "attendance-reminders",
     label: "Attendance & reminders",
     icon: BellRing,
@@ -445,7 +451,14 @@ export default function SideNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { permissions, isOwner } = useOrganization();
+  const { permissions, isOwner, isSuperAdmin, roleType } = useOrganization();
+  const isAdminUser =
+    isOwner ||
+    isSuperAdmin ||
+    roleType === "owner" ||
+    roleType === "admin" ||
+    user?.role?.toLowerCase() === "admin" ||
+    user?.global_role?.toLowerCase() === "super_admin";
   const navAccess = useMemo(
     () =>
       buildNavAccess({
@@ -536,6 +549,15 @@ export default function SideNav() {
     ];
   }, []);
 
+  const humanResourceMenuItems = useMemo((): MenuItem[] => {
+    if (isAdminUser) {
+      return HUMAN_RESOURCE_MENU_ITEMS;
+    }
+    return HUMAN_RESOURCE_MENU_ITEMS.filter(
+      (item) => item.id !== "leave-reports",
+    );
+  }, [isAdminUser]);
+
   let menuItems: MenuItem[];
   if (isProjectsPage) {
     menuItems = PROJECTS_MENU_ITEMS;
@@ -546,7 +568,7 @@ export default function SideNav() {
   } else if (isAccountsPage) {
     menuItems = ACCOUNTS_MENU_ITEMS;
   } else if (isEmployeeManagementSection) {
-    menuItems = HUMAN_RESOURCE_MENU_ITEMS;
+    menuItems = humanResourceMenuItems;
   } else if (isWorkspacePage) {
     menuItems = WORKSPACE_MENU_ITEMS;
   } else if (isSettingsPage) {
@@ -621,7 +643,7 @@ export default function SideNav() {
 
     // For human resources / employee management (/hr/* or legacy /workspace/employees/*)
     if (isEmployeeManagementSection) {
-      const hrItem = HUMAN_RESOURCE_MENU_ITEMS.find((item) =>
+      const hrItem = humanResourceMenuItems.find((item) =>
         pathname.startsWith(item.href),
       );
       if (hrItem) {
@@ -629,7 +651,7 @@ export default function SideNav() {
         return;
       }
       if (pathname === "/hr" || pathname?.startsWith("/hr/")) {
-        setActiveItem(HUMAN_RESOURCE_MENU_ITEMS[0]?.id || "");
+        setActiveItem(humanResourceMenuItems[0]?.id || "");
       }
       return;
     }

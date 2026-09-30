@@ -250,6 +250,13 @@ export const APP_SEARCH_ROUTES: AppSearchRoute[] = [
     section: "Human resources",
   },
   {
+    href: "/hr/leave-reports",
+    label: "Leave reports",
+    keywords: "leave reports roster inspector date who is on leave pto absence",
+    section: "Human resources",
+    adminOnly: true,
+  },
+  {
     href: "/hr/metrics",
     label: "Performance matrix",
     keywords: "metrics report working days",
