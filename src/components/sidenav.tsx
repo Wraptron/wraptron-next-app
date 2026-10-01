@@ -530,15 +530,6 @@ export default function SideNav() {
   // When on /hr only — used for layout tweaks (e.g. admin block), not employee pages
   const isHumanResourcePage = pathname?.startsWith("/hr");
 
-  const productsMenuItems = useMemo((): MenuItem[] => {
-    return [
-      ...PRODUCTS_MENU_ITEMS,
-      ...PRODUCT_PAGE_SECTION_ITEMS_TEMPLATE.map((item) => ({
-        ...item,
-        href: PRODUCT_SECTION_HREF[item.id],
-      })),
-    ];
-  }, []);
 
   const humanResourceMenuItems = useMemo((): MenuItem[] => {
     if (isAdminUser) {
