@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Check,
+  FileSpreadsheet,
   Loader2,
   Plane,
   X,
@@ -104,7 +106,7 @@ export function HrLeaveSection({
   const { user } = useAuth();
   const canReview = mode === "hr" && isAdmin;
   const canApply = mode === "workspace";
-  const showEmployeeColumn = mode === "hr" || isAdmin;
+  const showEmployeeColumn = mode === "hr";
 
   const [leaveType, setLeaveType] = useState<LeaveType>("casual");
   const [startDate, setStartDate] = useState(defaultStartDate);
@@ -126,20 +128,11 @@ export function HrLeaveSection({
 
   const visibleLeaves = useMemo(() => {
     if (mode === "workspace") {
-      // Employees see their own requests (pending + approved + rejected).
-      // Approved leave from the team is also useful for admins browsing workspace.
-      if (isAdmin) {
-        return leaves.filter(
-          (leave) =>
-            leave.status === "approved" ||
-            leave.status === "pending" ||
-            leave.user_id === user?.id,
-        );
-      }
-      return leaves;
+      // In workspace mode, only show the person who applied their own leave requests
+      return leaves.filter((leave) => leave.user_id === user?.id);
     }
     return leaves;
-  }, [leaves, mode, isAdmin, user?.id]);
+  }, [leaves, mode, user?.id]);
 
   const pendingLeaves = useMemo(
     () => visibleLeaves.filter((leave) => leave.status === "pending"),
