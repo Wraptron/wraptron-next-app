@@ -113,6 +113,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  turbopack: {},
   webpack: (config, { isServer }) => {
     // Cloudflare Workers compatibility
     if (!isServer) {
