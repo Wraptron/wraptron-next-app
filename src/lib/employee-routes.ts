@@ -16,4 +16,5 @@ export const HR_CALENDAR_PATH = "/hr/calendar";
 /** Workspace calendar for viewing the month and leave requests. */
 export const WORKSPACE_CALENDAR_PATH = "/workspace/calendar";
 
-
+/** Leave reports and date inspector. */
+export const HR_LEAVE_REPORTS_PATH = "/hr/leave-reports";

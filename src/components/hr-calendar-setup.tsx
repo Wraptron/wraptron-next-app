@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock,
   Coffee,
+  FileSpreadsheet,
   Info,
   Loader2,
   Plane,
@@ -61,7 +62,7 @@ import {
   type WorkPolicy,
   type WorkingDaysBreakdown,
 } from "@/lib/api";
-import { HR_METRICS_PATH } from "@/lib/employee-routes";
+import { HR_LEAVE_REPORTS_PATH, HR_METRICS_PATH } from "@/lib/employee-routes";
 import { useAuth } from "@/contexts/auth-context";
 import { useOrganization } from "@/contexts/organization-context";
 import { HrLeaveSection } from "@/components/hr-leave-section";
@@ -122,7 +123,7 @@ export function HrCalendarSetup({
   const isAdmin = isOwner || isSuperAdmin || user?.role?.toLowerCase() === "admin";
   const showLeave = variant === "workspace";
   const showPolicySetup = variant === "hr";
-  const showLeaveSection = showLeave || showPolicySetup;
+  const showLeaveSection = showLeave;
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
@@ -360,12 +361,15 @@ type DayCalendarCell = {
         item,
       ]),
     );
-    const visibleLeaves = leaves.filter(
-      (leave) =>
-        leave.status === "pending" ||
-        leave.status === "approved" ||
-        leave.status === "rejected",
-    );
+    const userLeaves = showLeave && user?.id
+      ? leaves.filter(
+          (leave) =>
+            leave.user_id === user.id &&
+            (leave.status === "pending" ||
+              leave.status === "approved" ||
+              leave.status === "rejected"),
+        )
+      : [];
 
     const blanks: BlankCalendarCell[] = Array.from({
       length: firstDayOfWeek,
@@ -392,12 +396,12 @@ type DayCalendarCell = {
         holidayName: fromApi?.holiday_name,
         isWorkingDay: fromApi?.is_working_day ?? (!isWeekend && !isHoliday),
         isToday: date === todayStr,
-        leaves: visibleLeaves.filter((leave) => leaveCoversDate(leave, date)),
+        leaves: userLeaves.filter((leave) => leaveCoversDate(leave, date)),
       };
     });
 
     return [...blanks, ...days];
-  }, [breakdown?.day_breakdown, leaves, selectedMonth, selectedYear, weekendPolicy]);
+  }, [breakdown?.day_breakdown, leaves, selectedMonth, selectedYear, showLeave, user?.id, weekendPolicy]);
 
   const monthShort =
     MONTHS.find((m) => m.value === selectedMonth)?.label.slice(0, 3) ?? "";
@@ -419,35 +423,48 @@ type DayCalendarCell = {
           </div>
           <p className="max-w-3xl text-sm text-muted-foreground">
             {showLeave
-              ? "Apply for leave here. HR reviews requests from Calendar & holidays. Approved leave appears in the list below."
-              : "Configure weekend policy and public holidays. Review and approve leave requests in the section at the bottom."}
+              ? "Apply for leave here. Your personal leave requests appear in the list below."
+              : "Configure weekend policy and public holidays. View and review employee leave requests from Leave Reports."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {showPolicySetup ? (
             <>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="gap-1.5 shadow-sm"
-          >
-            <Link href="/hr/attendance">
-              <Clock className="h-4 w-4" />
-              Attendance Reminders
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="gap-1.5 shadow-sm"
-          >
-            <Link href={HR_METRICS_PATH}>
-              Performance Matrix
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+              {isAdmin ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shadow-sm"
+                >
+                  <Link href={HR_LEAVE_REPORTS_PATH}>
+                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                    Leave Reports
+                  </Link>
+                </Button>
+              ) : null}
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="gap-1.5 shadow-sm"
+              >
+                <Link href="/hr/attendance">
+                  <Clock className="h-4 w-4" />
+                  Attendance Reminders
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="gap-1.5 shadow-sm"
+              >
+                <Link href={HR_METRICS_PATH}>
+                  Performance Matrix
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </>
           ) : null}
           {showLeave ? (
@@ -849,7 +866,7 @@ type DayCalendarCell = {
                 <span className="h-2 w-2 rounded-full bg-amber-500" />
                 Holiday ({breakdown?.holiday_days ?? 0})
               </span>
-              {showLeaveSection ? (
+              {showLeave ? (
                 <>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-semibold">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -865,6 +882,7 @@ type DayCalendarCell = {
                   </span>
                 </>
               ) : null}
+
               {showPolicySetup ? (
               <Button
                 type="button"
@@ -996,7 +1014,7 @@ type DayCalendarCell = {
                   );
                 }
 
-                const dayLeaves = showLeaveSection ? cell.leaves : [];
+                const dayLeaves = cell.leaves;
                 const approvedLeave = dayLeaves.find((leave) => leave.status === "approved");
                 const pendingLeave = dayLeaves.find((leave) => leave.status === "pending");
                 const rejectedLeave = dayLeaves.find((leave) => leave.status === "rejected");
@@ -1229,16 +1247,7 @@ type DayCalendarCell = {
       </Card>
       ) : null}
 
-      {showPolicySetup ? (
-      <HrLeaveSection
-        mode="hr"
-        year={selectedYear}
-        leaves={leaves}
-        loading={leavesLoading}
-        isAdmin={isAdmin}
-        onChanged={loadPolicyAndData}
-      />
-      ) : null}
+
 
       {/* Add Holiday Dialog Modal */}
       <Dialog open={isAddHolidayOpen} onOpenChange={setIsAddHolidayOpen}>
