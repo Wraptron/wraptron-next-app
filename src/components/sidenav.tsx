@@ -168,6 +168,12 @@ const SALES_MENU_ITEMS: MenuItem[] = [
     href: "/sales/deals",
   },
   {
+    id: "quotes",
+    label: "Quotes",
+    icon: FileText,
+    href: "/sales/quotes",
+  },
+  {
     id: "contacts",
     label: "Contacts",
     icon: Users,
