@@ -238,8 +238,8 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     try {
       const phone = newCompany.phone.trim();
       const payload: CreateCompanyInput = {
+        name: contactName || companyName,
         company_name: companyName,
-        ...(contactName ? { name: contactName } : {}),
         ...(phone ? { phone } : {}),
       };
       const created = await companiesApi.create(payload);
