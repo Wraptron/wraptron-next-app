@@ -46,8 +46,11 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const contactNameForForm = (record?: { name?: string; company_name?: string }) =>
+    record?.name && record.name !== record.company_name ? record.name : "";
+
   const [formData, setFormData] = useState<CreateCompanyInput>({
-    name: company?.name || "",
+    name: contactNameForForm(company),
     company_name: company?.company_name || "",
     phone: company?.phone || "",
     website: company?.website || "",
@@ -60,7 +63,7 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
   useEffect(() => {
     if (company) {
       setFormData({
-        name: company.name || "",
+        name: contactNameForForm(company),
         company_name: company.company_name || "",
         phone: company.phone || "",
         website: company.website || "",
@@ -92,10 +95,11 @@ export function CompanyForm({ company, onSuccess, onCancel }: CompanyFormProps) 
     e.preventDefault();
     setLoading(true);
     try {
-      // Ensure name is set (backend requires it, use company_name if name is empty)
+      const companyName = (formData.company_name || "").trim();
+      const contactName = (formData.name || "").trim();
       const dataToSend: CreateCompanyInput = {
-        name: formData.name || formData.company_name || "Company",
-        company_name: formData.company_name || undefined,
+        name: contactName || companyName || "Company",
+        company_name: companyName || undefined,
         phone: formData.phone || undefined,
         website: formData.website || undefined,
         industry: formData.industry || undefined,

@@ -91,7 +91,11 @@ export function DealFormSheet({
     email: "",
     mobile: "",
   });
-  const [newCompany, setNewCompany] = useState({ name: "", company_name: "" });
+  const [newCompany, setNewCompany] = useState({
+    company_name: "",
+    contact_name: "",
+    phone: "",
+  });
   const setSheetOpen = useSheetPush()?.setSheetOpen;
   const { stageNames, defaultStageName, loading: stagesLoading } =
     useSalesStages(open);
@@ -280,21 +284,24 @@ export function DealFormSheet({
   };
 
   const handleCreateCompany = async () => {
-    const name = newCompany.name.trim();
-    if (!name) {
-      alert("Name is required.");
+    const companyName = newCompany.company_name.trim();
+    const contactName = newCompany.contact_name.trim();
+    if (!companyName) {
+      alert("Company name is required.");
       return;
     }
     setCreateCompanyLoading(true);
     try {
+      const phone = newCompany.phone.trim();
       const payload: CreateCompanyInput = {
-        name,
-        company_name: newCompany.company_name.trim() || undefined,
+        company_name: companyName,
+        ...(contactName ? { name: contactName } : {}),
+        ...(phone ? { phone } : {}),
       };
       const created = await companiesApi.create(payload);
       setCompanies((prev) => [created, ...prev]);
       setCompany(created.company_id);
-      setNewCompany({ name: "", company_name: "" });
+      setNewCompany({ company_name: "", contact_name: "", phone: "" });
       setCreateCompanyOpen(false);
     } catch (err) {
       console.error("Failed to create company:", err);
@@ -473,6 +480,15 @@ export function DealFormSheet({
                     </Command>
                   </PopoverContent>
                 </Popover>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Create company"
+                  onClick={() => setCreateCompanyOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
                 {formData.company_id && (
                   <Button
                     type="button"
@@ -600,25 +616,36 @@ export function DealFormSheet({
               <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
                   <DialogTitle>New company</DialogTitle>
-                  <DialogDescription>Add a company. Name is required.</DialogDescription>
+                  <DialogDescription>Add a company. Company name is required.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="new-company-name">Name *</Label>
-                    <Input
-                      id="new-company-name"
-                      value={newCompany.name}
-                      onChange={(e) => setNewCompany((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="Company or contact name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-company-company_name">Company name</Label>
+                    <Label htmlFor="new-company-company_name">Company name *</Label>
                     <Input
                       id="new-company-company_name"
                       value={newCompany.company_name}
                       onChange={(e) => setNewCompany((p) => ({ ...p, company_name: e.target.value }))}
-                      placeholder="Legal or display name"
+                      placeholder="Company name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-company-contact_name">Contact name</Label>
+                    <Input
+                      id="new-company-contact_name"
+                      value={newCompany.contact_name}
+                      onChange={(e) => setNewCompany((p) => ({ ...p, contact_name: e.target.value }))}
+                      placeholder="Contact name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-company-phone">Phone</Label>
+                    <Input
+                      id="new-company-phone"
+                      type="tel"
+                      value={newCompany.phone}
+                      onChange={(e) => setNewCompany((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="Phone number"
                     />
                   </div>
                 </div>

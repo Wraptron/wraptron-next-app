@@ -116,7 +116,7 @@ export default function CompanyDetailPage() {
 
   useEffect(() => {
     if (company) {
-      setTitle(company.name || company.company_name || "Company");
+      setTitle(company.company_name || company.name || "Company");
     }
     return () => setTitle(null);
   }, [company, setTitle]);
@@ -142,7 +142,9 @@ export default function CompanyDetailPage() {
     );
   }
 
-  const displayName = company.name || company.company_name || "Unnamed";
+  const displayName = company.company_name || company.name || "Unnamed";
+  const contactName =
+    company.name && company.name !== company.company_name ? company.name : undefined;
   const phone = company.phone?.trim();
   const mail = company.email?.trim();
 
@@ -217,8 +219,8 @@ export default function CompanyDetailPage() {
                 )}
               </CardHeader>
               <CardContent className="space-y-1">
-                <DetailRow label="Display name" value={company.name} />
-                <DetailRow label="Legal name" value={company.company_name} />
+                <DetailRow label="Company name" value={company.company_name || company.name} />
+                <DetailRow label="Contact name" value={contactName} />
                 <DetailRow label="Email" value={company.email} />
                 <DetailRow label="Phone" value={company.phone} />
                 <DetailRow label="Website" value={company.website} />
