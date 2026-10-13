@@ -29,6 +29,7 @@ import {
   type Deal,
   type CreateDealInput,
   type CreateContactInput,
+  type CreateCompanyInput,
   type Contact,
   type Company,
   type SalesStage,
@@ -56,6 +57,7 @@ const FALLBACK_STAGE_NAMES = [
 
 const CURRENCIES = ["USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"];
 const CREATE_NEW_CONTACT_VALUE = "__create_new_contact__";
+const CREATE_NEW_COMPANY_VALUE = "__create_new_company__";
 
 export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const { currency: defaultCurrency } = useCurrency();
@@ -65,11 +67,18 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const [salesStages, setSalesStages] = useState<SalesStage[]>([]);
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createContactLoading, setCreateContactLoading] = useState(false);
+  const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
+  const [createCompanyLoading, setCreateCompanyLoading] = useState(false);
   const [newContact, setNewContact] = useState({
     first_name: "",
     last_name: "",
     email: "",
     mobile: "",
+  });
+  const [newCompany, setNewCompany] = useState({
+    company_name: "",
+    contact_name: "",
+    phone: "",
   });
 
   const stagesSorted = useMemo(() => {
@@ -215,6 +224,39 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
       alert("Failed to create contact. Please try again.");
     } finally {
       setCreateContactLoading(false);
+    }
+  };
+
+  const handleCreateCompany = async () => {
+    const companyName = newCompany.company_name.trim();
+    const contactName = newCompany.contact_name.trim();
+    if (!companyName) {
+      alert("Company name is required.");
+      return;
+    }
+    setCreateCompanyLoading(true);
+    try {
+      const phone = newCompany.phone.trim();
+      const payload: CreateCompanyInput = {
+        name: contactName || companyName,
+        company_name: companyName,
+        ...(phone ? { phone } : {}),
+      };
+      const created = await companiesApi.create(payload);
+      setCompanies((prev) => [created, ...prev]);
+      if (!formData.companies_associated?.includes(created.company_id)) {
+        setFormData((prev) => ({
+          ...prev,
+          companies_associated: [...(prev.companies_associated || []), created.company_id],
+        }));
+      }
+      setNewCompany({ company_name: "", contact_name: "", phone: "" });
+      setCreateCompanyOpen(false);
+    } catch (error) {
+      console.error("Error creating company:", error);
+      alert("Failed to create company. Please try again.");
+    } finally {
+      setCreateCompanyLoading(false);
     }
   };
 
@@ -367,7 +409,12 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         <Select
           value=""
           onValueChange={(value) => {
+            if (value === CREATE_NEW_COMPANY_VALUE) {
+              setCreateCompanyOpen(true);
+              return;
+            }
             const companyId = parseInt(value);
+            if (Number.isNaN(companyId)) return;
             if (!formData.companies_associated?.includes(companyId)) {
               setFormData({
                 ...formData,
@@ -380,6 +427,12 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
             <SelectValue placeholder="Select companies" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={CREATE_NEW_COMPANY_VALUE}>
+              <span className="flex items-center gap-2 text-primary">
+                <Plus className="h-4 w-4" />
+                Create new company
+              </span>
+            </SelectItem>
             {companies.map((company) => (
               <SelectItem key={company.company_id} value={company.company_id.toString()}>
                 {company.company_name || company.name}
@@ -417,6 +470,59 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>New company</DialogTitle>
+            <DialogDescription>Add a company. Company name is required.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-company-company_name">Company name *</Label>
+              <Input
+                id="new-company-company_name"
+                value={newCompany.company_name}
+                onChange={(e) => setNewCompany((prev) => ({ ...prev, company_name: e.target.value }))}
+                placeholder="Company name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-company-contact_name">Contact name</Label>
+              <Input
+                id="new-company-contact_name"
+                value={newCompany.contact_name}
+                onChange={(e) => setNewCompany((prev) => ({ ...prev, contact_name: e.target.value }))}
+                placeholder="Contact name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-company-phone">Phone</Label>
+              <Input
+                id="new-company-phone"
+                type="tel"
+                value={newCompany.phone}
+                onChange={(e) => setNewCompany((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="Phone number"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateCompanyOpen(false)}
+              disabled={createCompanyLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCreateCompany} disabled={createCompanyLoading}>
+              {createCompanyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createContactOpen} onOpenChange={setCreateContactOpen}>
         <DialogContent className="sm:max-w-[400px]">

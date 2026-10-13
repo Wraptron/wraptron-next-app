@@ -88,8 +88,16 @@ function buildCompanyTableColumns(
     {
       id: "contact_name",
       header: "Contact Name",
-      sortValue: (item) => byId.get(Number(item.id))?.name ?? "",
-      cell: (item) => byId.get(Number(item.id))?.name || "—",
+      sortValue: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c?.name || c.name === c.company_name) return "";
+        return c.name;
+      },
+      cell: (item) => {
+        const c = byId.get(Number(item.id));
+        if (!c?.name || c.name === c.company_name) return "—";
+        return c.name;
+      },
     },
     {
       id: "email",
