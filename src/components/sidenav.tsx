@@ -25,6 +25,7 @@ import {
   Receipt,
   BookOpen,
   Book,
+  Hash,
   Store,
   ClipboardList,
   Monitor,
@@ -438,6 +439,12 @@ const ACCOUNTS_MENU_ITEMS: MenuItem[] = [
     label: "Journals",
     icon: Book,
     href: "/accounts/journals",
+  },
+  {
+    id: "hsn-codes",
+    label: "HSN Codes",
+    icon: Hash,
+    href: "/accounts/hsn-codes",
   },
 ];
 

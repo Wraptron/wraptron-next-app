@@ -16,6 +16,15 @@ function formatDate(value?: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+function expiryFromQuoteDate(value?: string | null) {
+  if (!value) return null;
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + 30);
+  return date.toISOString().slice(0, 10);
+}
+
 export function QuotePreview({
   quote,
 }: {
@@ -23,11 +32,6 @@ export function QuotePreview({
   settings?: InvoiceSettings | null;
 }) {
   const items = quote.items || [];
-  const deductionLabel = quote.deduction_type === "tcs" ? "TCS" : "TDS";
-  const deductionSigned =
-    quote.deduction_type === "tcs"
-      ? Number(quote.deduction_amount || 0)
-      : -Number(quote.deduction_amount || 0);
 
   return (
     <article className="mx-auto max-w-[820px] bg-white px-10 py-10 text-[13px] leading-5 text-neutral-900 shadow-sm print:max-w-none print:px-0 print:py-0 print:shadow-none">
@@ -57,7 +61,9 @@ export function QuotePreview({
             </div>
             <div className="grid grid-cols-[110px_1fr] gap-3">
               <span className="text-neutral-500">Expiry Date</span>
-              <span>{formatDate(quote.expiry_date)}</span>
+              <span>
+                {formatDate(quote.expiry_date || expiryFromQuoteDate(quote.quote_date))}
+              </span>
             </div>
             {quote.reference_number ? (
               <div className="grid grid-cols-[110px_1fr] gap-3">
@@ -77,7 +83,6 @@ export function QuotePreview({
             Bill To
           </div>
           <div className="mt-1 font-semibold">{quote.customer_name}</div>
-          {quote.location ? <div className="whitespace-pre-line">{quote.location}</div> : null}
         </div>
         {quote.project_name ? (
           <div className="sm:text-right">
@@ -143,16 +148,16 @@ export function QuotePreview({
       <section className="mt-4 ml-auto w-full max-w-[260px] space-y-1.5">
         <TotalRow label="Sub Total" value={money(Number(quote.subtotal || 0))} />
         <TotalRow label="Tax" value={money(Number(quote.tax_total || 0))} />
-        {Number(quote.deduction_rate || 0) !== 0 ? (
-          <TotalRow
-            label={`${deductionLabel} (${Number(quote.deduction_rate || 0)}%)`}
-            value={money(deductionSigned)}
-          />
-        ) : null}
         <TotalRow label="Adjustment" value={money(Number(quote.adjustment_amount || 0))} />
         <div className="flex justify-between border-t-2 border-neutral-900 pt-2 text-base font-semibold">
           <span>Total</span>
-          <span className="tabular-nums">{money(Number(quote.total || 0))}</span>
+          <span className="tabular-nums">
+            {money(
+              Number(quote.subtotal || 0) +
+                Number(quote.tax_total || 0) +
+                Number(quote.adjustment_amount || 0),
+            )}
+          </span>
         </div>
       </section>
 

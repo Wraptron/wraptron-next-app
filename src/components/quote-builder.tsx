@@ -12,7 +12,6 @@ import {
   type CreateQuoteInput,
   type Project,
   type Quote,
-  type QuoteDeductionType,
   type QuoteStatus,
 } from "@/lib/api";
 import { PageShell } from "@/components/page-shell";
@@ -28,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -53,7 +51,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 const TAX_RATES = ["0", "5", "12", "18", "28"];
-const DEDUCTION_RATES = ["0", "1", "2", "5", "10"];
 
 type ItemDraft = {
   product_id: string;
@@ -69,7 +66,6 @@ type QuoteDraft = {
   customer_id: string;
   company_id: string;
   customer_name: string;
-  location: string;
   quote_number: string;
   reference_number: string;
   quote_date: string;
@@ -78,8 +74,6 @@ type QuoteDraft = {
   subject: string;
   customer_notes: string;
   terms_and_conditions: string;
-  deduction_type: QuoteDeductionType;
-  deduction_rate: string;
   adjustment_label: string;
   adjustment_amount: string;
   items: ItemDraft[];
@@ -108,12 +102,19 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "";
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function blankDraft(): QuoteDraft {
   return {
     customer_id: "",
     company_id: "",
     customer_name: "",
-    location: "",
     quote_number: "",
     reference_number: "",
     quote_date: "",
@@ -122,8 +123,6 @@ function blankDraft(): QuoteDraft {
     subject: "",
     customer_notes: "",
     terms_and_conditions: "",
-    deduction_type: "tds",
-    deduction_rate: "0",
     adjustment_label: "Adjustment",
     adjustment_amount: "0",
     items: [emptyItem()],
@@ -135,17 +134,16 @@ function quoteToDraft(quote: Quote): QuoteDraft {
     customer_id: quote.customer_id ? String(quote.customer_id) : "",
     company_id: quote.company_id ? String(quote.company_id) : "",
     customer_name: quote.customer_name || "",
-    location: quote.location || "",
     quote_number: quote.quote_number || "",
     reference_number: quote.reference_number || "",
     quote_date: quote.quote_date?.slice(0, 10) || "",
-    expiry_date: quote.expiry_date?.slice(0, 10) || "",
+    expiry_date:
+      quote.expiry_date?.slice(0, 10) ||
+      (quote.quote_date ? addDays(quote.quote_date, 30) : ""),
     project_id: quote.project_id ? String(quote.project_id) : "",
     subject: quote.subject || "",
     customer_notes: quote.customer_notes || "",
     terms_and_conditions: quote.terms_and_conditions || "",
-    deduction_type: quote.deduction_type === "tcs" ? "tcs" : "tds",
-    deduction_rate: String(Number(quote.deduction_rate ?? 0)),
     adjustment_label: quote.adjustment_label || "Adjustment",
     adjustment_amount: String(Number(quote.adjustment_amount ?? 0)),
     items:
@@ -168,6 +166,10 @@ const money = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+
+function companyLabel(company: Company) {
+  return company.company_name || company.name || "Company";
+}
 
 function lineAmount(item: ItemDraft) {
   const qty = Number(item.quantity || 0);
@@ -297,9 +299,12 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
       setLoading(true);
       setError(null);
       try {
-        const [companyRes, projectRes] = await Promise.all([
+        const [companyRes, projectRes, nextNumber] = await Promise.all([
           companiesApi.getAll({ limit: 1000 }),
           projectsApi.getAll({ limit: 1000 }),
+          isEdit
+            ? Promise.resolve(null)
+            : quotesApi.getNextNumber().catch(() => null),
         ]);
         if (cancelled) return;
         setCompanies(companyRes.data);
@@ -313,7 +318,11 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
           setDraft(quoteToDraft(quote));
           setSavedDocuments(documents.data);
         } else {
-          setDraft(blankDraft());
+          const draft = blankDraft();
+          if (nextNumber?.quote_number) {
+            draft.quote_number = nextNumber.quote_number;
+          }
+          setDraft(draft);
         }
       } catch (e) {
         if (!cancelled) {
@@ -338,20 +347,14 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
       subtotal += amount;
       tax += (amount * taxRate) / 100;
     }
-    const deductionRate = Number(draft.deduction_rate || 0);
-    const deductionAmount = (subtotal * deductionRate) / 100;
     const adjustment = Number(draft.adjustment_amount || 0);
-    const signed =
-      draft.deduction_type === "tcs" ? deductionAmount : -deductionAmount;
     return {
       subtotal,
       tax,
-      deductionAmount,
-      signed,
       adjustment,
-      total: subtotal + tax + signed + adjustment,
+      total: subtotal + tax + adjustment,
     };
-  }, [draft.items, draft.deduction_rate, draft.deduction_type, draft.adjustment_amount]);
+  }, [draft.items, draft.adjustment_amount]);
 
   const updateItem = (idx: number, patch: Partial<ItemDraft>) => {
     setDraft((prev) => ({
@@ -372,8 +375,9 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
     const companyId = draft.company_id
       ? (company?.company_id ?? Number(draft.company_id))
       : null;
-    const customerName =
-      company?.name || company?.company_name || draft.customer_name;
+    const customerName = company
+      ? companyLabel(company)
+      : draft.customer_name;
     if ((!customerId && !companyId) || !customerName) {
       setError("Customer name is required");
       return;
@@ -396,18 +400,16 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
       customer_id: customerId,
       company_id: companyId,
       customer_name: customerName,
-      location: draft.location.trim(),
       quote_number: draft.quote_number.trim(),
       reference_number: draft.reference_number.trim(),
       quote_date: draft.quote_date,
-      expiry_date: draft.expiry_date || null,
+      expiry_date: draft.expiry_date || addDays(draft.quote_date, 30) || null,
       project_id: draft.project_id ? Number(draft.project_id) : null,
       subject: draft.subject.trim(),
       customer_notes: draft.customer_notes.trim(),
       terms_and_conditions: draft.terms_and_conditions.trim(),
       status,
-      deduction_type: draft.deduction_type,
-      deduction_rate: Number(draft.deduction_rate || 0),
+      deduction_rate: 0,
       adjustment_label: "Adjustment",
       adjustment_amount: Number(draft.adjustment_amount || 0),
       items: items.map((item) => ({
@@ -525,17 +527,10 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
           ) : (
             <>
               <section className="space-y-4 rounded-xl border bg-muted/15 p-4 md:p-5">
-                <FieldRow label="Customer Name" required>
-                  <SearchPicker
-                    valueLabel={draft.customer_name}
-                    placeholder="Search a company"
-                    searchPlaceholder="Search companies"
-                    emptyText="No companies found."
-                    options={companies.map((company) => ({
-                      value: String(company.company_id),
-                      label: company.name || company.company_name || "Company",
-                    }))}
-                    onSelect={(value) => {
+                <FieldRow label="Company Name" required>
+                  <Select
+                    value={draft.company_id || undefined}
+                    onValueChange={(value) => {
                       const company = companies.find(
                         (item) => String(item.company_id) === value,
                       );
@@ -543,23 +538,30 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                         ...prev,
                         company_id: value,
                         customer_id: "",
-                        customer_name:
-                          company?.name ||
-                          company?.company_name ||
-                          prev.customer_name,
+                        customer_name: company
+                          ? companyLabel(company)
+                          : prev.customer_name,
                       }));
                     }}
-                  />
-                </FieldRow>
-
-                <FieldRow label="Location">
-                  <Input
-                    type="text"
-                    value={draft.location}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, location: e.target.value }))
-                    }
-                  />
+                  >
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="Select a company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...companies]
+                        .sort((a, b) =>
+                          companyLabel(a).localeCompare(companyLabel(b)),
+                        )
+                        .map((company) => (
+                          <SelectItem
+                            key={company.company_id}
+                            value={String(company.company_id)}
+                          >
+                            {companyLabel(company)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </FieldRow>
 
                 <FieldRow label="Quote" required>
@@ -602,6 +604,7 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                         setDraft((prev) => ({
                           ...prev,
                           quote_date: e.target.value,
+                          expiry_date: addDays(e.target.value, 30),
                         }))
                       }
                     />
@@ -833,54 +836,6 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                   <div className="flex items-center justify-between">
                     <span>Tax</span>
                     <span className="tabular-nums">{money(summary.tax)}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <RadioGroup
-                        value={draft.deduction_type}
-                        onValueChange={(value) =>
-                          setDraft((prev) => ({
-                            ...prev,
-                            deduction_type: value === "tcs" ? "tcs" : "tds",
-                          }))
-                        }
-                        className="flex items-center gap-3"
-                      >
-                        <label className="flex items-center gap-1.5">
-                          <RadioGroupItem value="tds" />
-                          TDS
-                        </label>
-                        <label className="flex items-center gap-1.5">
-                          <RadioGroupItem value="tcs" />
-                          TCS
-                        </label>
-                      </RadioGroup>
-                      <Select
-                        value={
-                          DEDUCTION_RATES.includes(draft.deduction_rate)
-                            ? draft.deduction_rate
-                            : draft.deduction_rate || "0"
-                        }
-                        onValueChange={(value) =>
-                          setDraft((prev) => ({ ...prev, deduction_rate: value }))
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-[120px]">
-                          <SelectValue placeholder="Select a Tax" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(DEDUCTION_RATES.includes(draft.deduction_rate)
-                            ? DEDUCTION_RATES
-                            : [draft.deduction_rate, ...DEDUCTION_RATES]
-                          ).map((rate) => (
-                            <SelectItem key={rate} value={rate}>
-                              {rate}%
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <span className="tabular-nums">{money(summary.signed)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">Adjustment</span>

@@ -3415,6 +3415,46 @@ export interface AccountsDashboardData {
   cash_flow: FinancialReportLine[];
 }
 
+export interface HsnCode {
+  id: number;
+  code: string;
+  tax_percent: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const hsnCodesApi = {
+  getAll: async (): Promise<{ data: HsnCode[] }> => {
+    return fetchApi<{ data: HsnCode[] }>("/api/hsn-codes");
+  },
+
+  create: async (data: {
+    code: string;
+    tax_percent: number;
+  }): Promise<HsnCode> => {
+    return fetchApi<HsnCode>("/api/hsn-codes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { code?: string; tax_percent?: number },
+  ): Promise<HsnCode> => {
+    return fetchApi<HsnCode>(`/api/hsn-codes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/hsn-codes/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
 export const accountsApi = {
   getDashboard: async (
     period: AccountsDashboardPeriod = "month",
@@ -3560,6 +3600,17 @@ export interface QuotesResponse {
 }
 
 export const quotesApi = {
+  getNumberSettings: async (): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/quotes/number-settings");
+  },
+  updateNumberSettings: async (data: {
+    start_number: number;
+  }): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/quotes/number-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
   getNextNumber: async (): Promise<{ quote_number: string }> => {
     return fetchApi<{ quote_number: string }>("/api/quotes/next-number");
   },

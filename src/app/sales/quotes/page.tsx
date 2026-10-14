@@ -40,6 +40,15 @@ function formatDate(value?: string | null) {
   return value.slice(0, 10);
 }
 
+function expiryFromQuoteDate(value?: string | null) {
+  if (!value) return null;
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + 30);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function QuotesPage() {
   const router = useRouter();
   const { setTitle } = usePageTitle();
@@ -159,7 +168,9 @@ export default function QuotesPage() {
                       </TableCell>
                       <TableCell>{row.customer_name}</TableCell>
                       <TableCell>{formatDate(row.quote_date)}</TableCell>
-                      <TableCell>{formatDate(row.expiry_date)}</TableCell>
+                      <TableCell>
+                        {formatDate(row.expiry_date || expiryFromQuoteDate(row.quote_date))}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
@@ -173,7 +184,11 @@ export default function QuotesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {money(Number(row.total || 0))}
+                        {money(
+                          Number(row.subtotal || 0) +
+                            Number(row.tax_total || 0) +
+                            Number(row.adjustment_amount || 0),
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
