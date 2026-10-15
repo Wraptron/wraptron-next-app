@@ -25,12 +25,12 @@ import Link from "next/link";
 import {
   productsApi,
   productCategoriesApi,
+  hsnCodesApi,
   type CreateProductInput,
+  type HsnCode,
   type Product,
   type ProductCategory,
 } from "@/lib/api";
-
-const NONE_CATEGORY = "__none__";
 
 const emptyFormState = {
   part_code: "",
@@ -39,14 +39,15 @@ const emptyFormState = {
   product_description: "",
   selling_price: "",
   buying_price: "",
-  category_id: NONE_CATEGORY,
+  category_id: "",
 };
 
 function productToFormState(p: Product) {
+  const rawHsn = p.hsn_code ?? (p as { hsn?: string | null }).hsn;
   return {
     part_code: p.part_code ?? "",
     part_name: p.part_name ?? "",
-    hsn_code: p.hsn_code ?? "",
+    hsn_code: rawHsn != null ? String(rawHsn).trim() : "",
     product_description: p.product_description ?? "",
     selling_price:
       p.selling_price != null && !Number.isNaN(p.selling_price)
@@ -56,8 +57,7 @@ function productToFormState(p: Product) {
       p.total_cost != null && !Number.isNaN(p.total_cost)
         ? String(p.total_cost)
         : "",
-    category_id:
-      p.category_id != null ? String(p.category_id) : NONE_CATEGORY,
+    category_id: p.category_id != null ? String(p.category_id) : "",
   };
 }
 
@@ -79,6 +79,7 @@ export function ProductFormSheet({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(emptyFormState);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -91,10 +92,38 @@ export function ProductFormSheet({
     productCategoriesApi
       .getAll()
       .then((res) => {
-        if (!cancelled) setCategories(res.data ?? []);
+        if (!cancelled) {
+          const list = res.data ?? [];
+          setCategories(list);
+          if (
+            product &&
+            (!product.category_id || Number(product.category_id) === 0) &&
+            product.category_name
+          ) {
+            const found = list.find(
+              (c) =>
+                c.name.trim().toLowerCase() ===
+                product.category_name?.trim().toLowerCase(),
+            );
+            if (found) {
+              setFormData((prev) => ({
+                ...prev,
+                category_id: String(found.id),
+              }));
+            }
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setCategories([]);
+      });
+    hsnCodesApi
+      .getAll()
+      .then((res) => {
+        if (!cancelled) setHsnCodes(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setHsnCodes([]);
       });
     return () => {
       cancelled = true;
@@ -124,7 +153,7 @@ export function ProductFormSheet({
         const payload: Partial<CreateProductInput> = {
           part_code: code,
           part_name: name,
-          hsn_code: formData.hsn_code.trim() || undefined,
+          hsn_code: formData.hsn_code.trim() || null,
           product_description: formData.product_description.trim() || undefined,
           selling_price: formData.selling_price
             ? parseFloat(formData.selling_price)
@@ -132,10 +161,9 @@ export function ProductFormSheet({
           total_cost: formData.buying_price
             ? parseFloat(formData.buying_price)
             : undefined,
-          category_id:
-            formData.category_id && formData.category_id !== NONE_CATEGORY
-              ? parseInt(formData.category_id, 10)
-              : null,
+          category_id: formData.category_id
+            ? parseInt(formData.category_id, 10)
+            : null,
         };
         await productsApi.update(product.id, payload);
       } else {
@@ -150,10 +178,9 @@ export function ProductFormSheet({
           total_cost: formData.buying_price
             ? parseFloat(formData.buying_price)
             : undefined,
-          category_id:
-            formData.category_id && formData.category_id !== NONE_CATEGORY
-              ? parseInt(formData.category_id, 10)
-              : undefined,
+          category_id: formData.category_id
+            ? parseInt(formData.category_id, 10)
+            : undefined,
           status: "active",
         };
         await productsApi.create(payload);
@@ -229,7 +256,7 @@ export function ProductFormSheet({
             <div className="space-y-2">
               <Label htmlFor="product-category">Category</Label>
               <Select
-                value={formData.category_id}
+                value={formData.category_id || undefined}
                 onValueChange={(value) =>
                   setFormData({ ...formData, category_id: value })
                 }
@@ -238,7 +265,12 @@ export function ProductFormSheet({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_CATEGORY}>None</SelectItem>
+                  {formData.category_id &&
+                  !categories.some((c) => String(c.id) === formData.category_id) ? (
+                    <SelectItem value={formData.category_id}>
+                      {product?.category_name || "Selected category"}
+                    </SelectItem>
+                  ) : null}
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>
                       {c.name}
@@ -262,15 +294,44 @@ export function ProductFormSheet({
 
             <div className="space-y-2">
               <Label htmlFor="product-hsn-code">HSN code</Label>
-              <Input
-                id="product-hsn-code"
-                value={formData.hsn_code}
-                onChange={(e) =>
-                  setFormData({ ...formData, hsn_code: e.target.value })
+              <Select
+                value={formData.hsn_code || undefined}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, hsn_code: value })
                 }
-                placeholder="e.g. 84713010"
-                className="font-mono"
-              />
+              >
+                <SelectTrigger id="product-hsn-code" className="w-full font-mono">
+                  <SelectValue placeholder="Select a HSN code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.hsn_code &&
+                  !hsnCodes.some((c) => c.code === formData.hsn_code) ? (
+                    <SelectItem value={formData.hsn_code}>
+                      {formData.hsn_code}
+                    </SelectItem>
+                  ) : null}
+                  {hsnCodes.map((c) => (
+                    <SelectItem key={c.id} value={c.code}>
+                      {c.code}
+                      {c.tax_percent != null && c.tax_percent !== ""
+                        ? ` · ${c.tax_percent}%`
+                        : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hsnCodes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No HSN codes yet. Add them in{" "}
+                  <Link
+                    href="/accounts/hsn-codes"
+                    className="underline underline-offset-2"
+                  >
+                    Accounts → HSN Codes
+                  </Link>
+                  .
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">

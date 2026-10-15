@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   companiesApi,
+  hsnCodesApi,
+  productCategoriesApi,
+  productsApi,
   projectsApi,
   quotesApi,
   type QuoteDocument,
   type Company,
   type CreateQuoteInput,
+  type HsnCode,
+  type Product,
+  type ProductCategory,
   type Project,
   type Quote,
   type QuoteStatus,
@@ -275,6 +281,9 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
   const [draft, setDraft] = useState<QuoteDraft>(() => blankDraft());
   const [companies, setCompanies] = useState<Company[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<QuoteStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -299,16 +308,23 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
       setLoading(true);
       setError(null);
       try {
-        const [companyRes, projectRes, nextNumber] = await Promise.all([
-          companiesApi.getAll({ limit: 1000 }),
-          projectsApi.getAll({ limit: 1000 }),
-          isEdit
-            ? Promise.resolve(null)
-            : quotesApi.getNextNumber().catch(() => null),
-        ]);
+        const [companyRes, projectRes, productRes, categoryRes, hsnRes, nextNumber] =
+          await Promise.all([
+            companiesApi.getAll({ limit: 1000 }),
+            projectsApi.getAll({ limit: 1000 }),
+            productsApi.getAll({ limit: 1000 }),
+            productCategoriesApi.getAll(),
+            hsnCodesApi.getAll().catch(() => ({ data: [] as HsnCode[] })),
+            isEdit
+              ? Promise.resolve(null)
+              : quotesApi.getNextNumber().catch(() => null),
+          ]);
         if (cancelled) return;
         setCompanies(companyRes.data);
         setProjects(projectRes.data);
+        setProducts(productRes.data ?? []);
+        setCategories(categoryRes.data ?? []);
+        setHsnCodes(hsnRes.data ?? []);
         if (isEdit && quoteId) {
           const [quote, documents] = await Promise.all([
             quotesApi.getById(quoteId),
@@ -355,6 +371,33 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
       total: subtotal + tax + adjustment,
     };
   }, [draft.items, draft.adjustment_amount]);
+
+  const categoryNameFor = (product: Product) =>
+    product.category_name?.trim() ||
+    categories.find((category) => category.id === product.category_id)?.name ||
+    "";
+
+  const taxForProduct = (product: Product) => {
+    const code = product.hsn_code?.trim();
+    if (!code) return "";
+    const hsn = hsnCodes.find((row) => row.code === code);
+    if (!hsn) return "";
+    const tax = Number(hsn.tax_percent);
+    return Number.isFinite(tax) ? String(tax) : "";
+  };
+
+  const selectProduct = (idx: number, productId: string) => {
+    const product = products.find((item) => String(item.id) === productId);
+    if (!product) return;
+    const sellingPrice = Number(product.selling_price);
+    updateItem(idx, {
+      product_id: productId,
+      item_details: product.part_name,
+      item_group: categoryNameFor(product),
+      rate: Number.isFinite(sellingPrice) ? String(sellingPrice) : "0",
+      tax_percent: taxForProduct(product),
+    });
+  };
 
   const updateItem = (idx: number, patch: Partial<ItemDraft>) => {
     setDraft((prev) => ({
@@ -685,23 +728,32 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                         return (
                           <TableRow key={idx}>
                             <TableCell className="align-top">
-                              <Input
-                                value={item.item_details}
-                                placeholder="Type an item"
-                                onChange={(e) =>
-                                  updateItem(idx, {
-                                    item_details: e.target.value,
-                                    product_id: "",
-                                  })
+                              <SearchPicker
+                                valueLabel={
+                                  products.find(
+                                    (product) =>
+                                      String(product.id) === item.product_id,
+                                  )?.part_name || item.item_details
                                 }
+                                placeholder="Select a product"
+                                searchPlaceholder="Search products"
+                                emptyText="No products found."
+                                options={products.map((product) => ({
+                                  value: String(product.id),
+                                  label: product.part_name,
+                                  hint:
+                                    product.category_name?.trim() ||
+                                    product.part_code,
+                                }))}
+                                onSelect={(value) => selectProduct(idx, value)}
                               />
                             </TableCell>
                             <TableCell className="align-top">
                               <Input
+                                readOnly
                                 value={item.item_group}
-                                onChange={(e) =>
-                                  updateItem(idx, { item_group: e.target.value })
-                                }
+                                placeholder="Product category"
+                                className="bg-muted"
                               />
                             </TableCell>
                             <TableCell className="align-top">
@@ -744,26 +796,16 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                               </div>
                             </TableCell>
                             <TableCell className="align-top">
-                              <Select
-                                value={item.tax_percent ? taxValue : undefined}
-                                onValueChange={(value) =>
-                                  updateItem(idx, { tax_percent: value })
+                              <Input
+                                readOnly
+                                value={
+                                  item.tax_percent !== ""
+                                    ? `${taxValue}%`
+                                    : ""
                                 }
-                              >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Select a Tax" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(TAX_RATES.includes(taxValue)
-                                    ? TAX_RATES
-                                    : [taxValue, ...TAX_RATES]
-                                  ).map((rate) => (
-                                    <SelectItem key={rate} value={rate}>
-                                      {rate}%
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                placeholder="HSN tax"
+                                className="bg-muted"
+                              />
                             </TableCell>
                             <TableCell className="pt-3 text-right align-top text-sm font-medium tabular-nums">
                               {money(lineAmount(item))}
