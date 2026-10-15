@@ -9,6 +9,7 @@ import {
   ArrowUpDown,
   Calendar as CalendarIcon,
   CalendarDays,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +24,7 @@ import {
   ShieldAlert,
   UserCheck,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import {
@@ -51,7 +53,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getApiErrorMessage,
   leavesApi,
   type LeaveRequest,
   type LeaveStatus,
@@ -169,10 +181,14 @@ function leaveCoversDate(leave: LeaveRequest, targetDate: string): boolean {
 export function HrLeaveReports() {
   const { activeOrg, isOwner, isSuperAdmin, roleName } = useOrganization();
   const { user, loading: authLoading } = useAuth();
+  const [backendIsAdmin, setBackendIsAdmin] = useState<boolean | null>(null);
   const isAdmin =
     isOwner ||
     isSuperAdmin ||
+    backendIsAdmin === true ||
     roleName?.toLowerCase() === "admin" ||
+    roleName?.toLowerCase() === "owner" ||
+    activeOrg?.role_type === "owner" ||
     user?.role?.toLowerCase() === "admin" ||
     user?.global_role?.toLowerCase() === "super_admin";
 
@@ -197,6 +213,11 @@ export function HrLeaveReports() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Review states
+  const [rejectTarget, setRejectTarget] = useState<LeaveRequest | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+
   const yearOptions = useMemo(() => {
     const cur = now.getFullYear();
     return [
@@ -209,7 +230,6 @@ export function HrLeaveReports() {
   }, [now]);
 
   const loadLeaves = useCallback(async () => {
-    if (!isAdmin) return;
     setLoading(true);
     setError(null);
     try {
@@ -222,6 +242,9 @@ export function HrLeaveReports() {
         month: monthNum,
       });
       setLeaves(res.leaves || []);
+      if (typeof res.is_admin === "boolean") {
+        setBackendIsAdmin(res.is_admin);
+      }
     } catch (err) {
       console.error("Failed to load leaves:", err);
       setError("Failed to load leave requests report.");
@@ -229,13 +252,44 @@ export function HrLeaveReports() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, selectedMonth, isAdmin]);
+  }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (!authLoading) {
       void loadLeaves();
     }
-  }, [loadLeaves, isAdmin]);
+  }, [loadLeaves, authLoading, activeOrg?.id]);
+
+  const handleApprove = async (leave: LeaveRequest) => {
+    setReviewingId(leave.id);
+    try {
+      await leavesApi.review(leave.id, { status: "approved" });
+      await loadLeaves();
+    } catch (err) {
+      alert(getApiErrorMessage(err, "Failed to approve leave request."));
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  const handleReject = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!rejectTarget) return;
+    setReviewingId(rejectTarget.id);
+    try {
+      await leavesApi.review(rejectTarget.id, {
+        status: "rejected",
+        comment: rejectComment.trim() || undefined,
+      });
+      setRejectTarget(null);
+      setRejectComment("");
+      await loadLeaves();
+    } catch (err) {
+      alert(getApiErrorMessage(err, "Failed to reject leave request."));
+    } finally {
+      setReviewingId(null);
+    }
+  };
 
   // Date inspector navigation
   const handlePrevDay = () => {
@@ -782,6 +836,38 @@ export function HrLeaveReports() {
                           </span>
                         </div>
                       ) : null}
+
+                      {leave.status === "pending" ? (
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/40">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs gap-1 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-medium cursor-pointer"
+                            disabled={reviewingId === leave.id}
+                            onClick={() => void handleApprove(leave)}
+                          >
+                            {reviewingId === leave.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10 font-medium cursor-pointer"
+                            disabled={reviewingId === leave.id}
+                            onClick={() => {
+                              setRejectComment("");
+                              setRejectTarget(leave);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                            Reject
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -1009,10 +1095,10 @@ export function HrLeaveReports() {
 
                   {/* Applied Date Header with Sort */}
                   <TableHead
-                    className="font-semibold text-foreground cursor-pointer select-none text-right"
+                    className="font-semibold text-foreground cursor-pointer select-none"
                     onClick={() => handleSort("created_at")}
                   >
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       Applied Date
                       {sortField === "created_at" ? (
                         sortOrder === "asc" ? (
@@ -1024,6 +1110,11 @@ export function HrLeaveReports() {
                         <ArrowUpDown className="h-3 w-3 opacity-30" />
                       )}
                     </div>
+                  </TableHead>
+
+                  {/* Actions Header */}
+                  <TableHead className="font-semibold text-foreground text-right w-[170px]">
+                    Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -1100,8 +1191,45 @@ export function HrLeaveReports() {
                     </TableCell>
 
                     {/* Created Date */}
-                    <TableCell className="text-right font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                    <TableCell className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                       {normalizeIsoDate(leave.created_at) || "—"}
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="text-right">
+                      {leave.status === "pending" ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs gap-1 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium cursor-pointer"
+                            disabled={reviewingId === leave.id}
+                            onClick={() => void handleApprove(leave)}
+                          >
+                            {reviewingId === leave.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium cursor-pointer"
+                            disabled={reviewingId === leave.id}
+                            onClick={() => {
+                              setRejectComment("");
+                              setRejectTarget(leave);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                            Reject
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground/60">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1110,6 +1238,60 @@ export function HrLeaveReports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reject Reason Dialog */}
+      <Dialog
+        open={Boolean(rejectTarget)}
+        onOpenChange={(open) => {
+          if (!open) setRejectTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Reject leave request</DialogTitle>
+            <DialogDescription>
+              {rejectTarget
+                ? `Reject ${rejectTarget.employee_name}'s leave request (${
+                    rejectTarget.start_date === rejectTarget.end_date
+                      ? rejectTarget.start_date
+                      : `${rejectTarget.start_date} → ${rejectTarget.end_date}`
+                  })?`
+                : "Add an optional reason or note for the employee."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleReject} className="space-y-4 pt-2">
+            <Textarea
+              placeholder="Optional comment or reason for rejection"
+              value={rejectComment}
+              onChange={(event) => setRejectComment(event.target.value)}
+              className="bg-background min-h-20 text-xs"
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRejectTarget(null)}
+                disabled={reviewingId != null}
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={reviewingId != null}
+                className="gap-1.5"
+              >
+                {reviewingId != null ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                Reject leave
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

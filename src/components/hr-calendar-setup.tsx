@@ -118,12 +118,21 @@ export function HrCalendarSetup({
 }: {
   variant?: HrCalendarSetupVariant;
 }) {
-  const { activeOrg, isOwner, isSuperAdmin } = useOrganization();
+  const { activeOrg, isOwner, isSuperAdmin, roleName } = useOrganization();
   const { user } = useAuth();
-  const isAdmin = isOwner || isSuperAdmin || user?.role?.toLowerCase() === "admin";
+  const [backendIsAdmin, setBackendIsAdmin] = useState<boolean | null>(null);
+  const isAdmin =
+    isOwner ||
+    isSuperAdmin ||
+    backendIsAdmin === true ||
+    roleName?.toLowerCase() === "admin" ||
+    roleName?.toLowerCase() === "owner" ||
+    activeOrg?.role_type === "owner" ||
+    user?.role?.toLowerCase() === "admin" ||
+    user?.global_role?.toLowerCase() === "super_admin";
   const showLeave = variant === "workspace";
   const showPolicySetup = variant === "hr";
-  const showLeaveSection = showLeave;
+  const showLeaveSection = variant === "workspace";
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
@@ -209,8 +218,11 @@ export function HrCalendarSetup({
     }
     if (showLeaveSection) {
       if (leavesRes?.status === "fulfilled") {
-        const value = leavesRes.value as { leaves?: LeaveRequest[] };
+        const value = leavesRes.value as { leaves?: LeaveRequest[]; is_admin?: boolean };
         setLeaves(value.leaves || []);
+        if (typeof value?.is_admin === "boolean") {
+          setBackendIsAdmin(value.is_admin);
+        }
       } else {
         failed.push("leave requests");
       }

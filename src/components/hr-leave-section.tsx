@@ -51,6 +51,7 @@ import {
   type LeaveType,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
 
 const LEAVE_TYPE_OPTIONS: { value: LeaveType; label: string }[] = [
   { value: "casual", label: "Casual leave" },
@@ -104,9 +105,20 @@ export function HrLeaveSection({
   onChanged,
 }: HrLeaveSectionProps) {
   const { user } = useAuth();
-  const canReview = mode === "hr" && isAdmin;
-  const canApply = mode === "workspace";
-  const showEmployeeColumn = mode === "hr";
+  const { isOwner, isSuperAdmin, roleName, activeOrg } = useOrganization();
+  const effectiveIsAdmin =
+    isAdmin ||
+    isOwner ||
+    isSuperAdmin ||
+    roleName?.toLowerCase() === "admin" ||
+    roleName?.toLowerCase() === "owner" ||
+    activeOrg?.role_type === "owner" ||
+    user?.role?.toLowerCase() === "admin" ||
+    user?.global_role?.toLowerCase() === "super_admin";
+
+  const canReview = false;
+  const canApply = true;
+  const showEmployeeColumn = false;
 
   const [leaveType, setLeaveType] = useState<LeaveType>("casual");
   const [startDate, setStartDate] = useState(defaultStartDate);
@@ -127,12 +139,8 @@ export function HrLeaveSection({
   }, [applyOpen, defaultStartDate, defaultEndDate, canApply]);
 
   const visibleLeaves = useMemo(() => {
-    if (mode === "workspace") {
-      // In workspace mode, only show the person who applied their own leave requests
-      return leaves.filter((leave) => leave.user_id === user?.id);
-    }
-    return leaves;
-  }, [leaves, mode, user?.id]);
+    return leaves.filter((leave) => leave.user_id === user?.id);
+  }, [leaves, user?.id]);
 
   const pendingLeaves = useMemo(
     () => visibleLeaves.filter((leave) => leave.status === "pending"),
@@ -216,14 +224,10 @@ export function HrLeaveSection({
                 Leave requests ({year})
               </CardTitle>
               <CardDescription className="text-xs">
-                {mode === "hr"
-                  ? canReview
-                    ? "Approve or reject pending leave requests from your team."
-                    : "Leave requests for this organization."
-                  : "Your leave requests. Approved leave appears here after HR review."}
+                Your leave requests. Approved leave appears here after HR review.
               </CardDescription>
             </div>
-            {canReview && pendingLeaves.length > 0 ? (
+            {pendingLeaves.length > 0 ? (
               <Badge className="bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
                 {pendingLeaves.length} pending
               </Badge>
