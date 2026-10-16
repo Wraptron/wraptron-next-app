@@ -333,6 +333,7 @@ export default function TasksBoardPage() {
   const [inlineTitle, setInlineTitle] = useState("");
   const [inlineProject, setInlineProject] = useState("");
   const [inlineAssignee, setInlineAssignee] = useState("unassigned");
+  const [inlineApprover, setInlineApprover] = useState("unassigned");
   const [inlineDeadline, setInlineDeadline] = useState("");
   const [inlinePriority, setInlinePriority] = useState("medium");
   const createInFlightRef = useRef(false);
@@ -967,13 +968,21 @@ export default function TasksBoardPage() {
 
   useEffect(() => {
     if (!inlineAddActive) return;
+    const targetProject = inlineProject || defaultInlineProjectId;
     setInlineProject((current) => current || defaultInlineProjectId);
-  }, [inlineAddActive, defaultInlineProjectId]);
+    if (targetProject) {
+      const proj = projects.find((p) => String(p.id) === targetProject);
+      if (proj?.project_manager_employee_id != null && inlineApprover === "unassigned") {
+        setInlineApprover(String(proj.project_manager_employee_id));
+      }
+    }
+  }, [inlineAddActive, defaultInlineProjectId, inlineProject, projects, inlineApprover]);
 
   const resetInlineAdd = useCallback(() => {
     setInlineTitle("");
     setInlineProject(defaultInlineProjectId);
     setInlineAssignee("unassigned");
+    setInlineApprover("unassigned");
     setInlineDeadline("");
     setInlinePriority("medium");
     setInlineAddActive(false);
@@ -998,6 +1007,13 @@ export default function TasksBoardPage() {
         ? null
         : employeeOptions.find((option) => option.id === assignedEmployeeId)
           ?.label ?? null;
+    const approverEmployeeId =
+      inlineApprover !== "unassigned" ? parseInt(inlineApprover, 10) : null;
+    const approverName =
+      approverEmployeeId == null
+        ? null
+        : employeeOptions.find((option) => option.id === approverEmployeeId)
+          ?.label ?? null;
     const project = projects.find((entry) => entry.id === parsedProjectId);
     const defaultStatus = orderedStatuses[0]?.name ?? "backlog";
     const statusMeta = statusByName.get(defaultStatus.toLowerCase());
@@ -1019,8 +1035,8 @@ export default function TasksBoardPage() {
       branch_name: null,
       assigned_employee_id: assignedEmployeeId,
       assignee_name: assigneeName,
-      approver_employee_id: null,
-      approver_name: null,
+      approver_employee_id: approverEmployeeId,
+      approver_name: approverName,
       pr_count: 0,
       latest_pr_state: null,
       created_at: now,
@@ -1029,6 +1045,7 @@ export default function TasksBoardPage() {
 
     setInlineTitle("");
     setInlineAssignee("unassigned");
+    setInlineApprover("unassigned");
     setInlineDeadline("");
     setInlinePriority("medium");
     startTransition(() => {
@@ -1042,6 +1059,7 @@ export default function TasksBoardPage() {
         title,
         priority: inlinePriority,
         assigned_employee_id: assignedEmployeeId,
+        approver_employee_id: approverEmployeeId,
         end_date: inlineDeadline || null,
       });
       startTransition(() => {
@@ -1060,6 +1078,7 @@ export default function TasksBoardPage() {
   }, [
     defaultInlineProjectId,
     employeeOptions,
+    inlineApprover,
     inlineAssignee,
     inlineDeadline,
     inlinePriority,
@@ -1117,7 +1136,13 @@ export default function TasksBoardPage() {
           <TableCell>
             <Select
               value={inlineProject || defaultInlineProjectId}
-              onValueChange={setInlineProject}
+              onValueChange={(val) => {
+                setInlineProject(val);
+                const proj = projects.find((p) => String(p.id) === val);
+                if (proj?.project_manager_employee_id != null) {
+                  setInlineApprover(String(proj.project_manager_employee_id));
+                }
+              }}
               disabled={projects.length === 0}
             >
               <SelectTrigger
@@ -1143,6 +1168,28 @@ export default function TasksBoardPage() {
               <SelectTrigger
                 className={cn(inlineTaskFieldClassName, "w-[170px]")}
                 onClick={(event) => event.stopPropagation()}
+              >
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={String(employee.id)}>
+                    {employee.first_name} {employee.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="w-[230px]">
+            <Select
+              value={inlineApprover}
+              onValueChange={setInlineApprover}
+            >
+              <SelectTrigger
+                className={cn(inlineTaskFieldClassName, "w-[170px]")}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="New task approver"
               >
                 <SelectValue placeholder="Unassigned" />
               </SelectTrigger>
@@ -1197,6 +1244,7 @@ export default function TasksBoardPage() {
       handleInlineAddCommit,
       handleInlineCreateTask,
       inlineAddActive,
+      inlineApprover,
       inlineAssignee,
       inlineDeadline,
       inlinePriority,
