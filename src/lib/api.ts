@@ -3517,6 +3517,8 @@ export interface QuoteItem {
   product_id?: number | null;
   item_details: string;
   item_group: string;
+  hsn_code?: string;
+  hsn?: string;
   quantity: number;
   rate: number;
   discount_percent: number;
@@ -3550,6 +3552,7 @@ export interface Quote {
   adjustment_label: string;
   adjustment_amount: number;
   total: number;
+  customer_gst?: string;
   created_at: string;
   updated_at: string;
   items?: QuoteItem[];
@@ -3577,6 +3580,7 @@ export interface CreateQuoteInput {
     product_id?: number | null;
     item_details: string;
     item_group?: string;
+    hsn_code?: string;
     quantity: number;
     rate: number;
     discount_percent?: number;

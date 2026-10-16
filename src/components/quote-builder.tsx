@@ -62,6 +62,7 @@ type ItemDraft = {
   product_id: string;
   item_details: string;
   item_group: string;
+  hsn_code: string;
   quantity: string;
   rate: string;
   discount_percent: string;
@@ -89,6 +90,7 @@ const emptyItem = (): ItemDraft => ({
   product_id: "",
   item_details: "",
   item_group: "",
+  hsn_code: "",
   quantity: "1",
   rate: "0",
   discount_percent: "0",
@@ -158,6 +160,7 @@ function quoteToDraft(quote: Quote): QuoteDraft {
             product_id: item.product_id ? String(item.product_id) : "",
             item_details: item.item_details || "",
             item_group: item.item_group || "",
+            hsn_code: (item as any).hsn_code || (item as any).hsn || (item as any).product_hsn || "",
             quantity: String(Number(item.quantity ?? 0)),
             rate: String(Number(item.rate ?? 0)),
             discount_percent: String(Number(item.discount_percent ?? 0)),
@@ -390,12 +393,14 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
     const product = products.find((item) => String(item.id) === productId);
     if (!product) return;
     const sellingPrice = Number(product.selling_price);
+    const prodHsn = product.hsn_code?.trim() || "";
     updateItem(idx, {
       product_id: productId,
       item_details: product.part_name,
       item_group: categoryNameFor(product),
+      hsn_code: prodHsn || "998314",
       rate: Number.isFinite(sellingPrice) ? String(sellingPrice) : "0",
-      tax_percent: taxForProduct(product),
+      tax_percent: taxForProduct(product) || "18",
     });
   };
 
@@ -459,6 +464,7 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
         product_id: item.product_id ? Number(item.product_id) : null,
         item_details: item.item_details.trim(),
         item_group: item.item_group.trim(),
+        hsn_code: item.hsn_code.trim(),
         quantity: Number(item.quantity || 0),
         rate: Number(item.rate || 0),
         discount_percent: Number(item.discount_percent || 0),
@@ -712,6 +718,7 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                       <TableRow className="bg-muted/50 hover:bg-muted/50">
                         <TableHead className="min-w-[220px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Item details</TableHead>
                         <TableHead className="min-w-[140px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Item group</TableHead>
+                        <TableHead className="w-[100px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">HSN/SAC</TableHead>
                         <TableHead className="w-[90px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Quantity</TableHead>
                         <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Rate</TableHead>
                         <TableHead className="w-[100px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Discount</TableHead>
@@ -754,6 +761,15 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                                 value={item.item_group}
                                 placeholder="Product category"
                                 className="bg-muted"
+                              />
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <Input
+                                value={item.hsn_code}
+                                placeholder="HSN/SAC"
+                                onChange={(e) =>
+                                  updateItem(idx, { hsn_code: e.target.value })
+                                }
                               />
                             </TableCell>
                             <TableCell className="align-top">
@@ -921,12 +937,20 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                   />
                 </div>
                 <div className="space-y-3 rounded-xl border bg-muted/15 p-4">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Upload any document
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Upload any document
+                    </Label>
+                    <span className="text-[11px] text-muted-foreground">
+                      Max 10MB per file (up to 10 files)
+                    </span>
+                  </div>
                   <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-background text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground">
                     <Upload className="h-4 w-4" />
                     <span>Choose files</span>
+                    <span className="text-xs text-muted-foreground">
+                      PDF, images, or documents up to 10MB
+                    </span>
                     <input
                       type="file"
                       multiple
