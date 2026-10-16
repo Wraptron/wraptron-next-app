@@ -47,6 +47,7 @@ import {
   integrationsApi,
   employeesApi,
   taskStatusesApi,
+  getApiErrorMessage,
   WORKFLOW_CATEGORY_LABELS,
   WORKFLOW_CATEGORY_ORDER,
   type Project,
@@ -1669,6 +1670,27 @@ function TaskListView({
     }
   };
 
+  const handleInlineStatusChange = async (task: Task, value: string) => {
+    if (value === task.status || task.id < 0) return;
+
+    setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      const updated = await projectsApi.updateTask(projectId, task.id, {
+        status: value,
+      });
+      onUpdate(updated);
+    } catch (err) {
+      console.error("Failed to update task status:", err);
+      alert(getApiErrorMessage(err, "Failed to update status. Please try again."));
+    } finally {
+      setUpdatingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
+  };
+
   const handleInlineCreateTask = async () => {
     const title = inlineTitle.trim();
     if (!title) return;
@@ -1744,6 +1766,7 @@ function TaskListView({
   };
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1763,6 +1786,34 @@ function TaskListView({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await taskStatusesApi.getAll();
+        if (!cancelled) setStatuses(res.data ?? []);
+      } catch {
+        if (!cancelled) setStatuses([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const orderedStatuses = useMemo(() => {
+    if (statuses.length > 0) {
+      return [...statuses].sort(
+        (a, b) =>
+          WORKFLOW_CATEGORY_ORDER[a.category] -
+            WORKFLOW_CATEGORY_ORDER[b.category] ||
+          a.sort_order - b.sort_order ||
+          a.id - b.id,
+      );
+    }
+    return [];
+  }, [statuses]);
+
   const employeesById = useMemo(
     () => new Map(employees.map((e) => [e.id, e])),
     [employees],
@@ -1780,7 +1831,41 @@ function TaskListView({
   };
 
   const taskStatusLabel = (status: string) => {
+    const match = statuses.find(
+      (s) => s.name.toLowerCase() === status.toLowerCase(),
+    );
+    if (match) return match.name.replace(/_/g, " ");
+    const fallback = PROJECT_TASK_STATUS_OPTIONS.find(
+      (o) => o.value.toLowerCase() === status.toLowerCase(),
+    );
+    if (fallback) return fallback.label;
     return status.replace(/_/g, " ");
+  };
+
+  const getStatusOptionsForTask = (task: Task) => {
+    const baseOptions =
+      orderedStatuses.length > 0
+        ? orderedStatuses.map((s) => ({
+            value: s.name,
+            label: s.name.replace(/_/g, " "),
+          }))
+        : PROJECT_TASK_STATUS_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+          }));
+
+    if (
+      task.status &&
+      !baseOptions.some(
+        (o) => o.value.toLowerCase() === task.status.toLowerCase(),
+      )
+    ) {
+      return [
+        { value: task.status, label: taskStatusLabel(task.status) },
+        ...baseOptions,
+      ];
+    }
+    return baseOptions;
   };
 
   const getSortValue = (task: Task, key: string) => {
@@ -1945,12 +2030,32 @@ function TaskListView({
             )}
           </div>
         );
-      case "status":
+      case "status": {
+        const statusOptions = getStatusOptionsForTask(task);
         return (
-          <span className="capitalize text-sm">
-            {taskStatusLabel(task.status)}
-          </span>
+          <div onClick={(e) => e.stopPropagation()}>
+            <select
+              value={task.status}
+              onChange={(event) =>
+                void handleInlineStatusChange(task, event.target.value)
+              }
+              disabled={!!updatingTaskIds[task.id] || task.id < 0}
+              className={cn(listInlineSelectClassName, "w-[130px] capitalize")}
+              aria-label={`Status for ${task.title}`}
+            >
+              {statusOptions.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  className="capitalize"
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         );
+      }
       case "assignee":
         return (
           <div onClick={(e) => e.stopPropagation()}>
@@ -2362,6 +2467,53 @@ function TaskCardView({
   projectId: number;
   onUpdate: () => void;
 }) {
+  const [updatingTaskIds, setUpdatingTaskIds] = useState<Record<number, boolean>>({});
+  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await taskStatusesApi.getAll();
+        if (!cancelled) setStatuses(res.data ?? []);
+      } catch {
+        if (!cancelled) setStatuses([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleStatusChange = async (task: Task, newStatus: string) => {
+    if (newStatus === task.status || task.id < 0) return;
+    setUpdatingTaskIds((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      await projectsApi.updateTask(projectId, task.id, { status: newStatus });
+      onUpdate();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert(getApiErrorMessage(err, "Failed to update status. Please try again."));
+    } finally {
+      setUpdatingTaskIds((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
+  };
+
+  const statusOptions =
+    statuses.length > 0
+      ? statuses.map((s) => ({
+          value: s.name,
+          label: s.name.replace(/_/g, " "),
+        }))
+      : PROJECT_TASK_STATUS_OPTIONS.map((o) => ({
+          value: o.value,
+          label: o.label,
+        }));
+
   if (tasks.length === 0) {
     return (
       <Card>
@@ -2390,18 +2542,43 @@ function TaskCardView({
                 </p>
               )}
               <div className="flex items-center justify-between mt-3">
-                <Badge
-                  variant={
-                    task.status === "completed" || task.status === "done"
-                      ? "default"
-                      : task.status === "in_progress"
-                        ? "secondary"
-                        : "outline"
-                  }
-                  className="text-xs"
-                >
-                  {task.status}
-                </Badge>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={task.status}
+                    onChange={(e) =>
+                      void handleStatusChange(task, e.target.value)
+                    }
+                    disabled={!!updatingTaskIds[task.id] || task.id < 0}
+                    className={cn(
+                      listInlineSelectClassName,
+                      "w-[120px] text-xs h-6 px-1.5 py-0 capitalize",
+                    )}
+                    aria-label={`Status for ${task.title}`}
+                  >
+                    {(statusOptions.some(
+                      (o) =>
+                        o.value.toLowerCase() ===
+                        (task.status || "").toLowerCase(),
+                    )
+                      ? statusOptions
+                      : [
+                          {
+                            value: task.status,
+                            label: task.status.replace(/_/g, " "),
+                          },
+                          ...statusOptions,
+                        ]
+                    ).map((o) => (
+                      <option
+                        key={o.value}
+                        value={o.value}
+                        className="capitalize"
+                      >
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <span className="text-xs text-muted-foreground">
                   {new Date(task.created_at).toLocaleDateString()}
                 </span>
