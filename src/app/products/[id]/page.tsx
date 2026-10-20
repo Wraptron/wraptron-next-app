@@ -176,6 +176,10 @@ export default function ProductDetailPage() {
                     value={product.category_name}
                   />
                   <DetailRow
+                    label="HSN code"
+                    value={product.hsn_code}
+                  />
+                  <DetailRow
                     label="Customer part number"
                     value={product.customer_part_number}
                   />

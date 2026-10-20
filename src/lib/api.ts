@@ -3415,6 +3415,46 @@ export interface AccountsDashboardData {
   cash_flow: FinancialReportLine[];
 }
 
+export interface HsnCode {
+  id: number;
+  code: string;
+  tax_percent: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const hsnCodesApi = {
+  getAll: async (): Promise<{ data: HsnCode[] }> => {
+    return fetchApi<{ data: HsnCode[] }>("/api/hsn-codes");
+  },
+
+  create: async (data: {
+    code: string;
+    tax_percent: number;
+  }): Promise<HsnCode> => {
+    return fetchApi<HsnCode>("/api/hsn-codes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (
+    id: number,
+    data: { code?: string; tax_percent?: number },
+  ): Promise<HsnCode> => {
+    return fetchApi<HsnCode>(`/api/hsn-codes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/hsn-codes/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
 export const accountsApi = {
   getDashboard: async (
     period: AccountsDashboardPeriod = "month",
@@ -3464,6 +3504,173 @@ export const invoiceSettingsApi = {
     return fetchApi<InvoiceSettings>("/api/invoice-settings", {
       method: "PUT",
       body: JSON.stringify(data),
+    });
+  },
+};
+
+export type QuoteStatus = "draft" | "sent";
+export type QuoteDeductionType = "tds" | "tcs";
+
+export interface QuoteItem {
+  id?: number;
+  quote_id?: number;
+  product_id?: number | null;
+  item_details: string;
+  item_group: string;
+  hsn_code?: string;
+  hsn?: string;
+  quantity: number;
+  rate: number;
+  discount_percent: number;
+  tax_percent: number;
+  amount?: number;
+  sort_order?: number;
+}
+
+export interface Quote {
+  id: number;
+  user_id: number;
+  customer_id?: number | null;
+  company_id?: number | null;
+  customer_name: string;
+  location: string;
+  quote_number: string;
+  reference_number: string;
+  quote_date: string;
+  expiry_date?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  subject: string;
+  customer_notes: string;
+  terms_and_conditions: string;
+  status: QuoteStatus;
+  subtotal: number;
+  tax_total: number;
+  deduction_type: QuoteDeductionType;
+  deduction_rate: number;
+  deduction_amount: number;
+  adjustment_label: string;
+  adjustment_amount: number;
+  total: number;
+  customer_gst?: string;
+  created_at: string;
+  updated_at: string;
+  items?: QuoteItem[];
+}
+
+export interface CreateQuoteInput {
+  customer_id?: number | null;
+  company_id?: number | null;
+  customer_name: string;
+  location?: string;
+  quote_number?: string;
+  reference_number?: string;
+  quote_date: string;
+  expiry_date?: string | null;
+  project_id?: number | null;
+  subject?: string;
+  customer_notes?: string;
+  terms_and_conditions?: string;
+  status?: QuoteStatus;
+  deduction_type?: QuoteDeductionType;
+  deduction_rate?: number;
+  adjustment_label?: string;
+  adjustment_amount?: number;
+  items: Array<{
+    product_id?: number | null;
+    item_details: string;
+    item_group?: string;
+    hsn_code?: string;
+    quantity: number;
+    rate: number;
+    discount_percent?: number;
+    tax_percent?: number;
+  }>;
+}
+
+export interface QuoteDocument {
+  id: number;
+  file_name: string;
+  content_type: string;
+  created_at?: string;
+  file_data?: string;
+}
+
+export interface QuotesResponse {
+  data: Quote[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const quotesApi = {
+  getNumberSettings: async (): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/quotes/number-settings");
+  },
+  updateNumberSettings: async (data: {
+    start_number: number;
+  }): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/quotes/number-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  getNextNumber: async (): Promise<{ quote_number: string }> => {
+    return fetchApi<{ quote_number: string }>("/api/quotes/next-number");
+  },
+  getAll: async (
+    params?: CollectionListQueryParams,
+  ): Promise<QuotesResponse> => {
+    const searchParams = new URLSearchParams();
+    appendListQueryParams(searchParams, params);
+    const query = searchParams.toString();
+    return fetchApi<QuotesResponse>(`/api/quotes${query ? `?${query}` : ""}`);
+  },
+  getById: async (id: number): Promise<Quote> => {
+    return fetchApi<Quote>(`/api/quotes/${id}`);
+  },
+  create: async (data: CreateQuoteInput): Promise<Quote> => {
+    return fetchApi<Quote>("/api/quotes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  update: async (id: number, data: CreateQuoteInput): Promise<Quote> => {
+    return fetchApi<Quote>(`/api/quotes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  delete: async (id: number): Promise<void> => {
+    return fetchApi<void>(`/api/quotes/${id}`, { method: "DELETE" });
+  },
+  send: async (id: number): Promise<{ sent_to: string }> => {
+    return fetchApi<{ sent_to: string }>(`/api/quotes/${id}/send`, {
+      method: "POST",
+      timeoutMs: 120000,
+    });
+  },
+  listDocuments: async (id: number): Promise<{ data: QuoteDocument[] }> => {
+    return fetchApi<{ data: QuoteDocument[] }>(`/api/quotes/${id}/documents`);
+  },
+  getDocument: async (id: number, documentId: number): Promise<QuoteDocument> => {
+    return fetchApi<QuoteDocument>(
+      `/api/quotes/${id}/documents/${documentId}`,
+    );
+  },
+  addDocument: async (
+    id: number,
+    data: { file_name: string; content_type: string; data_base64: string },
+  ): Promise<QuoteDocument> => {
+    return fetchApi<QuoteDocument>(`/api/quotes/${id}/documents`, {
+      method: "POST",
+      body: JSON.stringify(data),
+      timeoutMs: 120000,
+    });
+  },
+  deleteDocument: async (id: number, documentId: number): Promise<void> => {
+    return fetchApi<void>(`/api/quotes/${id}/documents/${documentId}`, {
+      method: "DELETE",
     });
   },
 };
