@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -42,6 +43,7 @@ export default function HsnCodesPage() {
   const [selected, setSelected] = useState<HsnCode | null>(null);
   const [code, setCode] = useState("");
   const [tax, setTax] = useState("");
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -79,10 +81,12 @@ export default function HsnCodesPage() {
       await hsnCodesApi.create({
         code: code.trim(),
         tax_percent: taxNumber,
+        description: description.trim() || null,
       });
       setAddOpen(false);
       setCode("");
       setTax("");
+      setDescription("");
       await load();
     } catch (e: unknown) {
       setError(errorMessage(e, "Failed to add HSN code"));
@@ -99,9 +103,11 @@ export default function HsnCodesPage() {
       await hsnCodesApi.update(selected.id, {
         code: code.trim(),
         tax_percent: taxNumber,
+        description: description.trim() || null,
       });
       setEditOpen(false);
       setSelected(null);
+      setDescription("");
       await load();
     } catch (e: unknown) {
       setError(errorMessage(e, "Failed to update HSN code"));
@@ -151,6 +157,16 @@ export default function HsnCodesPage() {
           onChange={(e) => setTax(e.target.value)}
         />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-description`}>Description (optional)</Label>
+        <Textarea
+          id={`${idPrefix}-description`}
+          rows={3}
+          placeholder="e.g. Automatic data processing machines and units thereof"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
     </div>
   );
 
@@ -172,6 +188,7 @@ export default function HsnCodesPage() {
             onClick={() => {
               setCode("");
               setTax("");
+              setDescription("");
               setAddOpen(true);
             }}
           >
@@ -202,15 +219,27 @@ export default function HsnCodesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>HSN code</TableHead>
-                  <TableHead>Tax</TableHead>
+                  <TableHead className="w-[140px]">HSN code</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-[100px]">Tax</TableHead>
                   <TableHead className="w-[120px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {codes.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.code}</TableCell>
+                    <TableCell className="font-mono font-medium">{item.code}</TableCell>
+                    <TableCell className="max-w-[340px]">
+                      {item.description ? (
+                        <span className="line-clamp-2 text-sm text-foreground/90">
+                          {item.description}
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-muted-foreground">
+                          No description
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>{Number(item.tax_percent)}%</TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -221,6 +250,7 @@ export default function HsnCodesPage() {
                           setSelected(item);
                           setCode(item.code);
                           setTax(String(Number(item.tax_percent)));
+                          setDescription(item.description ?? "");
                           setEditOpen(true);
                         }}
                       >
@@ -251,7 +281,7 @@ export default function HsnCodesPage() {
           <DialogHeader>
             <DialogTitle>Add HSN code</DialogTitle>
             <DialogDescription>
-              Enter a 4 to 8 digit HSN code and the tax percentage for it.
+              Enter a 4 to 8 digit HSN code, tax percentage, and optional description.
             </DialogDescription>
           </DialogHeader>
           {formFields("hsn-add")}
@@ -270,7 +300,7 @@ export default function HsnCodesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit HSN code</DialogTitle>
-            <DialogDescription>Update the code or its tax percentage.</DialogDescription>
+            <DialogDescription>Update the code, tax percentage, or description.</DialogDescription>
           </DialogHeader>
           {formFields("hsn-edit")}
           <DialogFooter>
