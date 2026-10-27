@@ -820,14 +820,14 @@ export default function SideNav() {
       {/* Backdrop on mobile when sidebar is open */}
       {!isCollapsed && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden print:hidden"
           onClick={toggleSidebar}
           aria-hidden
         />
       )}
       <div
         className={cn(
-          "fixed top-0 left-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50 h-screen transition-all duration-300 ease-in-out flex flex-col",
+          "fixed top-0 left-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50 h-screen transition-all duration-300 ease-in-out flex flex-col print:hidden",
           isCollapsed ? "hidden md:flex" : "flex",
           isCollapsed ? "w-16" : "w-full md:w-64",
         )}

@@ -312,10 +312,11 @@ export function ProductFormSheet({
                   ) : null}
                   {hsnCodes.map((c) => (
                     <SelectItem key={c.id} value={c.code}>
-                      {c.code}
+                      <span>{c.code}</span>
                       {c.tax_percent != null && c.tax_percent !== ""
                         ? ` · ${c.tax_percent}%`
                         : ""}
+                      {c.description ? ` (${c.description})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

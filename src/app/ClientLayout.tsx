@@ -64,20 +64,23 @@ function MainContent({ children }: { children: React.ReactNode }) {
     // || isPublishedFormPage;
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-background text-foreground">
+    <main className="h-screen w-screen overflow-hidden bg-background text-foreground print:h-auto print:w-auto print:overflow-visible print:bg-transparent">
       {!shouldHideSidebar ? (
         <Suspense fallback={null}>
-          <SideNav />
+          <div className="print:hidden">
+            <SideNav />
+          </div>
         </Suspense>
       ) : null}
       <div
         className={cn(
           "flex h-full flex-col transition-all duration-300 ease-in-out ml-0",
           !shouldHideSidebar && (isCollapsed ? "md:ml-16" : "md:ml-64"),
+          "print:ml-0 print:h-auto print:block",
         )}
       >
         {!shouldHideHeader ? (
-          <div className="shrink-0">
+          <div className="shrink-0 print:hidden">
             <Header />
             <PwaPushSetup />
             <AttendanceReminderBanner />
@@ -88,6 +91,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
           className={cn(
             "relative flex min-h-0 flex-1 flex-col bg-background text-foreground",
             "overflow-y-auto pb-4",
+            "print:overflow-visible print:h-auto print:min-h-0 print:p-0 print:bg-transparent",
             // isFormfieldBuilder ? "overflow-hidden" : "overflow-y-auto pb-4", // Formfield app hidden
           )}
         >

@@ -41,7 +41,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronsUpDown, FileText, Plus, Trash2, Upload, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  FileDown,
+  FileText,
+  Mail,
+  MessageCircle,
+  Plus,
+  Printer,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -292,6 +311,7 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
   const [error, setError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<QuoteDocument[]>([]);
+  const [currentQuote, setCurrentQuote] = useState<Quote | null>(null);
 
   const isEdit = typeof quoteId === "number" && !Number.isNaN(quoteId);
 
@@ -334,6 +354,7 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
             quotesApi.listDocuments(quoteId),
           ]);
           if (cancelled) return;
+          setCurrentQuote(quote);
           setDraft(quoteToDraft(quote));
           setSavedDocuments(documents.data);
         } else {
@@ -534,6 +555,60 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
     }
   };
 
+  const handleWhatsAppShare = () => {
+    if (!quoteId || typeof window === "undefined") return;
+    const text = `Quotation ${draft.quote_number || ""} for ${
+      draft.customer_name || "Customer"
+    } - ${new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(summary.total)}\nView document: ${
+      window.location.origin
+    }/sales/quotes/${quoteId}/preview`;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(text)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const handleEmailShare = () => {
+    if (!quoteId || typeof window === "undefined") return;
+    const subject = `Quotation ${draft.quote_number || ""} from Wraptron`;
+    const body = `Dear ${draft.customer_name || "Customer"},\n\nPlease review our quotation ${
+      draft.quote_number || ""
+    }.\nTotal Amount: ${new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(summary.total)}\n\nView quotation document:\n${
+      window.location.origin
+    }/sales/quotes/${quoteId}/preview\n\nRegards,\nWraptron`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!quoteId) return;
+    try {
+      const blob = await quotesApi.downloadPdf(quoteId);
+      const safeNumber = (draft.quote_number || `QUO-${quoteId}`).replace(
+        /[^\w.-]+/g,
+        "-",
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Quote-${safeNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      router.push(`/sales/quotes/${quoteId}/preview`);
+    }
+  };
+
   return (
     <PageShell className="space-y-4 bg-background text-foreground">
       {error && (
@@ -557,16 +632,69 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
               </p>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={() => router.push("/sales/quotes")}
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {isEdit && quoteId ? (
+              <div className="inline-flex rounded-md shadow-xs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 rounded-r-none border-r-0"
+                  onClick={() => router.push(`/sales/quotes/${quoteId}/preview`)}
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print</span>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-l-none px-2"
+                      aria-label="Print and share options"
+                      title="Print and share options"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(`/sales/quotes/${quoteId}/preview`)
+                      }
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Print Document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadPdf}>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Download PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleWhatsAppShare}>
+                      <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                      Share via WhatsApp
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleEmailShare}>
+                      <Mail className="mr-2 h-4 w-4 text-blue-600" />
+                      Share via Email
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={() => router.push("/sales/quotes")}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6 px-6 py-6">
           {loading ? (
@@ -1015,30 +1143,48 @@ export function QuoteBuilder({ quoteId }: { quoteId?: number }) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 px-3 py-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={saving !== null}
-                  onClick={() => onSave("draft")}
-                >
-                  {saving === "draft" ? "Saving..." : "Save as Draft"}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={saving !== null}
-                  onClick={() => onSave("sent")}
-                >
-                  {saving === "sent" ? "Sending..." : "Save and Send"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={saving !== null}
-                  onClick={() => router.push("/sales/quotes")}
-                >
-                  Cancel
-                </Button>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/20 px-3 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving !== null}
+                    onClick={() => onSave("draft")}
+                  >
+                    {saving === "draft" ? "Saving..." : "Save as Draft"}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={saving !== null}
+                    onClick={() => onSave("sent")}
+                  >
+                    {saving === "sent" ? "Sending..." : "Save and Send"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving !== null}
+                    onClick={() => router.push("/sales/quotes")}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                {isEdit && quoteId ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() =>
+                        router.push(`/sales/quotes/${quoteId}/preview`)
+                      }
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Print</span>
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </>
           )}

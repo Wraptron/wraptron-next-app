@@ -144,3 +144,53 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Only hide elements explicitly marked print:hidden */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Unconstrain app layout so document flows naturally */
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  main {
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #main-content-portal {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset sidebar left margins in print */
+  div[class*="md:ml-"],
+  div[class*="ml-"] {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+}

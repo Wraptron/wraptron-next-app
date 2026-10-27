@@ -3419,6 +3419,7 @@ export interface HsnCode {
   id: number;
   code: string;
   tax_percent: string;
+  description?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -3431,6 +3432,7 @@ export const hsnCodesApi = {
   create: async (data: {
     code: string;
     tax_percent: number;
+    description?: string | null;
   }): Promise<HsnCode> => {
     return fetchApi<HsnCode>("/api/hsn-codes", {
       method: "POST",
@@ -3440,7 +3442,11 @@ export const hsnCodesApi = {
 
   update: async (
     id: number,
-    data: { code?: string; tax_percent?: number },
+    data: {
+      code?: string;
+      tax_percent?: number;
+      description?: string | null;
+    },
   ): Promise<HsnCode> => {
     return fetchApi<HsnCode>(`/api/hsn-codes/${id}`, {
       method: "PUT",
@@ -3649,6 +3655,18 @@ export const quotesApi = {
       method: "POST",
       timeoutMs: 120000,
     });
+  },
+  downloadPdf: async (id: number): Promise<Blob> => {
+    const token = getAuthToken();
+    const activeOrgId = getActiveOrgId();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (activeOrgId != null) headers["X-Organization-Id"] = String(activeOrgId);
+    const res = await fetch(`${API_BASE_URL}/api/quotes/${id}/pdf`, { headers });
+    if (!res.ok) {
+      throw new ApiError("Failed to download quote PDF", res.status);
+    }
+    return res.blob();
   },
   listDocuments: async (id: number): Promise<{ data: QuoteDocument[] }> => {
     return fetchApi<{ data: QuoteDocument[] }>(`/api/quotes/${id}/documents`);

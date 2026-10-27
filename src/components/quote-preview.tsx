@@ -108,7 +108,7 @@ export function QuotePreview({
   return (
     <div className="mx-auto max-w-[820px] space-y-8 font-sans print:max-w-none print:space-y-0">
       {/* PAGE 1 */}
-      <article className="min-h-[1050px] bg-white px-12 py-12 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-0 print:border-none print:px-0 print:py-0 print:shadow-none flex flex-col justify-between">
+      <article className="min-h-[1050px] bg-white px-12 py-12 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-0 print:border-none print:shadow-none flex flex-col justify-between">
         <div>
           {/* Header */}
           <header className="flex items-start justify-between gap-8">
@@ -330,7 +330,7 @@ export function QuotePreview({
       </article>
 
       {/* PAGE 2 */}
-      <article className="min-h-[600px] bg-white px-12 py-12 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-0 print:border-none print:px-0 print:py-0 print:shadow-none print:break-before-page flex flex-col justify-between">
+      <article className="min-h-[600px] bg-white px-12 py-12 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-0 print:border-none print:shadow-none print:break-before-page flex flex-col justify-between">
         <div>
           <h2 className="text-sm font-bold text-neutral-900">Terms & Conditions</h2>
 

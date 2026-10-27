@@ -198,7 +198,8 @@ export default function QuotesPage() {
                             onClick={() =>
                               router.push(`/sales/quotes/${row.id}/preview`)
                             }
-                            aria-label="Preview quote"
+                            aria-label="Preview and print quote"
+                            title="Preview and print quote"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -207,6 +208,7 @@ export default function QuotesPage() {
                             size="sm"
                             onClick={() => router.push(`/sales/quotes/${row.id}`)}
                             aria-label="Edit quote"
+                            title="Edit quote"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
