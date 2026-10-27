@@ -26,6 +26,7 @@ import {
   FileDown,
   Mail,
   MessageCircle,
+  Pencil,
   Printer,
   Share2,
 } from "lucide-react";
@@ -159,12 +160,22 @@ export default function QuotePreviewPage() {
   return (
     <PageShell className="space-y-4 bg-background text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <Button variant="outline" asChild>
-          <Link href={Number.isNaN(id) ? "/sales/quotes" : `/sales/quotes/${id}`}>
-            <ArrowLeft className="h-4 w-4" />
-            Back to quote
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/sales/quotes">
+              <ArrowLeft className="h-4 w-4" />
+              Back to quotes
+            </Link>
+          </Button>
+          {!Number.isNaN(id) && (
+            <Button variant="ghost" asChild>
+              <Link href={`/sales/quotes/${id}`}>
+                <Pencil className="h-4 w-4" />
+                Edit quote
+              </Link>
+            </Button>
+          )}
+        </div>
 
         {/* Print button with built-in document share options */}
         <DropdownMenu>
