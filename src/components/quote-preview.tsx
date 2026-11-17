@@ -1,7 +1,24 @@
 "use client";
 
 import React from "react";
+import localFont from "next/font/local";
 import type { InvoiceSettings, Quote } from "@/lib/api";
+
+const quotationFont = localFont({
+  src: [
+    {
+      path: "../fonts/OpenSans-Variable.ttf",
+      weight: "300 800",
+      style: "normal",
+    },
+    {
+      path: "../fonts/OpenSans-Italic-Variable.ttf",
+      weight: "300 800",
+      style: "italic",
+    },
+  ],
+  display: "swap",
+});
 
 function money(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -106,7 +123,9 @@ export function QuotePreview({
   const isInterstate = !placeOfSupply.includes("Tamil Nadu") && !placeOfSupply.includes("33");
 
   return (
-    <div className="mx-auto max-w-[820px] font-sans print:max-w-none">
+    <div
+      className={`${quotationFont.className} mx-auto max-w-[820px] print:max-w-none`}
+    >
       <article className="flex min-h-[1123px] flex-col bg-white px-12 py-10 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-[100vh] print:border-none print:shadow-none">
         <div className="flex-1">
         {/* Header */}
@@ -114,14 +133,11 @@ export function QuotePreview({
           {/* Left: Logo & Company Letterhead */}
           <div className="flex flex-col items-start">
             <img
-              src="/icon-512.png"
+              src="/wraptron-logo-full.jpg"
               alt="Wraptron"
-              className="h-12 w-12 object-contain"
+              className="h-5 w-auto object-contain"
             />
-            <div className="mt-2 text-sm font-black tracking-wider text-neutral-900">
-              WRAPTRON
-            </div>
-            <div className="mt-0.5 text-xs font-bold text-neutral-900">
+            <div className="mt-2 text-xs font-bold text-neutral-900">
               {settings?.company_name || "Wraptron Apptech LLP"}
             </div>
             <div className="mt-0.5 space-y-0.5 text-[11px] text-neutral-800">
