@@ -114,10 +114,14 @@ export function QuotePreview({
   const adjustment = Number(quote.adjustment_amount || 0);
   const total = Number(quote.total || subtotal + taxTotal + adjustment);
 
-  const quoteNumber = quote.quote_number || "000000";
-  const formattedQuoteNumber = quoteNumber.startsWith("#")
-    ? quoteNumber
-    : `# ${quoteNumber}`;
+  const isInvoice =
+    Boolean(quote.invoice_id) && Boolean(quote.invoice_number);
+  const documentTitle = isInvoice ? "TAX INVOICE" : "QUOTATION";
+  const documentNumber =
+    (isInvoice ? quote.invoice_number : quote.quote_number) || "000000";
+  const formattedDocumentNumber = documentNumber.startsWith("#")
+    ? documentNumber
+    : `# ${documentNumber}`;
 
   const placeOfSupply = quote.location || "Tamil Nadu (33)";
   const isInterstate = !placeOfSupply.includes("Tamil Nadu") && !placeOfSupply.includes("33");
@@ -152,10 +156,10 @@ export function QuotePreview({
           {/* Right: Title & Meta */}
           <div className="min-w-[240px] text-right">
             <h1 className="text-3xl font-normal tracking-normal text-neutral-900">
-              QUOTATION
+              {documentTitle}
             </h1>
             <div className="mt-2 text-sm font-bold text-neutral-900">
-              {formattedQuoteNumber}
+              {formattedDocumentNumber}
             </div>
 
             <div className="mt-4 space-y-1.5 text-xs">

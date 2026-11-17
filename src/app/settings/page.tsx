@@ -19,6 +19,7 @@ import {
   type WorkflowCategory,
 } from "@/lib/api";
 import { SettingsQuoteNumber } from "@/components/settings-quote-number";
+import { SettingsInvoiceNumber } from "@/components/settings-invoice-number";
 import { SettingsPricingCalculator } from "@/components/settings-pricing-calculator";
 import { SettingsProductCategories } from "@/components/settings-product-categories";
 import { SettingsWorkspaceSkills } from "@/components/settings-workspace-skills";
@@ -958,6 +959,7 @@ export default function Settings() {
       )}
 
       {showApps && <SettingsQuoteNumber />}
+      {showApps && <SettingsInvoiceNumber />}
 
       {showApps && (
         <>
