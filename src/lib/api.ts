@@ -3338,6 +3338,8 @@ export interface InvoiceItem {
   line_total?: number;
 }
 
+export type InvoiceStatus = "draft" | "sent";
+
 export interface Invoice {
   id: number;
   user_id: number;
@@ -3357,6 +3359,9 @@ export interface Invoice {
   total: number;
   terms_and_conditions: string;
   authorized_signature: string;
+  quote_id?: number | null;
+  project_id?: number | null;
+  project_name?: string | null;
   created_at: string;
   updated_at: string;
   items?: InvoiceItem[];
@@ -3370,6 +3375,7 @@ export interface CreateInvoiceInput {
   place_of_supply?: string;
   invoice_date?: string;
   due_date?: string;
+  project_id?: number | null;
   terms_and_conditions?: string;
   authorized_signature?: string;
   items: Array<{
@@ -3514,7 +3520,7 @@ export const invoiceSettingsApi = {
   },
 };
 
-export type QuoteStatus = "draft" | "sent";
+export type QuoteStatus = "draft" | "sent" | "invoiced";
 export type QuoteDeductionType = "tds" | "tcs";
 
 export interface QuoteItem {
@@ -3559,6 +3565,8 @@ export interface Quote {
   adjustment_amount: number;
   total: number;
   customer_gst?: string;
+  invoice_id?: number | null;
+  invoice_number?: string | null;
   created_at: string;
   updated_at: string;
   items?: QuoteItem[];
@@ -3656,6 +3664,19 @@ export const quotesApi = {
       timeoutMs: 120000,
     });
   },
+  convertToInvoice: async (
+    id: number,
+  ): Promise<{
+    quote: Quote;
+    invoice: { id: number; invoice_number: string; status?: string };
+  }> => {
+    return fetchApi<{
+      quote: Quote;
+      invoice: { id: number; invoice_number: string; status?: string };
+    }>(`/api/quotes/${id}/convert`, {
+      method: "POST",
+    });
+  },
   downloadPdf: async (id: number): Promise<Blob> => {
     const token = getAuthToken();
     const activeOrgId = getActiveOrgId();
@@ -3694,6 +3715,20 @@ export const quotesApi = {
 };
 
 export const invoicesApi = {
+  getNumberSettings: async (): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/invoices/number-settings");
+  },
+  updateNumberSettings: async (data: {
+    start_number: number;
+  }): Promise<{ start_number: number }> => {
+    return fetchApi<{ start_number: number }>("/api/invoices/number-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  getNextNumber: async (): Promise<{ invoice_number: string }> => {
+    return fetchApi<{ invoice_number: string }>("/api/invoices/next-number");
+  },
   getAll: async (
     params?: CollectionListQueryParams,
   ): Promise<InvoicesResponse> => {
@@ -3719,6 +3754,27 @@ export const invoicesApi = {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  },
+  updateStatus: async (
+    id: number,
+    status: InvoiceStatus,
+  ): Promise<{ id: number; invoice_number: string; status: string }> => {
+    return fetchApi<{ id: number; invoice_number: string; status: string }>(
+      `/api/invoices/${id}/status`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      },
+    );
+  },
+  send: async (id: number): Promise<{ sent_to: string; status: string }> => {
+    return fetchApi<{ sent_to: string; status: string }>(
+      `/api/invoices/${id}/send`,
+      {
+        method: "POST",
+        timeoutMs: 120000,
+      },
+    );
   },
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/api/invoices/${id}`, { method: "DELETE" });

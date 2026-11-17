@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   invoiceSettingsApi,
@@ -28,19 +28,28 @@ import {
   MessageCircle,
   Pencil,
   Printer,
+  Receipt,
   Share2,
 } from "lucide-react";
 
 export default function QuotePreviewPage() {
   const params = useParams();
+  const router = useRouter();
   const { setTitle } = usePageTitle();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   const id = typeof params.id === "string" ? parseInt(params.id, 10) : NaN;
+  const isInvoice =
+    Boolean(quote?.invoice_id) && Boolean(quote?.invoice_number);
+  const documentLabel = isInvoice ? "Invoice" : "Quotation";
+  const documentNumber = isInvoice
+    ? quote?.invoice_number
+    : quote?.quote_number;
 
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -63,23 +72,30 @@ export default function QuotePreviewPage() {
   }, [id]);
 
   useEffect(() => {
-    setTitle(quote ? `Quote ${quote.quote_number}` : null);
+    if (!quote) {
+      setTitle(null);
+      return () => setTitle(null);
+    }
+    setTitle(
+      isInvoice
+        ? `Invoice ${quote.invoice_number}`
+        : `Quote ${quote.quote_number}`,
+    );
     return () => setTitle(null);
-  }, [quote, setTitle]);
+  }, [quote, isInvoice, setTitle]);
 
   const handleDownloadPdf = async () => {
     if (!quote) return;
     setDownloadingPdf(true);
     try {
       const blob = await quotesApi.downloadPdf(quote.id);
-      const safeNumber = (quote.quote_number || `QUO-${quote.id}`).replace(
-        /[^\w.-]+/g,
-        "-",
-      );
+      const safeNumber = (
+        documentNumber || `${isInvoice ? "INV" : "QUO"}-${quote.id}`
+      ).replace(/[^\w.-]+/g, "-");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Quote-${safeNumber}.pdf`;
+      a.download = `${isInvoice ? "Invoice" : "Quote"}-${safeNumber}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -91,6 +107,23 @@ export default function QuotePreviewPage() {
     }
   };
 
+  const handleConvertToInvoice = async () => {
+    if (!quote || isInvoice) return;
+    setConverting(true);
+    setError(null);
+    try {
+      const result = await quotesApi.convertToInvoice(quote.id);
+      setQuote(result.quote);
+      router.replace("/sales/quotes?tab=invoices");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to convert to invoice",
+      );
+    } finally {
+      setConverting(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     if (!quote || typeof window === "undefined") return;
     const total =
@@ -98,7 +131,7 @@ export default function QuotePreviewPage() {
       Number(quote.subtotal || 0) +
         Number(quote.tax_total || 0) +
         Number(quote.adjustment_amount || 0);
-    const text = `Quotation ${quote.quote_number || ""} for ${
+    const text = `${documentLabel} ${documentNumber || ""} for ${
       quote.customer_name || "Customer"
     } - ${new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -120,13 +153,13 @@ export default function QuotePreviewPage() {
       Number(quote.subtotal || 0) +
         Number(quote.tax_total || 0) +
         Number(quote.adjustment_amount || 0);
-    const subject = `Quotation ${quote.quote_number || ""} from Wraptron`;
-    const body = `Dear ${quote.customer_name || "Customer"},\n\nPlease review our quotation ${
-      quote.quote_number || ""
+    const subject = `${documentLabel} ${documentNumber || ""} from Wraptron`;
+    const body = `Dear ${quote.customer_name || "Customer"},\n\nPlease review our ${documentLabel.toLowerCase()} ${
+      documentNumber || ""
     }.\nTotal Amount: ${new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(total)}\n\nView quotation document:\n${
+    }).format(total)}\n\nView document:\n${
       window.location.origin
     }/sales/quotes/${quote.id}/preview\n\nRegards,\nWraptron`;
     window.location.href = `mailto:?subject=${encodeURIComponent(
@@ -143,8 +176,8 @@ export default function QuotePreviewPage() {
         Number(quote.adjustment_amount || 0);
     try {
       await navigator.share({
-        title: `Quotation ${quote.quote_number || ""}`,
-        text: `Quotation ${quote.quote_number || ""} for ${
+        title: `${documentLabel} ${documentNumber || ""}`,
+        text: `${documentLabel} ${documentNumber || ""} for ${
           quote.customer_name || "Customer"
         } - ${new Intl.NumberFormat("en-IN", {
           style: "currency",
@@ -160,14 +193,18 @@ export default function QuotePreviewPage() {
   return (
     <PageShell className="space-y-4 bg-background text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" asChild>
-            <Link href="/sales/quotes">
+            <Link
+              href={
+                isInvoice ? "/sales/quotes?tab=invoices" : "/sales/quotes"
+              }
+            >
               <ArrowLeft className="h-4 w-4" />
-              Back to quotes
+              {isInvoice ? "Back to invoices" : "Back to quotes"}
             </Link>
           </Button>
-          {!Number.isNaN(id) && (
+          {!Number.isNaN(id) && !isInvoice && (
             <Button variant="ghost" asChild>
               <Link href={`/sales/quotes/${id}`}>
                 <Pencil className="h-4 w-4" />
@@ -175,9 +212,17 @@ export default function QuotePreviewPage() {
               </Link>
             </Button>
           )}
+          {!isInvoice ? (
+            <Button
+              onClick={handleConvertToInvoice}
+              disabled={!quote || converting}
+            >
+              <Receipt className="h-4 w-4" />
+              {converting ? "Converting..." : "Convert to invoice"}
+            </Button>
+          ) : null}
         </div>
 
-        {/* Print button with built-in document share options */}
         <DropdownMenu>
           <div className="inline-flex rounded-md shadow-xs">
             <Button
@@ -240,7 +285,7 @@ export default function QuotePreviewPage() {
 
       {loading ? (
         <div className="py-16 text-center text-sm text-muted-foreground">
-          Loading quotation...
+          Loading {isInvoice ? "invoice" : "quotation"}...
         </div>
       ) : quote ? (
         <QuotePreview quote={quote} settings={settings} />
