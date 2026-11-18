@@ -101,7 +101,7 @@ export default function QuotePreviewPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      window.print();
+      setError("Failed to download PDF. Please try again.");
     } finally {
       setDownloadingPdf(false);
     }

@@ -1,24 +1,8 @@
 "use client";
 
 import React from "react";
-import localFont from "next/font/local";
+import { openSans } from "@/fonts/open-sans";
 import type { InvoiceSettings, Quote } from "@/lib/api";
-
-const quotationFont = localFont({
-  src: [
-    {
-      path: "../fonts/OpenSans-Variable.ttf",
-      weight: "300 800",
-      style: "normal",
-    },
-    {
-      path: "../fonts/OpenSans-Italic-Variable.ttf",
-      weight: "300 800",
-      style: "italic",
-    },
-  ],
-  display: "swap",
-});
 
 function money(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -128,7 +112,7 @@ export function QuotePreview({
 
   return (
     <div
-      className={`${quotationFont.className} mx-auto max-w-[820px] print:max-w-none`}
+      className={`${openSans.className} mx-auto max-w-[820px] print:max-w-none`}
     >
       <article className="flex min-h-[1123px] flex-col bg-white px-12 py-10 text-[12px] leading-relaxed text-neutral-900 shadow-md border border-neutral-200/80 print:min-h-[100vh] print:border-none print:shadow-none">
         <div className="flex-1">

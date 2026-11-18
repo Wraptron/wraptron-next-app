@@ -74,6 +74,8 @@ const posthogHost =
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.29.136"],
   outputFileTracingRoot: path.join(__dirname),
+  transpilePackages: ["@uiw/react-md-editor", "@uiw/react-markdown-preview"],
+
   async headers() {
     return [
       {

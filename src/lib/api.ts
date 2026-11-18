@@ -901,6 +901,54 @@ export const projectsApi = {
 };
 
 // ============================================================================
+// Project requirements document API
+// ============================================================================
+
+export type RequirementUpdatedBy = {
+  id: number;
+  name: string | null;
+};
+
+export type RequirementDoc = {
+  id: number;
+  project_id: number;
+  organization_id: number;
+  markdown: string;
+  content_hash?: string | null;
+  version: number;
+  updated_at: string;
+  updated_by: RequirementUpdatedBy | null;
+  created_at?: string;
+};
+
+export type RequirementConflictPayload = {
+  error?: string;
+  message?: string;
+  current: RequirementDoc;
+};
+
+export const requirementsApi = {
+  get: async (projectId: number): Promise<RequirementDoc> => {
+    return fetchApi<RequirementDoc>(
+      `/api/projects/${projectId}/requirements`,
+    );
+  },
+
+  update: async (
+    projectId: number,
+    body: { markdown: string; base_version: number },
+  ): Promise<RequirementDoc> => {
+    return fetchApi<RequirementDoc>(
+      `/api/projects/${projectId}/requirements`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+      },
+    );
+  },
+};
+
+// ============================================================================
 // Integrations Types and API
 // ============================================================================
 
