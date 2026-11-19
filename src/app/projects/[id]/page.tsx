@@ -120,6 +120,7 @@ import {
   ArrowUpDown,
   Filter,
   Calendar,
+  GanttChart,
   Trash2,
   ChevronLeft,
   FileText,
@@ -129,6 +130,7 @@ import {
   GitBranch,
   Users,
 } from "lucide-react";
+import { TaskGanttLoader } from "@/components/gantt/TaskGanttLoader";
 
 const SERVICE_OPTIONS = [
   "AI Development",
@@ -851,7 +853,9 @@ export default function ProjectPage() {
 }
 
 // Task View Switcher Component
-type TaskViewMode = "list" | "board" | "card" | "calendar";
+type TaskViewMode = "list" | "board" | "card" | "calendar" | "gantt";
+
+const PROJECT_TASKS_VIEW_KEY = "project_tasks_view_mode";
 
 function TaskViewSwitcher({
   tasks,
@@ -868,12 +872,15 @@ function TaskViewSwitcher({
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("tasks_view_mode");
+      const saved =
+        localStorage.getItem(PROJECT_TASKS_VIEW_KEY) ||
+        localStorage.getItem("tasks_view_mode");
       if (
         saved === "list" ||
         saved === "board" ||
         saved === "card" ||
-        saved === "calendar"
+        saved === "calendar" ||
+        saved === "gantt"
       ) {
         return saved as TaskViewMode;
       }
@@ -883,7 +890,7 @@ function TaskViewSwitcher({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("tasks_view_mode", viewMode);
+      localStorage.setItem(PROJECT_TASKS_VIEW_KEY, viewMode);
     }
   }, [viewMode]);
 
@@ -939,8 +946,19 @@ function TaskViewSwitcher({
             size="sm"
             onClick={() => setViewMode("calendar")}
             className="h-8"
+            title="Calendar"
           >
             <Calendar className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "gantt" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("gantt")}
+            className="h-8"
+            title="Gantt chart"
+            aria-label="Gantt chart"
+          >
+            <GanttChart className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -974,6 +992,13 @@ function TaskViewSwitcher({
           tasks={tasks}
           projectId={projectId}
           onUpdate={refreshTasks}
+        />
+      )}
+      {viewMode === "gantt" && (
+        <TaskGanttLoader
+          tasks={tasks}
+          projectId={projectId}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
     </div>

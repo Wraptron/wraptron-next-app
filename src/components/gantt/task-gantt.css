@@ -1,0 +1,108 @@
+/**
+ * Theme overrides for gantt-task-react@0.3.9 (pinned).
+ * DOM classes are CSS-module hashes (not the export keys). Mapping:
+ *   gridRow            → _2dZTy
+ *   gridRowLine        → _3rUKi
+ *   gridTick           → _RuwuK
+ *   calendarHeader     → _35nLX
+ *   calendarTopText    → _2q1Kt
+ *   calendarBottomText → _9w8d5
+ *   calendarTopTick    → _1rLuZ
+ *   barLabel           → _3zRJQ  (inside bar)
+ *   barLabelOutside    → _3KcaM
+ *   wrapper            → _3eULf
+ *   ganttVerticalContainer → _CZjuD
+ *   horizontalContainer    → _2B2zv
+ *   scrollWrapper      → _2k9Ys
+ * App tokens are oklch — use color-mix / var(), not hsl(var(--x)).
+ */
+
+.task-gantt-theme {
+  color: var(--foreground);
+  max-width: 100%;
+}
+
+.task-gantt-chart {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden; /* chart scrolls internally; page must not */
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.task-gantt-theme [class*="_3eULf"] {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.task-gantt-theme [class*="_CZjuD"],
+.task-gantt-theme [class*="_2B2zv"] {
+  background: transparent !important;
+}
+
+/* Default task-list table chrome (unused when custom list is provided) */
+.task-gantt-theme [class*="_3ZbQT"],
+.task-gantt-theme [class*="_3_ygE"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+.task-gantt-theme [class*="_34SS0"]:nth-of-type(even) {
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+}
+
+/* Timeline grid rows (SVG) — transparent + subtle alternate */
+.task-gantt-theme [class*="_2dZTy"] {
+  fill: transparent !important;
+}
+
+.task-gantt-theme [class*="_2dZTy"]:nth-child(even) {
+  fill: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+}
+
+/* Row / tick / calendar tick lines */
+.task-gantt-theme [class*="_3rUKi"],
+.task-gantt-theme [class*="_RuwuK"],
+.task-gantt-theme [class*="_1rLuZ"] {
+  stroke: var(--border) !important;
+}
+
+/* Calendar header strip */
+.task-gantt-theme [class*="_35nLX"] {
+  fill: var(--muted) !important;
+  stroke: var(--border) !important;
+}
+
+/* Calendar header text (month / day labels) */
+.task-gantt-theme [class*="_9w8d5"],
+.task-gantt-theme [class*="_2q1Kt"] {
+  fill: var(--muted-foreground) !important;
+}
+
+/* Bar label inside bar → white for contrast on coloured bars */
+.task-gantt-theme [class*="_3zRJQ"] {
+  fill: #ffffff !important;
+}
+
+/* Bar label outside bar → theme foreground */
+.task-gantt-theme [class*="_3KcaM"] {
+  fill: var(--foreground) !important;
+}
+
+/* Tooltip */
+.task-gantt-theme [class*="_3T42e"] {
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  box-shadow: 0 4px 16px color-mix(in oklch, var(--foreground) 20%, transparent) !important;
+}
+
+.task-gantt-theme [class*="_29NTg"] {
+  color: var(--muted-foreground) !important;
+}
+
+/* Internal scrollbars */
+.task-gantt-theme [class*="_2k9Ys"],
+.task-gantt-theme [class*="_1eT-t"] {
+  scrollbar-color: color-mix(in oklch, var(--foreground) 25%, transparent) transparent;
+}
