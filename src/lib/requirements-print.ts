@@ -181,7 +181,6 @@ export async function downloadRequirementsPdf(
           logging: false,
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
       })
       .from(target)
       .toPdf()
