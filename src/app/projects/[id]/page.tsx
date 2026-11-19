@@ -91,6 +91,7 @@ import {
 } from "@/components/task-list-add-row";
 import { GitHubCommitsView } from "@/components/github-commits-view";
 import { ProjectTaskCompletion } from "@/components/project-task-completion";
+import { RequirementsTab } from "@/components/requirements/requirements-tab";
 import { cn } from "@/lib/utils";
 import {
   TASK_TABLE_COLUMN_LABELS,
@@ -120,6 +121,7 @@ import {
   ArrowUpDown,
   Filter,
   Calendar,
+  GanttChart,
   Trash2,
   ChevronLeft,
   FileText,
@@ -129,6 +131,7 @@ import {
   GitBranch,
   Users,
 } from "lucide-react";
+import { TaskGanttLoader } from "@/components/gantt/TaskGanttLoader";
 
 const SERVICE_OPTIONS = [
   "AI Development",
@@ -775,91 +778,12 @@ export default function ProjectPage() {
           </TabsContent>
 
           <TabsContent value="requirements" className="space-y-4">
-            <div className="space-y-4">
-              {project.ux_preference && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>UX Design Preferences</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
-                        {project.ux_preference}
-                      </pre>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {project.pages_views && project.pages_views.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pages</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <PagesTreeView pagesViews={project.pages_views} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {project.functional_requirements && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Business Requirements</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
-                        {project.functional_requirements}
-                      </pre>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {project.non_functional_requirements && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Non-Functional Requirements</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
-                        {project.non_functional_requirements}
-                      </pre>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {project.technology_stack && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Technology Stack</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm bg-muted p-3 sm:p-4 rounded overflow-x-auto max-w-full">
-                        {project.technology_stack}
-                      </pre>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {!project.ux_preference &&
-                !project.functional_requirements &&
-                !project.non_functional_requirements &&
-                !project.technology_stack && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-muted-foreground text-center">
-                        No requirements specified yet.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-            </div>
+            {projectId != null ? (
+              <RequirementsTab
+                projectId={projectId}
+                projectName={project.project_name}
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-4">
@@ -930,7 +854,9 @@ export default function ProjectPage() {
 }
 
 // Task View Switcher Component
-type TaskViewMode = "list" | "board" | "card" | "calendar";
+type TaskViewMode = "list" | "board" | "card" | "calendar" | "gantt";
+
+const PROJECT_TASKS_VIEW_KEY = "project_tasks_view_mode";
 
 function TaskViewSwitcher({
   tasks,
@@ -947,12 +873,15 @@ function TaskViewSwitcher({
 }) {
   const [viewMode, setViewMode] = useState<TaskViewMode>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("tasks_view_mode");
+      const saved =
+        localStorage.getItem(PROJECT_TASKS_VIEW_KEY) ||
+        localStorage.getItem("tasks_view_mode");
       if (
         saved === "list" ||
         saved === "board" ||
         saved === "card" ||
-        saved === "calendar"
+        saved === "calendar" ||
+        saved === "gantt"
       ) {
         return saved as TaskViewMode;
       }
@@ -962,7 +891,7 @@ function TaskViewSwitcher({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("tasks_view_mode", viewMode);
+      localStorage.setItem(PROJECT_TASKS_VIEW_KEY, viewMode);
     }
   }, [viewMode]);
 
@@ -1018,8 +947,19 @@ function TaskViewSwitcher({
             size="sm"
             onClick={() => setViewMode("calendar")}
             className="h-8"
+            title="Calendar"
           >
             <Calendar className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "gantt" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("gantt")}
+            className="h-8"
+            title="Gantt chart"
+            aria-label="Gantt chart"
+          >
+            <GanttChart className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -1053,6 +993,13 @@ function TaskViewSwitcher({
           tasks={tasks}
           projectId={projectId}
           onUpdate={refreshTasks}
+        />
+      )}
+      {viewMode === "gantt" && (
+        <TaskGanttLoader
+          tasks={tasks}
+          projectId={projectId}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
     </div>

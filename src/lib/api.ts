@@ -575,8 +575,12 @@ export interface Task {
   status: string;
   /** Per-project task number used in keys like ACME-12. */
   number?: number;
-  start_date?: string;
-  end_date?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  /** 0–100 completion for Gantt bars. */
+  progress?: number;
+  /** Predecessor task ids (finish-to-start). */
+  dependencies?: number[];
   priority?: string;
   complexity?: string;
   story_points?: number;
@@ -600,9 +604,11 @@ export interface CreateTaskInput {
   approver_id?: number | null;
   approver?: number | null;
   status?: string;
+  start_date?: string;
   end_date?: string;
   deadline?: string;
   due_date?: string;
+  progress?: number;
   priority?: string;
   notes?: string;
   billable?: string;
@@ -896,6 +902,54 @@ export const projectsApi = {
   ): Promise<{ data: TaskChange[] }> => {
     return fetchApi<{ data: TaskChange[] }>(
       `/api/projects/${projectId}/tasks/${taskId}/changes`,
+    );
+  },
+};
+
+// ============================================================================
+// Project requirements document API
+// ============================================================================
+
+export type RequirementUpdatedBy = {
+  id: number;
+  name: string | null;
+};
+
+export type RequirementDoc = {
+  id: number;
+  project_id: number;
+  organization_id: number;
+  markdown: string;
+  content_hash?: string | null;
+  version: number;
+  updated_at: string;
+  updated_by: RequirementUpdatedBy | null;
+  created_at?: string;
+};
+
+export type RequirementConflictPayload = {
+  error?: string;
+  message?: string;
+  current: RequirementDoc;
+};
+
+export const requirementsApi = {
+  get: async (projectId: number): Promise<RequirementDoc> => {
+    return fetchApi<RequirementDoc>(
+      `/api/projects/${projectId}/requirements`,
+    );
+  },
+
+  update: async (
+    projectId: number,
+    body: { markdown: string; base_version: number },
+  ): Promise<RequirementDoc> => {
+    return fetchApi<RequirementDoc>(
+      `/api/projects/${projectId}/requirements`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+      },
     );
   },
 };
@@ -2896,7 +2950,9 @@ export interface BoardTask {
   assignee_name: string | null;
   approver_employee_id: number | null;
   approver_name: string | null;
+  start_date?: string | null;
   end_date?: string | null;
+  progress?: number;
   pr_count: number;
   latest_pr_state: "open" | "merged" | "closed" | null;
   created_at: string;
@@ -3005,9 +3061,11 @@ export const tasksApi = {
       status?: string;
       assigned_employee_id?: number | null;
       approver_employee_id?: number | null;
+      start_date?: string | null;
       end_date?: string | null;
       deadline?: string | null;
       due_date?: string | null;
+      progress?: number;
       priority?: string;
     },
   ): Promise<BoardTask> => {

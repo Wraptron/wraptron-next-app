@@ -1,0 +1,54 @@
+diff --git a/node_modules/gantt-task-react/dist/index.js b/node_modules/gantt-task-react/dist/index.js
+index 626bb39..fbc282e 100644
+--- a/node_modules/gantt-task-react/dist/index.js
++++ b/node_modules/gantt-task-react/dist/index.js
+@@ -810,13 +810,20 @@ var Calendar = function Calendar(_ref) {
+         topValue = getLocaleMonth(date, locale) + ", " + date.getFullYear();
+       }
+ 
+-      var bottomValue = "W" + getWeekNumberISO8601(date);
++      // Week-of-month label (W1–W5) based on the Monday column start date
++      var bottomValue = "W" + (Math.floor((date.getDate() - 1) / 7) + 1);
++      var weekEndDate = addToDate(date, 6, "day");
++      var weekRangeFmt = getCachedDateTimeFormat(locale, {
++        month: "short",
++        day: "numeric"
++      });
++      var weekRangeTitle = weekRangeFmt.format(date) + " - " + weekRangeFmt.format(weekEndDate);
+       bottomValues.push(React__default.createElement("text", {
+         key: date.getTime(),
+         y: headerHeight * 0.8,
+         x: columnWidth * (i + +rtl),
+         className: styles$5.calendarBottomText
+-      }, bottomValue));
++      }, bottomValue, React__default.createElement("title", null, weekRangeTitle)));
+ 
+       if (topValue) {
+         if (i !== dates.length - 1) {
+diff --git a/node_modules/gantt-task-react/dist/index.modern.js b/node_modules/gantt-task-react/dist/index.modern.js
+index b372269..0f17503 100644
+--- a/node_modules/gantt-task-react/dist/index.modern.js
++++ b/node_modules/gantt-task-react/dist/index.modern.js
+@@ -809,13 +809,20 @@ var Calendar = function Calendar(_ref) {
+         topValue = getLocaleMonth(date, locale) + ", " + date.getFullYear();
+       }
+ 
+-      var bottomValue = "W" + getWeekNumberISO8601(date);
++      // Week-of-month label (W1–W5) based on the Monday column start date
++      var bottomValue = "W" + (Math.floor((date.getDate() - 1) / 7) + 1);
++      var weekEndDate = addToDate(date, 6, "day");
++      var weekRangeFmt = getCachedDateTimeFormat(locale, {
++        month: "short",
++        day: "numeric"
++      });
++      var weekRangeTitle = weekRangeFmt.format(date) + " - " + weekRangeFmt.format(weekEndDate);
+       bottomValues.push(React.createElement("text", {
+         key: date.getTime(),
+         y: headerHeight * 0.8,
+         x: columnWidth * (i + +rtl),
+         className: styles$5.calendarBottomText
+-      }, bottomValue));
++      }, bottomValue, React.createElement("title", null, weekRangeTitle)));
+ 
+       if (topValue) {
+         if (i !== dates.length - 1) {
