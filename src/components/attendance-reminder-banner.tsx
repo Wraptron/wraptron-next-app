@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import { Bell, BellOff, LogIn, LogOut, X } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
@@ -11,6 +12,7 @@ import {
   type AttendanceSession,
   type AttendanceSettings,
 } from "@/lib/api";
+import { buildSwrKey } from "@/lib/swr";
 import {
   attendanceReminderStorageKey,
   getDueAttendanceReminder,
@@ -21,7 +23,6 @@ import { enablePushNotifications } from "@/lib/web-push-client";
 import { Button } from "@/components/ui/button";
 
 const ATTENDANCE_ACTION_HREF = "/workspace/dashboard";
-const POLL_MS = 60_000;
 
 function readFlag(key: string): boolean {
   if (typeof window === "undefined") return false;
@@ -43,8 +44,6 @@ function writeFlag(key: string): void {
 export function AttendanceReminderBanner() {
   const { user, isAuthenticated } = useAuth();
   const { activeOrg, permissions, isOwner, isSuperAdmin } = useOrganization();
-  const [settings, setSettings] = useState<AttendanceSettings | null>(null);
-  const [session, setSession] = useState<AttendanceSession | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [dismissedKind, setDismissedKind] = useState<AttendanceReminderKind | null>(
     null,
@@ -66,21 +65,32 @@ export function AttendanceReminderBanner() {
   );
 
   const orgId = activeOrg?.id != null ? Number(activeOrg.id) : 0;
+  const canFetch = isAuthenticated && isStaff && orgId > 0;
 
-  const refreshAttendance = useCallback(async () => {
-    if (!isAuthenticated || !isStaff || !orgId) return;
-    try {
-      const [settingsRes, todayRes] = await Promise.all([
-        attendanceApi.getSettings(),
-        attendanceApi.getMyToday(),
-      ]);
-      setSettings(settingsRes.settings);
-      setSession(todayRes.session);
-    } catch {
-      setSettings(null);
-      setSession(null);
-    }
-  }, [isAuthenticated, isStaff, orgId]);
+  // Settings rarely change during the day; cache for 10 minutes and pause when tab is hidden
+  const { data: settingsRes } = useSWR(
+    canFetch ? buildSwrKey("/api/attendance/settings", orgId) : null,
+    () => attendanceApi.getSettings(),
+    {
+      refreshInterval: 600_000,
+      revalidateOnFocus: false,
+      refreshWhenHidden: false,
+    },
+  );
+
+  // Today session status: polls every 60s, pauses when tab is hidden, revalidates on focus
+  const { data: todayRes } = useSWR(
+    canFetch ? buildSwrKey("/api/attendance/my-today", orgId) : null,
+    () => attendanceApi.getMyToday(),
+    {
+      refreshInterval: 60_000,
+      revalidateOnFocus: true,
+      refreshWhenHidden: false,
+    },
+  );
+
+  const settings = settingsRes?.settings ?? null;
+  const session = todayRes?.session ?? null;
 
   useEffect(() => {
     if (typeof Notification === "undefined") {
@@ -89,24 +99,6 @@ export function AttendanceReminderBanner() {
     }
     setNotificationPermission(Notification.permission);
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated || !isStaff || !orgId) return;
-    void refreshAttendance();
-    const id = window.setInterval(() => {
-      void refreshAttendance();
-    }, POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        void refreshAttendance();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [isAuthenticated, isStaff, orgId, refreshAttendance]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000);

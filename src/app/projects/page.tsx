@@ -9,6 +9,9 @@ import {
   type Project,
   type ProjectStatus,
 } from "@/lib/api";
+import useSWR from "swr";
+import { useOrganization } from "@/contexts/organization-context";
+import { buildSwrKey, mutateResource } from "@/lib/swr";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -369,9 +372,54 @@ const KanbanColumn = ({
 const Projects = () => {
   const router = useRouter();
   const { setTitle } = usePageTitle();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { activeOrg } = useOrganization();
+  const orgId = activeOrg?.id != null ? Number(activeOrg.id) : 0;
+
+  const {
+    data: projectsRes,
+    error: projectsErr,
+    isLoading: projectsLoading,
+    mutate: mutateProjects,
+  } = useSWR(
+    buildSwrKey("/api/projects", orgId),
+    () => projectsApi.getAll(),
+    { dedupingInterval: 5000 },
+  );
+
+  const { data: statusesRes } = useSWR(
+    buildSwrKey("/api/project-statuses", orgId),
+    () => projectStatusesApi.getAll(),
+    { dedupingInterval: 10000 },
+  );
+
+  const [projectsOverride, setProjectsOverride] = useState<Project[] | null>(null);
+
+  useEffect(() => {
+    setProjectsOverride(null);
+  }, [projectsRes?.data]);
+
+  const projects = projectsOverride ?? (projectsRes?.data ?? []);
+  const projectStatuses = statusesRes?.data ?? [];
+  const loading = !projectsRes && projectsLoading;
+  const error = projectsErr instanceof Error ? projectsErr.message : projectsErr ? String(projectsErr) : null;
+
+  const setProjects = useCallback<React.Dispatch<React.SetStateAction<Project[]>>>(
+    (action) => {
+      setProjectsOverride((prev) => {
+        const base = prev ?? (projectsRes?.data ?? []);
+        return typeof action === "function"
+          ? (action as (prev: Project[]) => Project[])(base)
+          : action;
+      });
+    },
+    [projectsRes?.data],
+  );
+
+  const fetchProjects = useCallback(async () => {
+    setProjectsOverride(null);
+    await mutateProjects();
+  }, [mutateProjects]);
+
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -387,7 +435,6 @@ const Projects = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [activeDragProject, setActiveDragProject] = useState<Project | null>(null);
-  const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>([]);
 
   const statusesSorted = useMemo(() => {
     return [...projectStatuses].sort((a, b) => {
@@ -436,39 +483,16 @@ const Projects = () => {
       );
       setSelectedProjects([]);
       setDeleteDialogOpen(false);
+      void mutateResource("/api/projects");
     } catch (err) {
       console.error("Failed to delete projects:", err);
       // Re-fetch to ensure UI sync
-      fetchProjects();
+      void fetchProjects();
       alert("Failed to delete some projects. Please try again.");
     } finally {
       setIsDeleting(false);
     }
   };
-
-  const fetchProjects = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await projectsApi.getAll();
-      setProjects(response.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    projectStatusesApi
-      .getAll()
-      .then((res) => setProjectStatuses(res.data ?? []))
-      .catch(() => setProjectStatuses([]));
-  }, []);
 
   // Set page title in header
   useEffect(() => {
@@ -659,6 +683,7 @@ const Projects = () => {
         await projectsApi.update(Number(project.id), {
           status: newStatusCanonical,
         });
+        void mutateResource("/api/projects");
       } catch (err) {
         setProjects((prev) =>
           prev.map((p) =>

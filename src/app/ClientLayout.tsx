@@ -16,6 +16,8 @@ import { PostHogPageView } from "@/components/posthog/posthog-pageview";
 import { AttendanceReminderBanner } from "@/components/attendance-reminder-banner";
 import { PwaPushSetup } from "@/components/pwa-push-setup";
 import { registerPushServiceWorker } from "@/lib/web-push-client";
+import { SWRConfig } from "swr";
+import { swrConfig } from "@/lib/swr";
 import { cn } from "@/lib/utils";
 
 function ServiceWorkerRegistrar() {
@@ -107,24 +109,26 @@ export default function ClientLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <ServiceWorkerRegistrar />
-      <AuthProvider>
-        <PostHogIdentify />
-        <Suspense fallback={null}>
-          <PostHogPageView />
-        </Suspense>
-        <ProtectedRoute>
-          <CurrencyProvider>
-            <PageTitleProvider>
-              <SidebarProvider>
-                <SheetPushProvider>
-                  <MainContent>{children}</MainContent>
-                </SheetPushProvider>
-              </SidebarProvider>
-            </PageTitleProvider>
-          </CurrencyProvider>
-        </ProtectedRoute>
-      </AuthProvider>
+      <SWRConfig value={swrConfig}>
+        <ServiceWorkerRegistrar />
+        <AuthProvider>
+          <PostHogIdentify />
+          <Suspense fallback={null}>
+            <PostHogPageView />
+          </Suspense>
+          <ProtectedRoute>
+            <CurrencyProvider>
+              <PageTitleProvider>
+                <SidebarProvider>
+                  <SheetPushProvider>
+                    <MainContent>{children}</MainContent>
+                  </SheetPushProvider>
+                </SidebarProvider>
+              </PageTitleProvider>
+            </CurrencyProvider>
+          </ProtectedRoute>
+        </AuthProvider>
+      </SWRConfig>
     </ThemeProvider>
   );
 }

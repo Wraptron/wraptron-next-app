@@ -22,6 +22,7 @@ import {
   type OrganizationSummary,
   type OrgRoleType,
 } from "@/lib/api";
+import { clearAllSwrCache } from "@/lib/swr";
 
 interface OrganizationContextType {
   organizations: OrganizationSummary[];
@@ -89,11 +90,26 @@ export function OrganizationProvider({
     }
   }, [applyOrgs]);
 
+  // Fire on mount if token exists without waiting for authLoading (breaks request waterfall)
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("auth_token")
+        : null;
+    if (token) {
+      void refreshOrganizations();
+    }
+  }, [refreshOrganizations]);
+
+  // Synchronize organizations when authentication state resolves or changes
   useEffect(() => {
     if (authLoading) return;
 
     if (authenticated) {
-      void refreshOrganizations();
+      // In case user logged in dynamically after mount and initial check was skipped
+      if (!loaded && !loading) {
+        void refreshOrganizations();
+      }
     } else {
       setOrganizations([]);
       setActiveOrg(null);
@@ -101,7 +117,7 @@ export function OrganizationProvider({
       setLoaded(false);
       setActiveOrgId(null);
     }
-  }, [authenticated, authLoading, refreshOrganizations]);
+  }, [authenticated, authLoading, loaded, loading, refreshOrganizations]);
 
   const switchOrg = useCallback(
     (orgId: number) => {
@@ -110,6 +126,8 @@ export function OrganizationProvider({
       if (!target) return;
       setActiveOrgId(id);
       setActiveOrg(target);
+      // Clear SWR cache on tenant switch to prevent cross-tenant stale data
+      void clearAllSwrCache();
       if (typeof window !== "undefined") {
         window.location.reload();
       }

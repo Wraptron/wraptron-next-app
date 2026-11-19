@@ -22,6 +22,7 @@ import {
 import { CollectionFilterControls } from "@/components/collection-filters";
 import { useCollectionPageFilters } from "@/components/collection-page-filters";
 import { useCollectionPaginatedData } from "@/hooks/use-collection-paginated-data";
+import { mutateResource } from "@/lib/swr";
 import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -498,7 +499,7 @@ export default function ContactsPage() {
     contactsApi.getAll,
     collectionFilters.apiParamsKey,
     collectionFilters.apiParams,
-    { pageSize: CONTACTS_PAGE_SIZE },
+    { pageSize: CONTACTS_PAGE_SIZE, resource: "/api/contacts" },
   );
   const [viewMode, setViewMode] = useCollectionViewMode(
     "contacts_view_mode",
@@ -564,6 +565,7 @@ export default function ContactsPage() {
       );
       setDeleteDialogOpen(false);
       setContactToDelete(null);
+      void mutateResource("/api/contacts");
       fetchContacts();
     } catch (error) {
       console.error("Error deleting contact:", error);
@@ -582,6 +584,7 @@ export default function ContactsPage() {
       setContacts((prev) => prev.filter((c) => !deletedSet.has(c.id)));
       setSelectedContactIds([]);
       setBulkDeleteDialogOpen(false);
+      void mutateResource("/api/contacts");
       fetchContacts();
     } catch (error) {
       console.error("Error deleting selected contacts:", error);
@@ -625,6 +628,7 @@ export default function ContactsPage() {
 
       try {
         await contactsApi.update(id, { status: toColumnId });
+        void mutateResource("/api/contacts");
       } catch (err) {
         setContacts((prev) =>
           prev.map((c) => (c.id === id ? { ...c, status: previousStatus } : c)),
