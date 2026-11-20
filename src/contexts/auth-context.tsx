@@ -16,6 +16,7 @@ import {
 } from "@/contexts/organization-context";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
+import { clearAllSwrCache } from "@/lib/swr";
 
 /** User as consumed by the app: `role` is the EFFECTIVE role within the
  * active organization (super admins act as admin; no membership = user).
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      void clearAllSwrCache();
       const response = await authApi.login({ email, password });
       if (response.organization?.id != null) {
         setActiveOrgId(Number(response.organization.id));
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyName?: string,
   ) => {
     try {
+      void clearAllSwrCache();
       const response = await authApi.signup({
         email,
         password,
@@ -142,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    void clearAllSwrCache();
     if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
       posthog.reset();
     }

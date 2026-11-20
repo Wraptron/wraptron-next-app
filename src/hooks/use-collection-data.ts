@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { CollectionListQueryParams } from "@/lib/api";
+import { useCallback, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
+import { getActiveOrgId, type CollectionListQueryParams } from "@/lib/api";
+import { buildSwrKey } from "@/lib/swr";
 
 type CollectionListResponse<T> = {
   data: T[];
@@ -12,45 +14,76 @@ export function useCollectionData<T>(
   fetcher: (params: CollectionListQueryParams) => Promise<CollectionListResponse<T>>,
   apiParamsKey: string,
   apiParams: Record<string, string>,
-  options?: { limit?: number; enabled?: boolean },
+  options?: { limit?: number; enabled?: boolean; resource?: string },
 ) {
   const limit = options?.limit ?? 500;
   const enabled = options?.enabled ?? true;
-  const [items, setItems] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const requestId = useRef(0);
+  const activeOrgId = getActiveOrgId();
+
+  // Infer resource name from options or fetcher source
+  const resourceName = useMemo(() => {
+    if (options?.resource) return options.resource;
+    if ((fetcher as any).__resource) return (fetcher as any).__resource;
+    const match = fetcher.toString().match(/\/api\/[a-zA-Z0-9_\/-]+/);
+    if (match?.[0]) return match[0];
+    return "collection";
+  }, [fetcher, options?.resource]);
+
+  const swrKey = useMemo(() => {
+    if (!enabled) return null;
+    const endpointWithParams = `${resourceName}?${apiParamsKey}&limit=${limit}&offset=0`;
+    return buildSwrKey(endpointWithParams, activeOrgId);
+  }, [enabled, resourceName, apiParamsKey, limit, activeOrgId]);
+
   const apiParamsRef = useRef(apiParams);
   apiParamsRef.current = apiParams;
 
-  const reload = useCallback(async () => {
-    const currentRequest = ++requestId.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetcher({
+  const [overrideItems, setOverrideItems] = useState<T[] | null>(null);
+
+  const { data, error: swrError, isLoading, mutate } = useSWR<CollectionListResponse<T>>(
+    swrKey,
+    () =>
+      fetcher({
         ...apiParamsRef.current,
         limit,
         offset: 0,
-      });
-      if (currentRequest !== requestId.current) return;
-      setItems(response.data);
-      setTotal(response.total);
-    } catch (err) {
-      if (currentRequest !== requestId.current) return;
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
-    } finally {
-      if (currentRequest === requestId.current) {
-        setLoading(false);
-      }
-    }
-  }, [fetcher, limit]);
+      }),
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5000,
+    },
+  );
 
-  useEffect(() => {
-    if (!enabled) return;
-    void reload();
-  }, [apiParamsKey, enabled, reload]);
+  // Reset override whenever data reference updates
+  const prevDataRef = useRef(data);
+  if (prevDataRef.current !== data) {
+    prevDataRef.current = data;
+    if (overrideItems !== null) {
+      setOverrideItems(null);
+    }
+  }
+
+  const items = overrideItems ?? (data?.data ?? []);
+  const total = data?.total ?? items.length;
+  const loading = enabled && !data && isLoading;
+  const error = swrError instanceof Error ? swrError.message : swrError ? String(swrError) : null;
+
+  const reload = useCallback(async () => {
+    setOverrideItems(null);
+    await mutate();
+  }, [mutate]);
+
+  const setItems = useCallback<React.Dispatch<React.SetStateAction<T[]>>>(
+    (action) => {
+      setOverrideItems((prev) => {
+        const base = prev ?? (data?.data ?? []);
+        return typeof action === "function"
+          ? (action as (prev: T[]) => T[])(base)
+          : action;
+      });
+    },
+    [data?.data],
+  );
 
   return {
     items,

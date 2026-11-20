@@ -16,6 +16,9 @@ import {
   type WorkflowCategory,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useOrganization } from "@/contexts/organization-context";
+import useSWR from "swr";
+import { buildSwrKey, mutateResource } from "@/lib/swr";
 import { usePageTitle } from "@/contexts/page-title-context";
 import {
   CollectionKanbanView,
@@ -155,6 +158,7 @@ function CopyBranchButton({
     e.stopPropagation();
     try {
       const result = await tasksApi.take(task.id);
+      void mutateResource("/api/tasks");
       if (result.branch_name) {
         await navigator.clipboard.writeText(result.branch_name);
       }
@@ -273,17 +277,14 @@ export default function TasksBoardPage() {
   const noDeadlineParam = searchParams.get("no_deadline") === "true";
 
   const { user } = useAuth();
+  const { activeOrg } = useOrganization();
+  const orgId = activeOrg?.id != null ? Number(activeOrg.id) : 0;
   const { setTitle } = usePageTitle();
   const [viewMode, setViewMode] = useCollectionViewMode(
     "tasks_view_mode",
     "kanban",
   );
 
-  const [tasks, setTasks] = useState<BoardTask[]>([]);
-  const [statuses, setStatuses] = useState<TaskStatus[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
   const [projectFilter, setProjectFilter] = useState<string>("all");
@@ -347,6 +348,87 @@ export default function TasksBoardPage() {
     return () => setTitle(null);
   }, [setTitle]);
 
+  const [tasksOverride, setTasksOverride] = useState<BoardTask[] | null>(null);
+
+  const boardFilterParams = useMemo(() => {
+    const filters: Parameters<typeof tasksApi.board>[0] = {};
+    if (projectFilter !== "all") filters.project_id = parseInt(projectFilter);
+    if (assigneeFilter !== "all") {
+      filters.assigned_employee_id = parseInt(assigneeFilter);
+    }
+    return filters;
+  }, [projectFilter, assigneeFilter]);
+
+  const boardKey = useMemo(() => {
+    const q = new URLSearchParams();
+    if (boardFilterParams.project_id != null) {
+      q.set("project_id", String(boardFilterParams.project_id));
+    }
+    if (boardFilterParams.assigned_employee_id != null) {
+      q.set("assigned_employee_id", String(boardFilterParams.assigned_employee_id));
+    }
+    return buildSwrKey(`/api/tasks/board?${q.toString()}`, orgId);
+  }, [boardFilterParams, orgId]);
+
+  const {
+    data: boardRes,
+    error: boardErr,
+    isLoading: boardLoading,
+    mutate: mutateBoard,
+  } = useSWR(boardKey, () => tasksApi.board(boardFilterParams), {
+    dedupingInterval: 5000,
+  });
+
+  const { data: statusesRes, isLoading: statusesLoading } = useSWR(
+    buildSwrKey("/api/task-statuses", orgId),
+    () => taskStatusesApi.getAll(),
+    { dedupingInterval: 10000 },
+  );
+
+  const { data: projectsRes, isLoading: projectsLoading } = useSWR(
+    buildSwrKey("/api/projects?limit=500", orgId),
+    () => projectsApi.getAll({ limit: 500 }),
+    { dedupingInterval: 5000 },
+  );
+
+  const { data: employeesRes, isLoading: employeesLoading } = useSWR(
+    buildSwrKey("/api/employees?employment_status=active&limit=500", orgId),
+    () => employeesApi.getAll({ employment_status: "active", limit: 500 }),
+    { dedupingInterval: 10000 },
+  );
+
+  useEffect(() => {
+    setTasksOverride(null);
+  }, [boardRes?.data]);
+
+  const tasks = tasksOverride ?? (boardRes?.data ?? []);
+  const statuses = statusesRes?.data ?? [];
+  const projects = projectsRes?.data ?? [];
+  const employees = employeesRes?.data ?? [];
+
+  const loading =
+    (!boardRes && boardLoading) ||
+    (!statusesRes && statusesLoading) ||
+    (!projectsRes && projectsLoading) ||
+    (!employeesRes && employeesLoading);
+
+  const setTasks = useCallback<React.Dispatch<React.SetStateAction<BoardTask[]>>>(
+    (action) => {
+      setTasksOverride((prev) => {
+        const base = prev ?? (boardRes?.data ?? []);
+        return typeof action === "function"
+          ? (action as (prev: BoardTask[]) => BoardTask[])(base)
+          : action;
+      });
+    },
+    [boardRes?.data],
+  );
+
+  const loadTasks = useCallback(async () => {
+    setTasksOverride(null);
+    await mutateBoard();
+  }, [mutateBoard]);
+
   const myEmployeeId = useMemo(() => {
     if (!user) return null;
     const me = employees.find(
@@ -354,50 +436,6 @@ export default function TasksBoardPage() {
     );
     return me?.id ?? null;
   }, [employees, user]);
-
-  const loadTasks = useCallback(async () => {
-    try {
-      const filters: Parameters<typeof tasksApi.board>[0] = {};
-      if (projectFilter !== "all") filters.project_id = parseInt(projectFilter);
-      if (assigneeFilter !== "all") {
-        filters.assigned_employee_id = parseInt(assigneeFilter);
-      }
-      const res = await tasksApi.board(filters);
-      setTasks(res.data);
-    } catch (err) {
-      console.error("Failed to load tasks:", err);
-      setNotice(err instanceof Error ? err.message : "Failed to load tasks");
-    }
-  }, [projectFilter, assigneeFilter]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const [statusesRes, projectsRes, employeesRes] = await Promise.all([
-          taskStatusesApi.getAll(),
-          projectsApi.getAll({ limit: 500 }),
-          employeesApi.getAll({ employment_status: "active", limit: 500 }),
-        ]);
-        if (cancelled) return;
-        setStatuses(statusesRes.data);
-        setProjects(projectsRes.data);
-        setEmployees(employeesRes.data);
-      } catch (err) {
-        console.error("Failed to load board data:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    void loadTasks();
-  }, [loadTasks]);
 
   useEffect(() => {
     if (!notice) return;
@@ -591,6 +629,7 @@ export default function TasksBoardPage() {
       );
       try {
         const updated = await tasksApi.update(task.id, payload);
+        void mutateResource("/api/tasks");
         setTasks((prev) =>
           prev.map((current) => (current.id === task.id ? updated : current)),
         );
@@ -1067,6 +1106,7 @@ export default function TasksBoardPage() {
           prev.map((task) => (task.id === tempId ? created : task)),
         );
       });
+      void mutateResource("/api/tasks");
     } catch (err) {
       startTransition(() => {
         setTasks((prev) => prev.filter((task) => task.id !== tempId));
@@ -1277,6 +1317,7 @@ export default function TasksBoardPage() {
       );
       try {
         await tasksApi.update(task.id, { status: toStatus.name });
+        void mutateResource("/api/tasks");
       } catch (err) {
         setTasks((prev) =>
           prev.map((t) => (t.id === previous.id ? previous : t)),
@@ -1303,6 +1344,7 @@ export default function TasksBoardPage() {
       setTasks((prev) => prev.filter((task) => !deletedSet.has(task.id)));
       setSelectedTaskIds([]);
       setBulkDeleteDialogOpen(false);
+      void mutateResource("/api/tasks");
     } catch (err) {
       console.error("Error deleting selected tasks:", err);
       setNotice(

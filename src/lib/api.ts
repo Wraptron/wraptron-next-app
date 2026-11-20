@@ -28,7 +28,7 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
 }
 
 // Get auth token from localStorage
-function getAuthToken(): string | null {
+export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("auth_token");
 }
@@ -63,7 +63,7 @@ export function setActiveOrgId(orgId: number | null): void {
   }
 }
 
-async function fetchApi<T>(
+export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit & { timeoutMs?: number },
 ): Promise<T> {

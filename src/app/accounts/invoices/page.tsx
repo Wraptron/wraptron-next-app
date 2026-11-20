@@ -23,6 +23,7 @@ import {
 import { CollectionFilterControls } from "@/components/collection-filters";
 import { useCollectionPageFilters } from "@/components/collection-page-filters";
 import { useCollectionData } from "@/hooks/use-collection-data";
+import { mutateResource } from "@/lib/swr";
 import { getCollectionFilterDefinitions } from "@/lib/collection-filter-definitions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -372,7 +373,7 @@ export default function AccountsInvoicesPage() {
     invoicesApi.getAll,
     collectionFilters.apiParamsKey,
     collectionFilters.apiParams,
-    { limit: LIST_LIMIT },
+    { limit: LIST_LIMIT, resource: "/api/invoices" },
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -415,6 +416,7 @@ export default function AccountsInvoicesPage() {
       await invoicesApi.delete(selected.id);
       setDeleteOpen(false);
       setSelected(null);
+      void mutateResource("/api/invoices");
       await fetchInvoices();
     } catch (err) {
       console.error("Failed to delete invoice:", err);

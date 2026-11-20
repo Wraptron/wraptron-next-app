@@ -27,6 +27,7 @@ import {
 import { CollectionFilterControls } from "@/components/collection-filters";
 import { useCollectionPageFilters } from "@/components/collection-page-filters";
 import { useCollectionData } from "@/hooks/use-collection-data";
+import { mutateResource } from "@/lib/swr";
 import {
   getCollectionFilterDefinitions,
   withFilterOptions,
@@ -532,6 +533,7 @@ export default function DealsPage() {
     setItems: setDeals,
   } = useCollectionData(dealsApi.getAll, apiParamsKey, apiParams, {
     limit: 2000,
+    resource: "/api/deals",
   });
 
   const toggleDealSelection = (dealId: number) => {
@@ -549,6 +551,7 @@ export default function DealsPage() {
       setDeals((prev) => prev.filter((d) => !selectedDeals.includes(d.id)));
       setSelectedDeals([]);
       setBulkDeleteOpen(false);
+      void mutateResource("/api/deals");
     } catch (err) {
       console.error("Failed to delete deals:", err);
       fetchDeals();
@@ -647,6 +650,7 @@ export default function DealsPage() {
       const updated = await dealsApi.update(Number(deal.id), {
         stage: newStage,
       });
+      void mutateResource("/api/deals");
       setDeals((prev) =>
         prev.map((d) => (d.id === deal.id ? { ...d, ...updated } : d)),
       );
@@ -751,6 +755,7 @@ export default function DealsPage() {
       setDeals(deals.filter((d) => d.id !== dealToDelete.id));
       setDeleteDialogOpen(false);
       setDealToDelete(null);
+      void mutateResource("/api/deals");
     } catch (error) {
       console.error("Error deleting deal:", error);
       alert("Failed to delete deal. Please try again.");
