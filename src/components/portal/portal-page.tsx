@@ -25,7 +25,7 @@ export function PortalPage({
         className,
       )}
     >
-      <div className="w-full px-4 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10">
+      <div className="w-full px-0 py-6 md:px-6 md:py-8 lg:px-8 xl:px-10">
         {(title || description || actions) ? (
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">

@@ -67,8 +67,32 @@ const KIND_ORDER: ResultKind[] = [
 
 const REMOTE_MIN_QUERY_LEN = 2;
 
-export function GlobalSearch() {
-  const [open, setOpen] = React.useState(false);
+export interface GlobalSearchProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+}
+
+export function GlobalSearch({
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = false,
+}: GlobalSearchProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+
+  const setOpen = React.useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      const resolved = typeof next === "function" ? next(open) : next;
+      if (!isControlled) {
+        setUncontrolledOpen(resolved);
+      }
+      onOpenChange?.(resolved);
+    },
+    [isControlled, onOpenChange, open],
+  );
+
   const [query, setQuery] = React.useState("");
   const [remoteResults, setRemoteResults] = React.useState<SearchResultItem[]>(
     [],
@@ -109,7 +133,7 @@ export function GlobalSearch() {
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [setOpen]);
 
   React.useEffect(() => {
     if (!staffAccess || !query || query.trim().length < REMOTE_MIN_QUERY_LEN) {
@@ -331,17 +355,19 @@ export function GlobalSearch() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        <Search className="h-4 w-4" />
-        <span className="hidden md:inline">Search…</span>
-        <kbd className="hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-          <span className="text-xs">⌘</span>K
-        </kbd>
-      </button>
+      {showTrigger ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <Search className="h-4 w-4" />
+          <span className="hidden md:inline">Search…</span>
+          <kbd className="hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </button>
+      ) : null}
 
       <CommandDialog
         open={open}

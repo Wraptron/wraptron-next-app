@@ -68,6 +68,9 @@
 }
 
 :root {
+  --bottom-nav-height: 3.25rem;
+  --bottom-nav-notch-radius: 1.75rem;
+  --bottom-nav-button-size: 2.625rem;
   --radius: 0.625rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -143,6 +146,19 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.bottom-nav-mask {
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 0,
+    transparent calc(var(--bottom-nav-notch-radius) - 0.5px),
+    black calc(var(--bottom-nav-notch-radius) + 0.5px)
+  );
+  mask-image: radial-gradient(
+    circle at 50% 0,
+    transparent calc(var(--bottom-nav-notch-radius) - 0.5px),
+    black calc(var(--bottom-nav-notch-radius) + 0.5px)
+  );
 }
 
 @media print {

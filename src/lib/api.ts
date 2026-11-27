@@ -688,6 +688,8 @@ export interface Project {
   sponsor_last_name?: string | null;
   sponsor_email?: string | null;
   tasks?: Task[];
+  task_count?: number;
+  completed_task_count?: number;
 }
 
 /** Staff-role login user; used for project manager assignment (`project_manager_id` = `id`). */
@@ -797,12 +799,14 @@ export const projectsApi = {
     status?: string;
     limit?: number;
     offset?: number;
+    include_tasks?: boolean;
   }): Promise<ProjectsResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.append("search", params.search);
     if (params?.status) searchParams.append("status", params.status);
     if (params?.limit) searchParams.append("limit", params.limit.toString());
     if (params?.offset) searchParams.append("offset", params.offset.toString());
+    if (params?.include_tasks) searchParams.append("include_tasks", "1");
 
     const query = searchParams.toString();
     return fetchApi<ProjectsResponse>(

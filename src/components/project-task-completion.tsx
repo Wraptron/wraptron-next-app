@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 type ProjectTaskCompletionProps = {
   tasks?: Task[] | null;
+  taskCount?: number | null;
+  completedTaskCount?: number | null;
   className?: string;
   /** Compact single-line layout for cards and table cells */
   variant?: "default" | "compact";
@@ -13,10 +15,15 @@ type ProjectTaskCompletionProps = {
 
 export function ProjectTaskCompletion({
   tasks,
+  taskCount,
+  completedTaskCount,
   className,
   variant = "default",
 }: ProjectTaskCompletionProps) {
-  const { total, completed, percent } = getProjectTaskCompletion(tasks);
+  const { total, completed, percent } = getProjectTaskCompletion(tasks, {
+    taskCount,
+    completedTaskCount,
+  });
 
   if (total === 0) {
     return (

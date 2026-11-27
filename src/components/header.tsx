@@ -28,7 +28,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { usePageTitle } from "@/contexts/page-title-context";
 import { useSidebar } from "@/contexts/sidebar-context";
-import { GlobalSearch } from "@/components/global-search";
 import { AppLauncherGrid } from "@/components/app-launcher-grid";
 import { useOrganization } from "@/contexts/organization-context";
 import { buildNavAccess, canAccessInternalNav } from "@/lib/nav-access";
@@ -81,7 +80,7 @@ export default function TopNavbar() {
   return (
     <nav className="bg-background border-b border-border pl-2 pr-4 md:px-4 py-2.5 sticky top-0 z-40">
       <div className="flex items-center justify-between w-full">
-        {/* Left side - Expand sidebar: top-left on mobile (always), when collapsed on desktop */}
+        {/* Left side - Expand sidebar when collapsed on desktop */}
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
           {/* Formfield app hidden — restore branded home link with isFormfield
           {isFormfield ? (
@@ -94,28 +93,17 @@ export default function TopNavbar() {
             </Link>
           ) : (
           */}
-            <>
+            {isCollapsed && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 shrink-0 md:hidden"
+                className="h-8 w-8 p-0 shrink-0 hidden md:inline-flex"
                 onClick={toggleSidebar}
                 aria-label="Expand sidebar"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              {isCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 shrink-0 hidden md:inline-flex"
-                  onClick={toggleSidebar}
-                  aria-label="Expand sidebar"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </>
+            )}
           {/* )} */}
           {title && (
             <div className="flex items-center space-x-3">

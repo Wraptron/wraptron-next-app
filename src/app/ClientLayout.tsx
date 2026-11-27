@@ -1,8 +1,10 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Header from "@/components/header";
 import SideNav from "@/components/sidenav";
+import BottomNav from "@/components/bottom-nav";
+import { GlobalSearch } from "@/components/global-search";
 import ProtectedRoute from "@/components/protected-route";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -30,6 +32,7 @@ function ServiceWorkerRegistrar() {
 function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isCollapsed } = useSidebar();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const isHomePage =
     pathname === "/" || pathname === null || pathname === undefined;
@@ -53,8 +56,8 @@ function MainContent({ children }: { children: React.ReactNode }) {
     isInvitePage ||
     isForgotPasswordPage ||
     isResetPasswordPage;
-    // || isFormfieldBuilder
-    // || isPublishedFormPage;
+  // || isFormfieldBuilder
+  // || isPublishedFormPage;
   const shouldHideHeader =
     isHomePage ||
     isLoginPage ||
@@ -63,13 +66,13 @@ function MainContent({ children }: { children: React.ReactNode }) {
     isInvitePage ||
     isForgotPasswordPage ||
     isResetPasswordPage;
-    // || isPublishedFormPage;
+  // || isPublishedFormPage;
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-background text-foreground print:h-auto print:w-auto print:overflow-visible print:bg-transparent">
+    <main className="h-dvh w-full overflow-hidden bg-background text-foreground print:h-auto print:w-auto print:overflow-visible print:bg-transparent">
       {!shouldHideSidebar ? (
         <Suspense fallback={null}>
-          <div className="print:hidden">
+          <div className="hidden md:block print:hidden">
             <SideNav />
           </div>
         </Suspense>
@@ -99,7 +102,23 @@ function MainContent({ children }: { children: React.ReactNode }) {
         >
           {children}
         </div>
+        {!shouldHideSidebar ? (
+          <div
+            aria-hidden="true"
+            className="h-[calc(5rem+env(safe-area-inset-bottom,0px))] w-full shrink-0 md:hidden print:hidden"
+          />
+        ) : null}
       </div>
+      {!shouldHideSidebar ? (
+        <Suspense fallback={null}>
+          <div className="md:hidden print:hidden">
+            <BottomNav />
+          </div>
+        </Suspense>
+      ) : null}
+      {!shouldHideHeader ? (
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      ) : null}
     </main>
   );
 }
