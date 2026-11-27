@@ -125,11 +125,16 @@ const ProjectCard = ({ project }: { project: Project }) => (
       </CardHeader>
       <CardContent>
         <div className="space-y-3 text-sm">
-          <ProjectTaskCompletion tasks={project.tasks} variant="compact" />
+          <ProjectTaskCompletion
+            tasks={project.tasks}
+            taskCount={project.task_count}
+            completedTaskCount={project.completed_task_count}
+            variant="compact"
+          />
           <div className="space-y-2">
           <div className="flex justify-between">
             <span>Tasks:</span>
-            <span>{project.tasks?.length || 0}</span>
+            <span>{project.tasks?.length ?? project.task_count ?? 0}</span>
           </div>
           <div className="flex justify-between">
             <span>Manager:</span>
@@ -217,7 +222,12 @@ const ProjectKanbanCard = ({
         </Badge>
       </div>
       <div className="text-xs text-muted-foreground space-y-1">
-        <ProjectTaskCompletion tasks={project.tasks} variant="compact" />
+        <ProjectTaskCompletion
+          tasks={project.tasks}
+          taskCount={project.task_count}
+          completedTaskCount={project.completed_task_count}
+          variant="compact"
+        />
         <div>Target: {formatDate(project.target_date)}</div>
       </div>
     </CardContent>
@@ -769,10 +779,14 @@ const Projects = () => {
                     <TableCell>
                       <ProjectTaskCompletion
                         tasks={project.tasks}
+                        taskCount={project.task_count}
+                        completedTaskCount={project.completed_task_count}
                         variant="compact"
                       />
                     </TableCell>
-                    <TableCell>{project.tasks?.length || 0}</TableCell>
+                    <TableCell>
+                      {project.tasks?.length ?? project.task_count ?? 0}
+                    </TableCell>
                     <TableCell>{formatProjectManager(project)}</TableCell>
                     <TableCell>{formatDate(project.created_at)}</TableCell>
                     <TableCell>{formatDate(project.target_date)}</TableCell>

@@ -37,7 +37,10 @@ export function mapProjectStatus(status?: string | null): ProjectStatus {
 }
 
 export function projectToClientProject(project: Project): ClientProject {
-  const { percent } = getProjectTaskCompletion(project.tasks);
+  const { percent } = getProjectTaskCompletion(project.tasks, {
+    taskCount: project.task_count,
+    completedTaskCount: project.completed_task_count,
+  });
   const description =
     project.functional_requirements?.trim() ||
     project.target_audience?.trim() ||

@@ -130,7 +130,7 @@ export default function WorkspaceDashboardPage() {
     try {
       const [employeesRes, projectsRes] = await Promise.all([
         employeesApi.getAll({ limit: 500 }),
-        projectsApi.getAll({ limit: 500 }),
+        projectsApi.getAll({ limit: 500, include_tasks: true }),
       ]);
 
       const currentEmployee = employeesRes.data.find(
